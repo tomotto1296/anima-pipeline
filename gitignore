@@ -1,0 +1,19 @@
+# 個人設定（APIキー等）※設定ファイルは初期値入りで配布
+
+# 自動生成ファイル
+settings/extra_tags.json
+settings/extra_tags_negative.json
+settings/style_tags.json
+settings/style_tags_negative.json
+settings/anima_session_last.json
+
+# ワークフローJSON（各自用意）
+image_anima_preview.json
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db

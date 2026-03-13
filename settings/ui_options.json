@@ -1,0 +1,1611 @@
+{
+  "hair_colors": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "black_hair",
+      "label": "黒"
+    },
+    {
+      "v": "brown_hair",
+      "label": "茶"
+    },
+    {
+      "v": "red_hair",
+      "label": "赤"
+    },
+    {
+      "v": "blue_hair",
+      "label": "青"
+    },
+    {
+      "v": "green_hair",
+      "label": "緑"
+    },
+    {
+      "v": "blonde_hair",
+      "label": "金"
+    },
+    {
+      "v": "silver_hair",
+      "label": "銀"
+    },
+    {
+      "v": "white_hair",
+      "label": "白"
+    },
+    {
+      "v": "pink_hair",
+      "label": "桃"
+    },
+    {
+      "v": "purple_hair",
+      "label": "紫"
+    },
+    {
+      "v": "orange_hair",
+      "label": "橙"
+    }
+  ],
+  "eye_colors": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "red_eyes",
+      "label": "赤"
+    },
+    {
+      "v": "blue_eyes",
+      "label": "青"
+    },
+    {
+      "v": "green_eyes",
+      "label": "緑"
+    },
+    {
+      "v": "yellow_eyes",
+      "label": "黄"
+    },
+    {
+      "v": "purple_eyes",
+      "label": "紫"
+    },
+    {
+      "v": "brown_eyes",
+      "label": "茶"
+    },
+    {
+      "v": "black_eyes",
+      "label": "黒"
+    },
+    {
+      "v": "white_eyes",
+      "label": "白"
+    },
+    {
+      "v": "orange_eyes",
+      "label": "橙"
+    },
+    {
+      "v": "pink_eyes",
+      "label": "桃"
+    },
+    {
+      "v": "aqua_eyes",
+      "label": "水"
+    }
+  ],
+  "skin_options": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "pale_skin",
+      "label": "白い"
+    },
+    {
+      "v": "light_skin",
+      "label": "薄め"
+    },
+    {
+      "v": "dark_skin",
+      "label": "小麦色"
+    },
+    {
+      "v": "very_dark_skin",
+      "label": "黒い"
+    }
+  ],
+  "bust_options": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "flat_chest",
+      "label": "貧乳"
+    },
+    {
+      "v": "small_breasts",
+      "label": "小"
+    },
+    {
+      "v": "medium_breasts",
+      "label": "中"
+    },
+    {
+      "v": "large_breasts",
+      "label": "大"
+    },
+    {
+      "v": "huge_breasts",
+      "label": "爆"
+    },
+    {
+      "v": "gigantic_breasts",
+      "label": "超爆"
+    }
+  ],
+  "body_height": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "short_stature",
+      "label": "小"
+    },
+    {
+      "v": "short_stature",
+      "label": "低"
+    },
+    {
+      "v": "",
+      "label": "普通"
+    },
+    {
+      "v": "tall",
+      "label": "高"
+    },
+    {
+      "v": "tall",
+      "label": "大柄"
+    }
+  ],
+  "body_build": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "skinny",
+      "label": "痩"
+    },
+    {
+      "v": "slim",
+      "label": "スリム"
+    },
+    {
+      "v": "",
+      "label": "普通"
+    },
+    {
+      "v": "muscular",
+      "label": "筋肉質"
+    },
+    {
+      "v": "fat",
+      "label": "太"
+    }
+  ],
+  "body_legs": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "short_legs",
+      "label": "短い"
+    },
+    {
+      "v": "",
+      "label": "普通"
+    },
+    {
+      "v": "long_legs",
+      "label": "長い"
+    }
+  ],
+  "pos_vertical": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "close-up",
+      "label": "アップ"
+    },
+    {
+      "v": "upper body",
+      "label": "上半身"
+    },
+    {
+      "v": "cowboy shot",
+      "label": "腰上"
+    },
+    {
+      "v": "full body",
+      "label": "全身"
+    }
+  ],
+  "pos_horizontal": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "from side",
+      "label": "横"
+    },
+    {
+      "v": "from behind",
+      "label": "後ろ"
+    },
+    {
+      "v": "dutch angle",
+      "label": "斜め"
+    },
+    {
+      "v": "pov",
+      "label": "POV"
+    }
+  ],
+  "pos_camera": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "low angle",
+      "label": "ローアングル"
+    },
+    {
+      "v": "high angle",
+      "label": "ハイアングル"
+    },
+    {
+      "v": "bird's-eye view",
+      "label": "俯瞰"
+    },
+    {
+      "v": "worm's-eye view",
+      "label": "仰視"
+    },
+    {
+      "v": "fisheye",
+      "label": "魚眼"
+    }
+  ],
+  "face_options": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "smile",
+      "label": "笑"
+    },
+    {
+      "v": "angry",
+      "label": "怒"
+    },
+    {
+      "v": "blush",
+      "label": "照"
+    },
+    {
+      "v": "sad",
+      "label": "悲"
+    },
+    {
+      "v": "surprised",
+      "label": "驚"
+    },
+    {
+      "v": "confused",
+      "label": "困惑"
+    },
+    {
+      "v": "expressionless",
+      "label": "無表情"
+    },
+    {
+      "v": "embarrassed",
+      "label": "恥ずかし"
+    },
+    {
+      "v": "crying",
+      "label": "泣き"
+    },
+    {
+      "v": "smirk",
+      "label": "ニヤリ"
+    }
+  ],
+  "eye_state_options": [
+    {
+      "v": "",
+      "label": "－",
+      "group": "open"
+    },
+    {
+      "v": "open_eyes",
+      "label": "開き",
+      "group": "open"
+    },
+    {
+      "v": "half-closed_eyes",
+      "label": "半目",
+      "group": "open"
+    },
+    {
+      "v": "closed_eyes",
+      "label": "閉じ",
+      "group": "open"
+    },
+    {
+      "v": "looking_at_viewer",
+      "label": "目線",
+      "group": "dir"
+    },
+    {
+      "v": "looking_away",
+      "label": "逸らし",
+      "group": "dir"
+    },
+    {
+      "v": "upward_glance",
+      "label": "上目",
+      "group": "dir"
+    },
+    {
+      "v": "downward_glance",
+      "label": "伏し目",
+      "group": "dir"
+    },
+    {
+      "v": "wink",
+      "label": "ウィンク",
+      "group": "state"
+    },
+    {
+      "v": "heart-shaped_eyes",
+      "label": "ハート目",
+      "group": "state"
+    },
+    {
+      "v": "sparkling_eyes",
+      "label": "キラキラ目",
+      "group": "state"
+    }
+  ],
+  "mouth_options": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "closed_mouth",
+      "label": "口閉じ"
+    },
+    {
+      "v": "open_mouth",
+      "label": "口開き"
+    },
+    {
+      "v": "tongue",
+      "label": "舌"
+    },
+    {
+      "v": "teeth",
+      "label": "歯"
+    },
+    {
+      "v": "fangs",
+      "label": "牙"
+    },
+    {
+      "v": "lipstick",
+      "label": "口紅"
+    }
+  ],
+  "effect_options": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "sweat",
+      "label": "汗"
+    },
+    {
+      "v": "tears",
+      "label": "涙"
+    },
+    {
+      "v": "watery_eyes",
+      "label": "涙目"
+    },
+    {
+      "v": "wet",
+      "label": "水濡れ"
+    },
+    {
+      "v": "nosebleed",
+      "label": "鼻血"
+    },
+    {
+      "v": "blood",
+      "label": "流血"
+    },
+    {
+      "v": "aura",
+      "label": "オーラ"
+    },
+    {
+      "v": "electricity",
+      "label": "電気"
+    },
+    {
+      "v": "fire",
+      "label": "炎"
+    },
+    {
+      "v": "ice",
+      "label": "氷"
+    }
+  ],
+  "hairstyle_options": [
+    {
+      "v": "short_hair",
+      "label": "ショート",
+      "group": "全体"
+    },
+    {
+      "v": "medium_hair",
+      "label": "ミディアム",
+      "group": "全体"
+    },
+    {
+      "v": "long_hair",
+      "label": "ロング",
+      "group": "全体"
+    },
+    {
+      "v": "very_long_hair",
+      "label": "超ロング",
+      "group": "全体"
+    },
+    {
+      "v": "bob_cut",
+      "label": "ボブ",
+      "group": "全体"
+    },
+    {
+      "v": "straight_hair",
+      "label": "ストレート",
+      "group": "全体"
+    },
+    {
+      "v": "wavy_hair",
+      "label": "ウェーブ",
+      "group": "全体"
+    },
+    {
+      "v": "curly_hair",
+      "label": "クセ毛",
+      "group": "全体"
+    },
+    {
+      "v": "bangs",
+      "label": "前髪あり",
+      "group": "前"
+    },
+    {
+      "v": "blunt_bangs",
+      "label": "ぱっつん",
+      "group": "前"
+    },
+    {
+      "v": "swept_bangs",
+      "label": "流し前髪",
+      "group": "前"
+    },
+    {
+      "v": "side_swept_bangs",
+      "label": "サイド流し",
+      "group": "前"
+    },
+    {
+      "v": "no_bangs",
+      "label": "前髪なし",
+      "group": "前"
+    },
+    {
+      "v": "ahoge",
+      "label": "アホ毛",
+      "group": "前"
+    },
+    {
+      "v": "twintails",
+      "label": "ツインテ",
+      "group": "後ろ"
+    },
+    {
+      "v": "ponytail",
+      "label": "ポニテ",
+      "group": "後ろ"
+    },
+    {
+      "v": "side_ponytail",
+      "label": "サイドポニテ",
+      "group": "後ろ"
+    },
+    {
+      "v": "low_twintails",
+      "label": "低ツインテ",
+      "group": "後ろ"
+    },
+    {
+      "v": "braid",
+      "label": "三つ編み",
+      "group": "後ろ"
+    },
+    {
+      "v": "side_braid",
+      "label": "横編み",
+      "group": "後ろ"
+    },
+    {
+      "v": "hair_bun",
+      "label": "お団子",
+      "group": "後ろ"
+    },
+    {
+      "v": "hime_cut",
+      "label": "姫カット",
+      "group": "後ろ"
+    }
+  ],
+  "action_options": [
+    {
+      "v": "standing",
+      "label": "立ち",
+      "group": "姿勢"
+    },
+    {
+      "v": "sitting",
+      "label": "座り",
+      "group": "姿勢"
+    },
+    {
+      "v": "lying",
+      "label": "寝",
+      "group": "姿勢"
+    },
+    {
+      "v": "squatting",
+      "label": "しゃがみ",
+      "group": "姿勢"
+    },
+    {
+      "v": "kneeling",
+      "label": "膝立ち",
+      "group": "姿勢"
+    },
+    {
+      "v": "walking",
+      "label": "歩く",
+      "group": "動作"
+    },
+    {
+      "v": "running",
+      "label": "走る",
+      "group": "動作"
+    },
+    {
+      "v": "jumping",
+      "label": "跳ぶ",
+      "group": "動作"
+    },
+    {
+      "v": "fighting_stance",
+      "label": "戦闘",
+      "group": "動作"
+    },
+    {
+      "v": "dancing",
+      "label": "踊る",
+      "group": "動作"
+    },
+    {
+      "v": "falling",
+      "label": "落下",
+      "group": "動作"
+    },
+    {
+      "v": "arms_crossed",
+      "label": "腕組み",
+      "group": "腕・手"
+    },
+    {
+      "v": "arms_up",
+      "label": "両手上げ",
+      "group": "腕・手"
+    },
+    {
+      "v": "hand_on_hip",
+      "label": "腰に手",
+      "group": "腕・手"
+    },
+    {
+      "v": "reaching_out",
+      "label": "手伸ばし",
+      "group": "腕・手"
+    },
+    {
+      "v": "holding",
+      "label": "持つ",
+      "group": "腕・手"
+    },
+    {
+      "v": "heart_hands",
+      "label": "ハート",
+      "group": "腕・手"
+    },
+    {
+      "v": "v",
+      "label": "ピース",
+      "group": "腕・手"
+    },
+    {
+      "v": "looking_at_viewer",
+      "label": "目線あり",
+      "group": "視線"
+    },
+    {
+      "v": "looking_away",
+      "label": "目線なし",
+      "group": "視線"
+    },
+    {
+      "v": "looking_back",
+      "label": "振り向き",
+      "group": "視線"
+    }
+  ],
+  "ears_options": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "animal_ears",
+      "label": "獣耳"
+    },
+    {
+      "v": "cat_ears",
+      "label": "猫耳"
+    },
+    {
+      "v": "dog_ears",
+      "label": "犬耳"
+    },
+    {
+      "v": "fox_ears",
+      "label": "狐耳"
+    },
+    {
+      "v": "rabbit_ears",
+      "label": "兎耳"
+    },
+    {
+      "v": "dragon_horns",
+      "label": "龍角"
+    },
+    {
+      "v": "demon_horns",
+      "label": "悪魔角"
+    },
+    {
+      "v": "pointy_ears",
+      "label": "エルフ耳"
+    }
+  ],
+  "tail_options": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "animal_tail",
+      "label": "獣尻尾"
+    },
+    {
+      "v": "cat_tail",
+      "label": "猫尻尾"
+    },
+    {
+      "v": "dog_tail",
+      "label": "犬尻尾"
+    },
+    {
+      "v": "fox_tail",
+      "label": "狐尻尾"
+    },
+    {
+      "v": "dragon_tail",
+      "label": "龍尻尾"
+    },
+    {
+      "v": "demon_tail",
+      "label": "悪魔尻尾"
+    }
+  ],
+  "wings_options": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "angel_wings",
+      "label": "天使翼"
+    },
+    {
+      "v": "demon_wings",
+      "label": "悪魔翼"
+    },
+    {
+      "v": "dragon_wings",
+      "label": "龍翼"
+    },
+    {
+      "v": "feathered_wings",
+      "label": "羽翼"
+    },
+    {
+      "v": "mechanical_wings",
+      "label": "機械翼"
+    }
+  ],
+  "accessory_options": [
+    {
+      "v": "hair_ribbon",
+      "label": "リボン"
+    },
+    {
+      "v": "hair_flower",
+      "label": "花飾り"
+    },
+    {
+      "v": "hair_ornament",
+      "label": "髪飾り"
+    },
+    {
+      "v": "glasses",
+      "label": "眼鏡"
+    },
+    {
+      "v": "sunglasses",
+      "label": "サングラス"
+    },
+    {
+      "v": "earrings",
+      "label": "イヤリング"
+    },
+    {
+      "v": "necklace",
+      "label": "ネックレス"
+    },
+    {
+      "v": "collar",
+      "label": "首輪"
+    },
+    {
+      "v": "hat",
+      "label": "帽子"
+    },
+    {
+      "v": "witch_hat",
+      "label": "魔女帽"
+    },
+    {
+      "v": "crown",
+      "label": "王冠"
+    },
+    {
+      "v": "mask",
+      "label": "マスク"
+    },
+    {
+      "v": "gloves",
+      "label": "手袋"
+    },
+    {
+      "v": "cape",
+      "label": "マント"
+    },
+    {
+      "v": "scarf",
+      "label": "スカーフ"
+    }
+  ],
+  "item_categories": {
+    "武器": [
+      {
+        "v": "sword",
+        "label": "剣"
+      },
+      {
+        "v": "katana",
+        "label": "刀"
+      },
+      {
+        "v": "spear",
+        "label": "槍"
+      },
+      {
+        "v": "bow",
+        "label": "弓"
+      },
+      {
+        "v": "gun",
+        "label": "銃"
+      },
+      {
+        "v": "rifle",
+        "label": "ライフル"
+      },
+      {
+        "v": "axe",
+        "label": "斧"
+      },
+      {
+        "v": "staff",
+        "label": "杖"
+      },
+      {
+        "v": "magic_wand",
+        "label": "魔法杖"
+      },
+      {
+        "v": "shield",
+        "label": "盾"
+      },
+      {
+        "v": "scythe",
+        "label": "大鎌"
+      },
+      {
+        "v": "dagger",
+        "label": "短剣"
+      }
+    ],
+    "道具": [
+      {
+        "v": "book",
+        "label": "本"
+      },
+      {
+        "v": "bag",
+        "label": "カバン"
+      },
+      {
+        "v": "umbrella",
+        "label": "傘"
+      },
+      {
+        "v": "camera",
+        "label": "カメラ"
+      },
+      {
+        "v": "phone",
+        "label": "スマホ"
+      },
+      {
+        "v": "microphone",
+        "label": "マイク"
+      },
+      {
+        "v": "flower",
+        "label": "花"
+      },
+      {
+        "v": "bouquet",
+        "label": "花束"
+      },
+      {
+        "v": "stuffed_animal",
+        "label": "ぬいぐるみ"
+      },
+      {
+        "v": "instrument",
+        "label": "楽器"
+      },
+      {
+        "v": "broom",
+        "label": "ほうき"
+      },
+      {
+        "v": "fan",
+        "label": "扇子"
+      }
+    ],
+    "食べ物": [
+      {
+        "v": "food",
+        "label": "食べ物"
+      },
+      {
+        "v": "ice_cream",
+        "label": "アイス"
+      },
+      {
+        "v": "cake",
+        "label": "ケーキ"
+      },
+      {
+        "v": "candy",
+        "label": "キャンディ"
+      },
+      {
+        "v": "pocky",
+        "label": "ポッキー"
+      },
+      {
+        "v": "lollipop",
+        "label": "棒キャンディ"
+      },
+      {
+        "v": "cup",
+        "label": "カップ"
+      },
+      {
+        "v": "bottle",
+        "label": "ボトル"
+      }
+    ],
+    "その他": [
+      {
+        "v": "flag",
+        "label": "旗"
+      },
+      {
+        "v": "letter",
+        "label": "手紙"
+      },
+      {
+        "v": "ball",
+        "label": "ボール"
+      },
+      {
+        "v": "key",
+        "label": "鍵"
+      },
+      {
+        "v": "coin",
+        "label": "コイン"
+      },
+      {
+        "v": "lantern",
+        "label": "ランタン"
+      },
+      {
+        "v": "rope",
+        "label": "縄"
+      },
+      {
+        "v": "chain",
+        "label": "鎖"
+      }
+    ]
+  },
+  "outfit_data": {
+    "全身": {
+      "items": [
+        {
+          "v": "dress",
+          "label": "ドレス"
+        },
+        {
+          "v": "suit",
+          "label": "スーツ"
+        },
+        {
+          "v": "kimono",
+          "label": "着物"
+        },
+        {
+          "v": "yukata",
+          "label": "浴衣"
+        },
+        {
+          "v": "school_uniform",
+          "label": "制服"
+        },
+        {
+          "v": "swimsuit",
+          "label": "水着"
+        }
+      ]
+    },
+    "上半身": {
+      "items": [
+        {
+          "v": "t-shirt",
+          "label": "Tシャツ"
+        },
+        {
+          "v": "dress_shirt",
+          "label": "Yシャツ"
+        },
+        {
+          "v": "jacket",
+          "label": "ジャケット"
+        },
+        {
+          "v": "hoodie",
+          "label": "パーカー"
+        },
+        {
+          "v": "tank_top",
+          "label": "タンクトップ"
+        },
+        {
+          "v": "bikini_top",
+          "label": "ビキニトップ"
+        }
+      ]
+    },
+    "下半身": {
+      "items": [
+        {
+          "v": "pants",
+          "label": "ズボン"
+        },
+        {
+          "v": "skirt",
+          "label": "スカート"
+        },
+        {
+          "v": "shorts",
+          "label": "ショーツ"
+        },
+        {
+          "v": "miniskirt",
+          "label": "ミニスカ"
+        },
+        {
+          "v": "jeans",
+          "label": "ジーンズ"
+        },
+        {
+          "v": "bikini_bottom",
+          "label": "ビキニボトム"
+        }
+      ]
+    }
+  },
+  "outfit_colors": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "white",
+      "label": "白"
+    },
+    {
+      "v": "black",
+      "label": "黒"
+    },
+    {
+      "v": "red",
+      "label": "赤"
+    },
+    {
+      "v": "blue",
+      "label": "青"
+    },
+    {
+      "v": "green",
+      "label": "緑"
+    },
+    {
+      "v": "yellow",
+      "label": "黄"
+    },
+    {
+      "v": "pink",
+      "label": "桃"
+    },
+    {
+      "v": "purple",
+      "label": "紫"
+    },
+    {
+      "v": "brown",
+      "label": "茶"
+    },
+    {
+      "v": "gray",
+      "label": "灰"
+    }
+  ],
+  "place_sub": {
+    "屋外": [
+      {
+        "v": "outdoors",
+        "label": "屋外"
+      },
+      {
+        "v": "rooftop",
+        "label": "屋上"
+      }
+    ],
+    "屋内": [
+      {
+        "v": "indoors",
+        "label": "室内"
+      }
+    ],
+    "特殊": [
+      {
+        "v": "outdoors",
+        "label": "屋外"
+      },
+      {
+        "v": "rooftop",
+        "label": "屋上"
+      },
+      {
+        "v": "indoors",
+        "label": "室内"
+      }
+    ]
+  },
+  "place_categories": {
+    "屋外": [
+      {
+        "v": "park",
+        "label": "公園"
+      },
+      {
+        "v": "beach",
+        "label": "海岸"
+      },
+      {
+        "v": "ocean",
+        "label": "海"
+      },
+      {
+        "v": "mountain",
+        "label": "山"
+      },
+      {
+        "v": "forest",
+        "label": "森"
+      },
+      {
+        "v": "field",
+        "label": "草原"
+      },
+      {
+        "v": "street",
+        "label": "街中"
+      },
+      {
+        "v": "shrine",
+        "label": "神社"
+      },
+      {
+        "v": "garden",
+        "label": "庭園"
+      },
+      {
+        "v": "river",
+        "label": "川"
+      },
+      {
+        "v": "lake",
+        "label": "湖"
+      },
+      {
+        "v": "school_courtyard",
+        "label": "校庭"
+      },
+      {
+        "v": "stadium",
+        "label": "競技場"
+      },
+      {
+        "v": "battlefield",
+        "label": "戦場"
+      }
+    ],
+    "屋内": [
+      {
+        "v": "classroom",
+        "label": "教室"
+      },
+      {
+        "v": "bedroom",
+        "label": "寝室"
+      },
+      {
+        "v": "living_room",
+        "label": "リビング"
+      },
+      {
+        "v": "bathroom",
+        "label": "風呂"
+      },
+      {
+        "v": "library",
+        "label": "図書館"
+      },
+      {
+        "v": "cafe",
+        "label": "カフェ"
+      },
+      {
+        "v": "restaurant",
+        "label": "レストラン"
+      },
+      {
+        "v": "gym",
+        "label": "体育館"
+      },
+      {
+        "v": "hospital",
+        "label": "病院"
+      },
+      {
+        "v": "castle_interior",
+        "label": "城内"
+      },
+      {
+        "v": "church",
+        "label": "教会"
+      },
+      {
+        "v": "laboratory",
+        "label": "研究室"
+      },
+      {
+        "v": "hallway",
+        "label": "廊下"
+      },
+      {
+        "v": "stage",
+        "label": "ステージ"
+      },
+      {
+        "v": "dungeon",
+        "label": "ダンジョン"
+      }
+    ],
+    "特殊": [
+      {
+        "v": "space",
+        "label": "宇宙"
+      },
+      {
+        "v": "underwater",
+        "label": "水中"
+      },
+      {
+        "v": "sky",
+        "label": "空中"
+      },
+      {
+        "v": "fantasy_world",
+        "label": "異世界"
+      },
+      {
+        "v": "ruins",
+        "label": "廃墟"
+      },
+      {
+        "v": "temple",
+        "label": "神殿"
+      },
+      {
+        "v": "heaven",
+        "label": "天界"
+      },
+      {
+        "v": "hell",
+        "label": "地獄"
+      },
+      {
+        "v": "void",
+        "label": "虚空"
+      },
+      {
+        "v": "dream",
+        "label": "夢の中"
+      }
+    ]
+  },
+  "scene_world": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "日常",
+      "label": "日常"
+    },
+    {
+      "v": "和風",
+      "label": "和風"
+    },
+    {
+      "v": "西洋",
+      "label": "西洋"
+    },
+    {
+      "v": "中華",
+      "label": "中華"
+    },
+    {
+      "v": "ファンタジー",
+      "label": "ファンタジー"
+    },
+    {
+      "v": "SF",
+      "label": "SF"
+    },
+    {
+      "v": "ポストアポカリプス",
+      "label": "廃墟"
+    }
+  ],
+  "scene_tod": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "朝",
+      "label": "朝"
+    },
+    {
+      "v": "昼",
+      "label": "昼"
+    },
+    {
+      "v": "夕方",
+      "label": "夕"
+    },
+    {
+      "v": "夜",
+      "label": "夜"
+    }
+  ],
+  "scene_weather": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "晴れ",
+      "label": "晴"
+    },
+    {
+      "v": "曇り",
+      "label": "曇"
+    },
+    {
+      "v": "雨",
+      "label": "雨"
+    },
+    {
+      "v": "雪",
+      "label": "雪"
+    }
+  ],
+  "gender_options": [
+    {
+      "v": "female",
+      "label": "女"
+    },
+    {
+      "v": "male",
+      "label": "男"
+    },
+    {
+      "v": "other",
+      "label": "不明"
+    }
+  ],
+  "age_options": [
+    {
+      "v": "unset",
+      "label": "未選択"
+    },
+    {
+      "v": "adult",
+      "label": "大人"
+    },
+    {
+      "v": "child",
+      "label": "子供"
+    }
+  ],
+  "safety_options": [
+    {
+      "v": "",
+      "label": "－"
+    },
+    {
+      "v": "safe",
+      "label": "safe"
+    },
+    {
+      "v": "sensitive",
+      "label": "sensitive"
+    },
+    {
+      "v": "nsfw",
+      "label": "nsfw"
+    },
+    {
+      "v": "explicit",
+      "label": "explicit"
+    }
+  ],
+  "quality_human": {
+    "tags": [
+      "masterpiece",
+      "best quality",
+      "good quality",
+      "normal quality",
+      "low quality",
+      "worst quality"
+    ],
+    "default": [
+      "masterpiece",
+      "best quality"
+    ]
+  },
+  "quality_pony": {
+    "tags": [
+      "score_9",
+      "score_8",
+      "score_7",
+      "score_6",
+      "score_5",
+      "score_4",
+      "score_3",
+      "score_2",
+      "score_1"
+    ],
+    "default": [
+      "score_9",
+      "score_8",
+      "score_7"
+    ]
+  },
+  "meta_tags": {
+    "tags": [
+      "highres",
+      "absurdres",
+      "anime screenshot",
+      "official art"
+    ],
+    "default": [
+      "highres",
+      "absurdres"
+    ]
+  },
+  "attach_groups": [
+    {
+      "key": "ears",
+      "label": "耳",
+      "options_key": "ears_options"
+    },
+    {
+      "key": "tail",
+      "label": "尻尾",
+      "options_key": "tail_options"
+    },
+    {
+      "key": "wings",
+      "label": "翼",
+      "options_key": "wings_options"
+    },
+    {
+      "key": "acc",
+      "label": "アクセサリー",
+      "options_key": "accessory_options"
+    }
+  ],
+  "place_cat_buttons": [
+    {
+      "v": "屋外",
+      "label": "屋外"
+    },
+    {
+      "v": "屋内",
+      "label": "屋内"
+    },
+    {
+      "v": "特殊",
+      "label": "特殊"
+    }
+  ],
+  "image_size_presets": [
+    {
+      "v": "1024x1024",
+      "label": "1024 × 1024　正方形"
+    },
+    {
+      "v": "1152x896",
+      "label": "1152 × 896　横長"
+    },
+    {
+      "v": "896x1152",
+      "label": "896 × 1152　縦長"
+    },
+    {
+      "v": "1280x704",
+      "label": "1280 × 704　ワイド"
+    },
+    {
+      "v": "704x1280",
+      "label": "704 × 1280　縦長ワイド"
+    },
+    {
+      "v": "1024x1536",
+      "label": "1024 × 1536　ポートレート"
+    }
+  ],
+  "quality_human_neg": {
+    "tags": [
+      "normal quality",
+      "low quality",
+      "worst quality"
+    ],
+    "default": [
+      "normal quality",
+      "low quality",
+      "worst quality"
+    ]
+  },
+  "quality_pony_neg": {
+    "tags": [
+      "score_9",
+      "score_8",
+      "score_7",
+      "score_6",
+      "score_5",
+      "score_4",
+      "score_3",
+      "score_2",
+      "score_1"
+    ],
+    "default": [
+      "score_4",
+      "score_3",
+      "score_2",
+      "score_1"
+    ]
+  }
+}
