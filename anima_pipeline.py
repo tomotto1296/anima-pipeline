@@ -691,6 +691,8 @@ HTML = r"""<!DOCTYPE html>
     text-align:center;transition:all 0.15s;user-select:none;}
   .age-btn:hover{border-color:#2d7a4f;}
   .age-btn.active{background:#2d7a4f;color:white;border-color:#2d7a4f;}
+  .age-btn[style*="background-color"].active{outline:3px solid #222;outline-offset:1px;filter:brightness(1.15);}
+  .age-btn[style*="background-color"]:hover{filter:brightness(1.1);}
 </style>
 </head>
 <body>
@@ -778,6 +780,11 @@ HTML = r"""<!DOCTYPE html>
     </div>
     <button class="save-btn" onclick="saveSettings()">💾 設定を保存</button>
     <div class="save-notice" id="saveNotice">✓ pipeline_config.json に保存しました</div>
+    <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+      <button class="sl-btn" style="flex:1" onclick="testConnection('comfyui')">🔌 ComfyUI 接続テスト</button>
+      <button class="sl-btn" style="flex:1" onclick="testConnection('llm')">🤖 LLM 接続テスト</button>
+    </div>
+    <div id="testResult" style="display:none;font-family:'DM Mono',monospace;font-size:0.75rem;margin-top:0.4rem;padding:0.4rem 0.6rem;border-radius:5px;"></div>
   </div>
 
   <div class="save-load-row" style="margin-bottom:1rem;">
@@ -807,8 +814,8 @@ HTML = r"""<!DOCTYPE html>
       <div>
         <label>保存形式</label>
         <div class="fmt-row" style="margin-top:0.2rem;">
-          <div class="fmt-btn active" data-fmt="png" onclick="selectFmt(this)">PNG</div>
-          <div class="fmt-btn" data-fmt="webp" onclick="selectFmt(this)">WebP</div>
+          <div class="fmt-btn active" data-fmt="png" onclick="selectFmt(this)">PNG生成</div>
+          <div class="fmt-btn" data-fmt="webp" onclick="selectFmt(this)">WebP変換</div>
         </div>
       </div>
       <div>
@@ -1280,11 +1287,36 @@ async function loadSettings(){
   }catch(e){console.warn(e);}
 }
 
+async function testConnection(target){
+  const resultEl = document.getElementById('testResult');
+  resultEl.style.display = 'block';
+  resultEl.style.background = '#f5f5f5';
+  resultEl.style.color = 'var(--ink)';
+  resultEl.textContent = (target==='comfyui' ? 'ComfyUI' : 'LLM') + ' 接続テスト中...';
+  try{
+    const res = await fetch('/test_connection?target='+target);
+    const data = await res.json();
+    if(data.ok){
+      resultEl.style.background = '#f0fff4';
+      resultEl.style.color = '#2d7a4f';
+      resultEl.textContent = '✓ ' + data.message;
+    } else {
+      resultEl.style.background = '#fff5f5';
+      resultEl.style.color = '#c0392b';
+      resultEl.textContent = '✗ ' + data.message;
+    }
+  } catch(e){
+    resultEl.style.background = '#fff5f5';
+    resultEl.style.color = '#c0392b';
+    resultEl.textContent = '✗ 接続エラー: ' + e.message;
+  }
+}
+
 async function saveSettings(){
   // 保存前に現在の入力値をメモリに退避
   _savePlatFields(_currentPlat);
   const cfg={
-    llm_platform: (document.querySelector('#llmPlatformBtns .period-btn.active')||{}).dataset?.plat||'',
+    llm_platform: _currentPlat||'',
     llm_token:document.getElementById('tokenInput').value,
     tool_danbooru_rag:document.getElementById('tool_danbooru_rag').checked,
     tool_danbooru_api:document.getElementById('tool_danbooru_api').checked,
@@ -1393,6 +1425,7 @@ function collectSessionData(){
     metaTags:     collectCheckedTags('metaTags'),
     lmPrompt:     document.getElementById('promptOutput').textContent||'',
     finalPrompt:  document.getElementById('promptFinal').textContent||'',
+    negFinalPrompt: document.getElementById('promptNegFinal').textContent||'',
     imgW: selectedW, imgH: selectedH, imgFmt: selectedFmt, imgCount: selectedCount,
     savedAt: new Date().toISOString(),
   };
@@ -1700,7 +1733,7 @@ function applySession(data){
     renderStyleBadges();
     // 期間
     selectedPeriod = data.selectedPeriod||'';
-    document.querySelectorAll('.period-btn').forEach(b=>{
+    document.querySelectorAll('.period-btn[data-p]').forEach(b=>{
       b.classList.toggle('active', b.dataset.p===selectedPeriod);
     });
     if(data.year) document.getElementById('yearInput').value = data.year;
@@ -1732,6 +1765,12 @@ function applySession(data){
       const pf = document.getElementById('promptFinal');
       pf.textContent = data.finalPrompt;
       pf.style.display='block';
+    }
+    if(data.negFinalPrompt){
+      document.getElementById('negFinalLabel').style.display='block';
+      const nf = document.getElementById('promptNegFinal');
+      nf.textContent = data.negFinalPrompt;
+      nf.style.display='block';
     }
     if(data.lmPrompt){ document.getElementById('regenBtn').classList.add('show'); running=false; document.getElementById('btn').disabled=false; }
     // 画像サイズ・フォーマット・枚数
@@ -2120,7 +2159,7 @@ function collectNegativePrompt(){
 }
 
 function selPeriod(el){
-  document.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.period-btn[data-p]').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
   selectedPeriod = el.dataset.p;
 }
@@ -2516,8 +2555,9 @@ function makeCharaBlock(idx){
   const skinOther = document.createElement('input');
   skinOther.type = 'text';
   skinOther.id = 'chara_skin_other_'+idx;
-  skinOther.placeholder = 'その他（例: 青肌、緑肌）';
-  skinOther.style.cssText = 'width:100%;background:white;border:1px solid var(--border);border-radius:5px;padding:0.35rem 0.6rem;font-family:DM Mono,monospace;font-size:0.75rem;color:var(--ink);outline:none;box-sizing:border-box;';
+  skinOther.placeholder = '日本語入力可（例: 青肌、緑肌）';
+  skinOther.className = 'inp-ja';
+  skinOther.style.cssText = 'width:100%;border-radius:5px;padding:0.35rem 0.6rem;font-family:DM Mono,monospace;font-size:0.75rem;outline:none;box-sizing:border-box;';
   skinOther.addEventListener('input', function(){
     if(this.value.trim()){
       skinBtns.querySelectorAll('.age-btn').forEach(b=>b.classList.remove('active'));
@@ -2588,11 +2628,12 @@ function makeCharaBlock(idx){
     gl.textContent = lbl;
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;gap:0.2rem;flex-wrap:wrap;';
-    EYE_COLORS.filter(c=>c.v!=='').forEach(({v,label})=>{
+    EYE_COLORS.filter(c=>c.v!=='').forEach(({v,label,bg,fg})=>{
       const b = document.createElement('div');
       b.className = 'age-btn';
       b.dataset['odd'+oi] = v;
       b.textContent = label;
+      if(bg){ b.style.backgroundColor=bg; b.style.color=fg||'#fff'; b.style.borderColor=bg; }
       b.addEventListener('click',function(){
         row.querySelectorAll('.age-btn').forEach(x=>x.classList.remove('active'));
         this.classList.add('active');
@@ -2625,11 +2666,12 @@ function makeCharaBlock(idx){
     }
   }
 
-  EYE_COLORS.forEach(({v,label})=>{
+  EYE_COLORS.forEach(({v,label,bg,fg})=>{
     const btn = document.createElement('div');
     btn.className = 'age-btn' + (v===''?' active':'');
     btn.dataset.eye = v;
     btn.textContent = label;
+    if(bg){ btn.style.backgroundColor=bg; btn.style.color=fg||'#fff'; btn.style.borderColor=bg; }
     btn.addEventListener('click',function(){
       eyeBtns.querySelectorAll('.age-btn').forEach(b=>b.classList.remove('active'));
       this.classList.add('active');
@@ -2739,11 +2781,12 @@ function makeCharaBlock(idx){
   const botLabel = makeSubLabel('下半身');
 
   function makeColorBtns(row, stateKey){
-    OUTFIT_COLORS.forEach(({v,label})=>{
+    OUTFIT_COLORS.forEach(({v,label,bg,fg})=>{
       const btn=document.createElement('div');
       btn.className='age-btn'+(v===''?' active':'');
       btn.dataset.ocolor=v;
       btn.textContent=label;
+      if(bg){ btn.style.backgroundColor=bg; btn.style.color=fg||'#fff'; btn.style.borderColor=bg; }
       btn.addEventListener('click',function(){
         row.querySelectorAll('.age-btn').forEach(b=>b.classList.remove('active'));
         this.classList.add('active');
@@ -2776,9 +2819,10 @@ function makeCharaBlock(idx){
   const outfitFree = document.createElement('input');
   outfitFree.type = 'text';
   outfitFree.id = 'chara_outfit_free_'+idx;
-  outfitFree.placeholder = '自由入力（例: maid_apron）';
+  outfitFree.placeholder = '日本語入力可（例: 白 ドレス、maid_apron）';
   outfitFree.className = 'inp-en';
-  outfitFree.style.cssText = 'width:100%;background:white;border:1px solid var(--border);border-radius:5px;padding:0.35rem 0.6rem;font-family:DM Mono,monospace;font-size:0.75rem;color:var(--ink);outline:none;box-sizing:border-box;';
+  outfitFree.className = 'inp-ja';
+  outfitFree.style.cssText = 'width:100%;border-radius:5px;padding:0.35rem 0.6rem;font-family:DM Mono,monospace;font-size:0.75rem;outline:none;box-sizing:border-box;';
   outfitFree.addEventListener('input',function(){
     if(this.value.trim()) outfitHidden.value=this.value.trim();
     else buildOutfitValue();
@@ -2897,9 +2941,9 @@ function makeCharaBlock(idx){
   });
   const hairStyleFree = document.createElement('input');
   hairStyleFree.type = 'text';
-  hairStyleFree.placeholder = '自由入力（例: お団子、ドレッド）';
+  hairStyleFree.placeholder = '日本語入力可（例: お団子、ドレッド）';
   hairStyleFree.className = 'inp-ja';
-  hairStyleFree.style.cssText = 'width:100%;background:white;border:1px solid var(--border);border-radius:5px;padding:0.35rem 0.6rem;font-family:DM Mono,monospace;font-size:0.75rem;color:var(--ink);outline:none;box-sizing:border-box;';
+  hairStyleFree.style.cssText = 'width:100%;border-radius:5px;padding:0.35rem 0.6rem;font-family:DM Mono,monospace;font-size:0.75rem;outline:none;box-sizing:border-box;';
   hairStyleFree.addEventListener('input',function(){
     if(this.value.trim()){
       hairStyleBtns.querySelectorAll('.multi-btn').forEach(b=>b.classList.remove('active'));
@@ -2934,8 +2978,9 @@ function makeCharaBlock(idx){
   const hairOther = document.createElement('input');
   hairOther.type = 'text';
   hairOther.id = 'chara_hairother_'+idx;
-  hairOther.placeholder = 'その他（例: グラデーション、メッシュ）';
-  hairOther.style.cssText = 'width:100%;background:white;border:1px solid var(--border);border-radius:5px;padding:0.35rem 0.6rem;font-family:DM Mono,monospace;font-size:0.75rem;color:var(--ink);outline:none;box-sizing:border-box;';
+  hairOther.placeholder = '日本語入力可（例: グラデーション、メッシュ）';
+  hairOther.className = 'inp-ja';
+  hairOther.style.cssText = 'width:100%;border-radius:5px;padding:0.35rem 0.6rem;font-family:DM Mono,monospace;font-size:0.75rem;outline:none;box-sizing:border-box;';
   hairOther.addEventListener('input', function(){
     if(this.value.trim()){
       hairBtns.querySelectorAll('.age-btn').forEach(b=>b.classList.remove('active'));
@@ -2945,11 +2990,12 @@ function makeCharaBlock(idx){
       hairHidden.value = '';
     }
   });
-  HAIR_COLORS.forEach(({v,label})=>{
+  HAIR_COLORS.forEach(({v,label,bg,fg})=>{
     const btn = document.createElement('div');
     btn.className = 'age-btn'+(v===''?' active':'');
     btn.dataset.hc = v;
     btn.textContent = label;
+    if(bg){ btn.style.backgroundColor=bg; btn.style.color=fg||'#fff'; btn.style.borderColor=bg; }
     btn.addEventListener('click',function(){
       hairBtns.querySelectorAll('.age-btn').forEach(b=>b.classList.remove('active'));
       this.classList.add('active');
@@ -3396,9 +3442,10 @@ function makeCharaBlock(idx){
   const itemFreeInput = document.createElement('input');
   itemFreeInput.type = 'text';
   itemFreeInput.id = 'chara_item_free_'+idx;
-  itemFreeInput.placeholder = '自由入力（例: magic_wand, baseball_bat）';
+  itemFreeInput.placeholder = '英語タグのみ（例: magic_wand, baseball_bat）';
   itemFreeInput.className = 'inp-en';
-  itemFreeInput.style.cssText = 'width:100%;background:white;border:1px solid var(--border);border-radius:5px;padding:0.35rem 0.6rem;font-family:DM Mono,monospace;font-size:0.75rem;color:var(--ink);outline:none;box-sizing:border-box;';
+  itemFreeInput.className = 'inp-en';
+  itemFreeInput.style.cssText = 'width:100%;border-radius:5px;padding:0.35rem 0.6rem;font-family:DM Mono,monospace;font-size:0.75rem;outline:none;box-sizing:border-box;';
 
   itemWrap.appendChild(itemCatRow);
   itemWrap.appendChild(itemBtnArea);
@@ -3461,9 +3508,10 @@ function makeCharaBlock(idx){
   const actionFreeInput = document.createElement('input');
   actionFreeInput.type = 'text';
   actionFreeInput.id = 'chara_action_free_'+idx;
-  actionFreeInput.placeholder = '自由入力（例: standing, arms_crossed）';
+  actionFreeInput.placeholder = '英語タグのみ（例: standing, arms_crossed）';
   actionFreeInput.className = 'inp-en';
-  actionFreeInput.style.cssText = 'width:100%;background:white;border:1px solid var(--border);border-radius:5px;padding:0.35rem 0.6rem;font-family:DM Mono,monospace;font-size:0.75rem;color:var(--ink);outline:none;box-sizing:border-box;';
+  actionFreeInput.className = 'inp-en';
+  actionFreeInput.style.cssText = 'width:100%;border-radius:5px;padding:0.35rem 0.6rem;font-family:DM Mono,monospace;font-size:0.75rem;outline:none;box-sizing:border-box;';
   actionFreeInput.addEventListener('input',function(){
     // 自由入力があればhiddenに上書き
     if(this.value.trim()) actionHidden.value = this.value.trim();
@@ -3781,6 +3829,8 @@ async function generate(){
   document.getElementById('lmLabel').style.display='none';
   document.getElementById('finalLabel').style.display='none';
   document.getElementById('promptFinal').style.display='none';
+  document.getElementById('negFinalLabel').style.display='none';
+  document.getElementById('promptNegFinal').style.display='none';
 
   try{
     const useLLM = document.getElementById('useLLM').checked;
@@ -3857,7 +3907,14 @@ async function pollComfyUIComplete(promptIds, steps){
       const data = await res.json();
       for(const pid of (data.completed||[])) pending.delete(pid);
       const done = promptIds.length - pending.size;
-      setStep(steps,'s3','active',`ComfyUI: 生成中 (${done}/${promptIds.length}枚完了)`);
+      const q = data.queue||{};
+      let queueStr = '';
+      if(q.position != null){
+        queueStr = ` — キュー待機中 (${q.position}番目)`;
+      } else if(q.running > 0 || q.pending > 0){
+        queueStr = ` — キュー: 実行中${q.running}件 / 待機${q.pending}件`;
+      }
+      setStep(steps,'s3','active',`ComfyUI: 生成中 (${done}/${promptIds.length}枚完了)${queueStr}`);
     }catch(e){}
   }
   setStep(steps,'s3','done',`ComfyUI: 生成完了 (${promptIds.length}枚)`);
@@ -3938,6 +3995,50 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Type','application/json')
             self.end_headers()
             self.wfile.write(json.dumps(load_config(),ensure_ascii=False).encode('utf-8'))
+        elif self.path.startswith('/test_connection'):
+            from urllib.parse import urlparse, parse_qs
+            import urllib.request as _ureq
+            qs = parse_qs(urlparse(self.path).query)
+            target = qs.get('target',[''])[0]
+            cfg = load_config()
+            result = {'ok': False, 'message': '不明なターゲット'}
+            if target == 'comfyui':
+                comfy = cfg.get('comfyui_url','http://127.0.0.1:8188').rstrip('/')
+                try:
+                    with _ureq.urlopen(comfy+'/system_stats', timeout=5) as r:
+                        stats = json.loads(r.read())
+                    python_ver = stats.get('system',{}).get('python_version','?')
+                    result = {'ok': True, 'message': f'ComfyUI 接続OK (Python {python_ver})'}
+                except Exception as e:
+                    result = {'ok': False, 'message': f'ComfyUI 接続失敗: {e}'}
+            elif target == 'llm':
+                platform = cfg.get('llm_platform','')
+                url = cfg.get('llm_url','').rstrip('/')
+                token = cfg.get('llm_token','').strip()
+                model = cfg.get('llm_model','')
+                if not url:
+                    result = {'ok': False, 'message': 'LLM URLが未設定です'}
+                else:
+                    try:
+                        if platform == 'gemini':
+                            test_url = url + '/chat/completions'
+                        else:
+                            base = url.removesuffix('/v1')
+                            test_url = base + '/v1/models'
+                        headers = {'Content-Type': 'application/json'}
+                        if token:
+                            headers['Authorization'] = f'Bearer {token}'
+                        req = _ureq.Request(test_url, headers=headers)
+                        with _ureq.urlopen(req, timeout=5) as r:
+                            r.read()
+                        result = {'ok': True, 'message': f'LLM 接続OK ({platform or "カスタム"}: {url})'}
+                    except Exception as e:
+                        result = {'ok': False, 'message': f'LLM 接続失敗: {e}'}
+            print(f"[接続テスト] {'OK' if result['ok'] else 'NG'}: {result['message']}")
+            self.send_response(200)
+            self.send_header('Content-Type','application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(result, ensure_ascii=False).encode('utf-8'))
         elif self.path.startswith('/poll_status'):
             from urllib.parse import urlparse, parse_qs
             import urllib.request as _ureq
@@ -3946,18 +4047,35 @@ class Handler(BaseHTTPRequestHandler):
             cfg = load_config()
             comfy = cfg.get('comfyui_url','http://127.0.0.1:8188').rstrip('/')
             completed = []
+            queue_info = {'running': 0, 'pending': 0, 'position': None}
             try:
                 with _ureq.urlopen(comfy+'/history',timeout=3) as r:
                     hist = json.loads(r.read())
                 for pid in ids:
                     if pid and pid in hist and hist[pid].get('status',{}).get('completed'):
                         completed.append(pid)
-            except Exception as e:
+            except Exception:
+                pass
+            try:
+                with _ureq.urlopen(comfy+'/queue',timeout=3) as r:
+                    q = json.loads(r.read())
+                running_list = q.get('queue_running', [])
+                pending_list = q.get('queue_pending', [])
+                queue_info['running'] = len(running_list)
+                queue_info['pending'] = len(pending_list)
+                # 自分のジョブがキュー内の何番目か
+                for pid in ids:
+                    if pid not in completed:
+                        for i, item in enumerate(pending_list):
+                            if len(item) > 1 and item[1] == pid:
+                                queue_info['position'] = i + 1
+                                break
+            except Exception:
                 pass
             self.send_response(200)
             self.send_header('Content-Type','application/json')
             self.end_headers()
-            self.wfile.write(json.dumps({'completed':completed,'total':len(ids)},ensure_ascii=False).encode('utf-8'))
+            self.wfile.write(json.dumps({'completed':completed,'total':len(ids),'queue':queue_info},ensure_ascii=False).encode('utf-8'))
         elif self.path=='/session':
             sf=_sf('anima_session_last.json')
             data={}

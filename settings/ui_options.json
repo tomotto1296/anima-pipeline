@@ -6,47 +6,69 @@
     },
     {
       "v": "black_hair",
-      "label": "黒"
+      "label": "黒",
+      "bg": "#1a1a1a",
+      "fg": "#ffffff"
     },
     {
       "v": "brown_hair",
-      "label": "茶"
+      "label": "茶",
+      "bg": "#8B4513",
+      "fg": "#ffffff"
     },
     {
       "v": "red_hair",
-      "label": "赤"
+      "label": "赤",
+      "bg": "#cc2200",
+      "fg": "#ffffff"
     },
     {
       "v": "blue_hair",
-      "label": "青"
+      "label": "青",
+      "bg": "#3366cc",
+      "fg": "#ffffff"
     },
     {
       "v": "green_hair",
-      "label": "緑"
+      "label": "緑",
+      "bg": "#2d8a2d",
+      "fg": "#ffffff"
     },
     {
       "v": "blonde_hair",
-      "label": "金"
+      "label": "金",
+      "bg": "#f0c040",
+      "fg": "#222222"
     },
     {
       "v": "silver_hair",
-      "label": "銀"
+      "label": "銀",
+      "bg": "#b0b8c8",
+      "fg": "#222222"
     },
     {
       "v": "white_hair",
-      "label": "白"
+      "label": "白",
+      "bg": "#e8e8e8",
+      "fg": "#222222"
     },
     {
       "v": "pink_hair",
-      "label": "桃"
+      "label": "桃",
+      "bg": "#f080a0",
+      "fg": "#222222"
     },
     {
       "v": "purple_hair",
-      "label": "紫"
+      "label": "紫",
+      "bg": "#8844cc",
+      "fg": "#ffffff"
     },
     {
       "v": "orange_hair",
-      "label": "橙"
+      "label": "橙",
+      "bg": "#e07020",
+      "fg": "#ffffff"
     }
   ],
   "eye_colors": [
@@ -56,47 +78,69 @@
     },
     {
       "v": "red_eyes",
-      "label": "赤"
+      "label": "赤",
+      "bg": "#cc2200",
+      "fg": "#ffffff"
     },
     {
       "v": "blue_eyes",
-      "label": "青"
+      "label": "青",
+      "bg": "#3366cc",
+      "fg": "#ffffff"
     },
     {
       "v": "green_eyes",
-      "label": "緑"
+      "label": "緑",
+      "bg": "#2d8a2d",
+      "fg": "#ffffff"
     },
     {
       "v": "yellow_eyes",
-      "label": "黄"
+      "label": "黄",
+      "bg": "#d4a800",
+      "fg": "#222222"
     },
     {
       "v": "purple_eyes",
-      "label": "紫"
+      "label": "紫",
+      "bg": "#8844cc",
+      "fg": "#ffffff"
     },
     {
       "v": "brown_eyes",
-      "label": "茶"
+      "label": "茶",
+      "bg": "#8B4513",
+      "fg": "#ffffff"
     },
     {
       "v": "black_eyes",
-      "label": "黒"
+      "label": "黒",
+      "bg": "#1a1a1a",
+      "fg": "#ffffff"
     },
     {
       "v": "white_eyes",
-      "label": "白"
+      "label": "白",
+      "bg": "#e8e8e8",
+      "fg": "#222222"
     },
     {
       "v": "orange_eyes",
-      "label": "橙"
+      "label": "橙",
+      "bg": "#e07020",
+      "fg": "#ffffff"
     },
     {
       "v": "pink_eyes",
-      "label": "桃"
+      "label": "桃",
+      "bg": "#f080a0",
+      "fg": "#222222"
     },
     {
       "v": "aqua_eyes",
-      "label": "水"
+      "label": "水",
+      "bg": "#00aacc",
+      "fg": "#ffffff"
     }
   ],
   "skin_options": [
@@ -1116,43 +1160,63 @@
     },
     {
       "v": "white",
-      "label": "白"
+      "label": "白",
+      "bg": "#e8e8e8",
+      "fg": "#222222"
     },
     {
       "v": "black",
-      "label": "黒"
+      "label": "黒",
+      "bg": "#1a1a1a",
+      "fg": "#ffffff"
     },
     {
       "v": "red",
-      "label": "赤"
+      "label": "赤",
+      "bg": "#cc2200",
+      "fg": "#ffffff"
     },
     {
       "v": "blue",
-      "label": "青"
+      "label": "青",
+      "bg": "#3366cc",
+      "fg": "#ffffff"
     },
     {
       "v": "green",
-      "label": "緑"
+      "label": "緑",
+      "bg": "#2d8a2d",
+      "fg": "#ffffff"
     },
     {
       "v": "yellow",
-      "label": "黄"
+      "label": "黄",
+      "bg": "#d4a800",
+      "fg": "#222222"
     },
     {
       "v": "pink",
-      "label": "桃"
+      "label": "桃",
+      "bg": "#f080a0",
+      "fg": "#222222"
     },
     {
       "v": "purple",
-      "label": "紫"
+      "label": "紫",
+      "bg": "#8844cc",
+      "fg": "#ffffff"
     },
     {
       "v": "brown",
-      "label": "茶"
+      "label": "茶",
+      "bg": "#8B4513",
+      "fg": "#ffffff"
     },
     {
       "v": "gray",
-      "label": "灰"
+      "label": "灰",
+      "bg": "#888888",
+      "fg": "#ffffff"
     }
   ],
   "place_sub": {
