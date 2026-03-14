@@ -22,7 +22,8 @@ EXTRA_TAGS_FILE    = _sf('extra_tags.json')
 STYLE_TAGS_FILE    = _sf('style_tags.json')
 NEG_EXTRA_TAGS_FILE  = _sf('extra_tags_negative.json')
 NEG_STYLE_TAGS_FILE  = _sf('style_tags_negative.json')
-UI_OPTIONS_FILE    = _sf('ui_options.json')
+UI_OPTIONS_FILE      = _sf('ui_options.json')
+CHARA_PRESETS_DIR    = os.path.join(_base_dir, 'chara')
 
 def load_neg_extra_tags():
     if os.path.exists(NEG_EXTRA_TAGS_FILE):
@@ -785,6 +786,16 @@ HTML = r"""<!DOCTYPE html>
       <button class="sl-btn" style="flex:1" onclick="testConnection('llm')">🤖 LLM 接続テスト</button>
     </div>
     <div id="testResult" style="display:none;font-family:'DM Mono',monospace;font-size:0.75rem;margin-top:0.4rem;padding:0.4rem 0.6rem;border-radius:5px;"></div>
+    <!-- キャラプリセット削除 -->
+    <div style="margin-top:0.8rem;padding:0.6rem 0.7rem;background:#fff5f5;border:1px solid #e0779a;border-radius:7px;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#c0392b;font-weight:bold;margin-bottom:0.4rem;">📋 キャラプリセット削除</div>
+      <div style="display:flex;gap:0.4rem;align-items:center;">
+        <select id="presetDeleteSel" style="flex:1;min-width:0;font-family:'DM Mono',monospace;font-size:0.72rem;border:1px solid #e0779a;border-radius:5px;padding:0.3rem 0.5rem;background:white;color:var(--ink);cursor:pointer;">
+          <option value="">── プリセットを選択 ──</option>
+        </select>
+        <button onclick="deleteCharaPresetFromSettings()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0;width:2.8rem;text-align:center;border:1px solid #e0779a;border-radius:5px;background:white;color:#c0392b;cursor:pointer;">削除</button>
+      </div>
+    </div>
   </div>
 
   <div class="save-load-row" style="margin-bottom:1rem;">
@@ -1102,6 +1113,173 @@ HTML = r"""<!DOCTYPE html>
 
 <script>
 let running=false, settingsOpen=false, lastPositivePrompt=null;
+let charaPresets = [];  // キャラプリセット一覧
+
+// ===== キャラプリセット管理 =====
+async function loadCharaPresets(){
+  try{
+    const res = await fetch('/chara_presets');
+    charaPresets = await res.json();
+    updateAllPresetSelects();
+  }catch(e){ charaPresets=[]; }
+}
+
+async function saveCharaPresetToServer(preset, filename=null){
+  const body = {action:'save', preset, filename};
+  const res = await fetch('/chara_presets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  return await res.json();
+}
+
+async function deleteCharaPresetFromServer(filename){
+  const body = {action:'delete', filename};
+  await fetch('/chara_presets',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+}
+
+function collectCharaData(idx){
+  const ch = {
+    series:   (document.getElementById('chara_series_'+idx)||{value:''}).value,
+    original: document.getElementById('chara_orig_'+idx)?.classList.contains('active')||false,
+    name:     (document.getElementById('chara_name_'+idx)||{value:''}).value,
+    gender:   document.querySelector(`#chara_${idx} .gender-btn.active`)?.dataset.g||'female',
+    age:      document.querySelector(`#chara_${idx} .age-btn.active`)?.dataset.a||'unset',
+  };
+  ['outfit','action','hair','hairstyle','hairstyle_lm','haircolor','eyes','skin','body','misc'].forEach(f=>{
+    ch[f] = (document.getElementById(`chara_${f}_${idx}`)||{value:''}).value;
+  });
+  ['bust','face','eyestate','mouth','effect','ears','tail','wings','acc','item','posv','posh'].forEach(f=>{
+    ch[f] = (document.getElementById(`chara_${f}_${idx}`)||{value:''}).value;
+  });
+  ch.outfit_cat   = document.querySelector(`#chara_${idx} [data-cat].active`)?.dataset.cat||'';
+  ch.outfit_color = document.querySelector(`#chara_${idx} [data-ocolor].active`)?.dataset.ocolor||'';
+  ch.outfit_item  = document.querySelector(`#chara_${idx} [data-oitem].active`)?.dataset.oitem||'';
+  ch.outfit_free     = document.querySelector(`#chara_${idx} #chara_outfit_${idx}`)?.value||'';
+  ch.skinOther       = (document.getElementById(`chara_skin_other_${idx}`)||{value:''}).value;
+  ch.hairstyle_free  = (document.getElementById(`chara_hairstyle_free_${idx}`)||{value:''}).value;
+  ch.hairother       = (document.getElementById(`chara_hairother_${idx}`)||{value:''}).value;
+  ch.action_free     = (document.getElementById(`chara_action_free_${idx}`)||{value:''}).value;
+  ch.item_free       = (document.getElementById(`chara_item_free_${idx}`)||{value:''}).value;
+  return ch;
+}
+
+async function saveCharaPreset(idx){
+  const ch = collectCharaData(idx);
+  const label = ch.name || 'キャラ'+(idx+1);
+  const name = prompt('プリセット名を入力してください', label);
+  if(name===null) return;
+  const preset = { name: name.trim()||label, data: ch, savedAt: new Date().toISOString() };
+  const res = await saveCharaPresetToServer(preset);
+  if(res.ok){
+    preset._filename = res.filename;
+    charaPresets.push(preset);
+    updateAllPresetSelects();
+    alert(`「${preset.name}」を保存しました`);
+  }
+}
+
+async function deleteCharaPreset(idx){
+  const sel = document.getElementById('chara_preset_sel_'+idx);
+  if(!sel || sel.value==='') return;
+  const i = parseInt(sel.value);
+  if(isNaN(i)) return;
+  const preset = charaPresets[i];
+  if(!preset) return;
+  if(!confirm(`「${preset.name}」を削除しますか？`)) return;
+  await deleteCharaPresetFromServer(preset._filename);
+  charaPresets.splice(i, 1);
+  updateAllPresetSelects();
+}
+
+function updatePresetSelect(selEl){
+  if(!selEl) return;
+  const cur = selEl.value;
+  selEl.innerHTML = '<option value="">── プリセットを選択 ──</option>';
+  charaPresets.forEach((p,i)=>{
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = p.name;
+    selEl.appendChild(opt);
+  });
+  if(cur!=='' && charaPresets[parseInt(cur)]) selEl.value = cur;
+}
+
+function updateAllPresetSelects(){
+  document.querySelectorAll('[id^="chara_preset_sel_"]').forEach(sel=>updatePresetSelect(sel));
+  updatePresetSelect(document.getElementById('presetDeleteSel'));
+}
+
+async function deleteCharaPresetFromSettings(){
+  const sel = document.getElementById('presetDeleteSel');
+  if(!sel || sel.value==='') return;
+  const i = parseInt(sel.value);
+  if(isNaN(i)) return;
+  const preset = charaPresets[i];
+  if(!preset) return;
+  if(!confirm(`「${preset.name}」を削除しますか？`)) return;
+  await deleteCharaPresetFromServer(preset._filename);
+  charaPresets.splice(i, 1);
+  updateAllPresetSelects();
+}
+
+function loadCharaPreset(idx){
+  const sel = document.getElementById('chara_preset_sel_'+idx);
+  if(!sel || sel.value==='') return;
+  const preset = charaPresets[parseInt(sel.value)];
+  if(!preset) return;
+  // applySessionのキャラ部分を流用
+  const ch = preset.data;
+  setTimeout(()=>{
+    if(document.getElementById('chara_series_'+idx)) document.getElementById('chara_series_'+idx).value = ch.series||'';
+    if(ch.original){
+      const ob = document.getElementById('chara_orig_'+idx);
+      if(ob && !ob.classList.contains('active')) ob.click();
+    }
+    if(document.getElementById('chara_name_'+idx)) document.getElementById('chara_name_'+idx).value = ch.name||'';
+    const gRow = document.querySelector(`#chara_${idx} .chara-attr-btns.gender-row`);
+    if(gRow) gRow.querySelectorAll('.gender-btn').forEach(b=>b.classList.toggle('active', b.dataset.g===ch.gender));
+    const aRow = document.querySelector(`#chara_${idx} .chara-attr-btns.age-row`);
+    if(aRow) aRow.querySelectorAll('.age-btn').forEach(b=>b.classList.toggle('active', b.dataset.a===ch.age));
+    ['outfit','action','hair','hairstyle','hairstyle_lm','haircolor','eyes','skin','body','misc'].forEach(f=>{
+      const el = document.getElementById(`chara_${f}_${idx}`);
+      if(el) el.value = ch[f]||'';
+    });
+    ['bust','face','eyestate','mouth','effect','ears','tail','wings','acc','item','posv','posh'].forEach(f=>{
+      const el = document.getElementById(`chara_${f}_${idx}`);
+      if(el) el.value = ch[f]||'';
+    });
+    // 衣装復元
+    if(ch.outfit_cat!==undefined){
+      const catBtn = document.querySelector(`#chara_${idx} [data-outcat="${ch.outfit_cat}"]`);
+      if(catBtn) catBtn.click();
+      if(ch.outfit_color) document.querySelectorAll(`#chara_${idx} [data-ocolor]`).forEach(b=>b.classList.toggle('active',b.dataset.ocolor===ch.outfit_color));
+      if(ch.outfit_item)  document.querySelectorAll(`#chara_${idx} [data-oitem]`).forEach(b=>b.classList.toggle('active',b.dataset.oitem===ch.outfit_item));
+      if(ch.outfit_free){ const of=document.querySelector(`#chara_${idx} #chara_outfit_${idx}`); if(of) of.value=ch.outfit_free; }
+    }
+    // 肌色復元
+    const skinHid = document.getElementById(`chara_skin_${idx}`);
+    if(skinHid){ skinHid.value=ch.skin||''; document.querySelectorAll(`#chara_${idx} [data-skin]`).forEach(b=>b.classList.toggle('active',b.dataset.skin===(ch.skin||''))); }
+    const skinOtherEl = document.getElementById(`chara_skin_other_${idx}`);
+    if(skinOtherEl) skinOtherEl.value = ch.skinOther||'';
+    // 自由入力欄復元
+    const hsf = document.getElementById(`chara_hairstyle_free_${idx}`);
+    if(hsf && ch.hairstyle_free) hsf.value = ch.hairstyle_free;
+    const hof = document.getElementById(`chara_hairother_${idx}`);
+    if(hof && ch.hairother) hof.value = ch.hairother;
+    const acf = document.getElementById(`chara_action_free_${idx}`);
+    if(acf && ch.action_free) acf.value = ch.action_free;
+    const itf = document.getElementById(`chara_item_free_${idx}`);
+    if(itf && ch.item_free) itf.value = ch.item_free;
+    // 瞳色復元
+    const eyeHid = document.getElementById(`chara_eyes_${idx}`);
+    if(eyeHid && ch.eyes){ eyeHid.value=ch.eyes; document.querySelectorAll(`#chara_${idx} [data-eye]`).forEach(b=>b.classList.toggle('active',b.dataset.eye===ch.eyes)); }
+    // 詳細欄を自動展開
+    const hasDetail = ['outfit','action','hair','eyes','skin','body','misc','bust'].some(f=>ch[f]);
+    if(hasDetail){
+      const opt = document.getElementById('chara_opt_'+idx);
+      const btn = opt?.previousElementSibling?.querySelector('.chara-expand');
+      if(opt && opt.style.display==='none'){ opt.style.display='block'; if(btn) btn.textContent='－ 詳細'; }
+    }
+  }, 50);
+}
 let selectedW=1024, selectedH=1024;
 let selectedFmt='png';
 let selectedCount=1;
@@ -1393,6 +1571,10 @@ function collectSessionData(){
     ch['skin'] = (document.getElementById(`chara_skin_${i}`)||{value:''}).value;
     ch['skinOther'] = (document.getElementById(`chara_skin_other_${i}`)||{value:''}).value;
     ch['eyes'] = (document.getElementById(`chara_eyes_${i}`)||{value:''}).value;
+    ch['hairstyle_free'] = (document.getElementById(`chara_hairstyle_free_${i}`)||{value:''}).value;
+    ch['hairother']      = (document.getElementById(`chara_hairother_${i}`)||{value:''}).value;
+    ch['action_free']    = (document.getElementById(`chara_action_free_${i}`)||{value:''}).value;
+    ch['item_free']      = (document.getElementById(`chara_item_free_${i}`)||{value:''}).value;
     chars.push(ch);
   }
   return {
@@ -1693,6 +1875,15 @@ function applySession(data){
         const btn = opt?.previousElementSibling?.querySelector('.chara-expand');
         if(opt && opt.style.display==='none'){ opt.style.display='block'; if(btn) btn.textContent='－ 詳細'; }
       }
+      // 自由入力欄の復元
+      const hairStyleFreeEl = document.getElementById(`chara_hairstyle_free_${i}`);
+      if(hairStyleFreeEl && ch['hairstyle_free']) hairStyleFreeEl.value = ch['hairstyle_free'];
+      const hairOtherEl = document.getElementById(`chara_hairother_${i}`);
+      if(hairOtherEl && ch['hairother']) hairOtherEl.value = ch['hairother'];
+      const actionFreeEl = document.getElementById(`chara_action_free_${i}`);
+      if(actionFreeEl && ch['action_free']) actionFreeEl.value = ch['action_free'];
+      const itemFreeEl = document.getElementById(`chara_item_free_${i}`);
+      if(itemFreeEl && ch['item_free']) itemFreeEl.value = ch['item_free'];
     });
     // シーン
     document.getElementById('f_place').value = data.place||'';
@@ -2476,6 +2667,35 @@ function makeCharaBlock(idx){
   row2.appendChild(genderGroup);
   row2.appendChild(ageGroup);
 
+  // --- プリセット行（キャラブロック内）---
+  const charaPresetRow = document.createElement('div');
+  charaPresetRow.style.cssText = 'margin-bottom:0.4rem;';
+  // 1行: キャラN + select + 読込 + 保存
+  const cpRow1 = document.createElement('div');
+  cpRow1.style.cssText = 'display:flex;gap:0.3rem;align-items:center;';
+  const cpNumLbl = document.createElement('span');
+  cpNumLbl.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);white-space:nowrap;';
+  cpNumLbl.textContent = 'キャラ'+n;
+  const charaPresetSel = document.createElement('select');
+  charaPresetSel.id = 'chara_preset_sel_'+idx;
+  charaPresetSel.style.cssText = 'flex:1;min-width:0;font-family:DM Mono,monospace;font-size:0.72rem;border:1px solid var(--accent);border-radius:5px;padding:0.28rem 0.45rem;background:white;color:var(--ink);cursor:pointer;';
+  charaPresetSel.innerHTML = '<option value="">── プリセット選択 ──</option>';
+  charaPresets.forEach((p,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=p.name; charaPresetSel.appendChild(o); });
+  const charaPresetLoadBtn = document.createElement('button');
+  charaPresetLoadBtn.textContent = '読込';
+  charaPresetLoadBtn.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;padding:0.28rem 0;width:2.8rem;text-align:center;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;';
+  charaPresetLoadBtn.onclick = ()=>loadCharaPreset(idx);
+  const charaPresetSaveBtn = document.createElement('button');
+  charaPresetSaveBtn.textContent = '保存';
+  charaPresetSaveBtn.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;padding:0.28rem 0;width:2.8rem;text-align:center;border:1px solid var(--accent);border-radius:5px;background:white;color:var(--accent);cursor:pointer;';
+  charaPresetSaveBtn.onclick = ()=>saveCharaPreset(idx);
+  cpRow1.appendChild(cpNumLbl);
+  cpRow1.appendChild(charaPresetSel);
+  cpRow1.appendChild(charaPresetLoadBtn);
+  cpRow1.appendChild(charaPresetSaveBtn);
+  charaPresetRow.appendChild(cpRow1);
+
+  header.appendChild(charaPresetRow);
   header.appendChild(row1);
   header.appendChild(row2);
   div.appendChild(header);
@@ -2941,6 +3161,7 @@ function makeCharaBlock(idx){
   });
   const hairStyleFree = document.createElement('input');
   hairStyleFree.type = 'text';
+  hairStyleFree.id = 'chara_hairstyle_free_'+idx;
   hairStyleFree.placeholder = '日本語入力可（例: お団子、ドレッド）';
   hairStyleFree.className = 'inp-ja';
   hairStyleFree.style.cssText = 'width:100%;border-radius:5px;padding:0.35rem 0.6rem;font-family:DM Mono,monospace;font-size:0.75rem;outline:none;box-sizing:border-box;';
@@ -3802,7 +4023,7 @@ function initCharaAttrButtons(idx){
   // 性別ボタン動的生成（makeCharaBlock呼び出し時に使用）
 }
 
-document.addEventListener('DOMContentLoaded', ()=>{ updateCharaBlocks(); loadSettings(); initExtraPresets(); initQualityMeta(); initQualityMetaNeg(); initNegExtraPresets(); initNegSafetyButtons(); loadNegStyleTagsFromServer(); initSceneButtons(); initSizePresets(); loadLastSession(); loadStyleTagsFromServer(); });
+document.addEventListener('DOMContentLoaded', ()=>{ loadCharaPresets().then(()=>updateCharaBlocks()); loadSettings(); initExtraPresets(); initQualityMeta(); initQualityMetaNeg(); initNegExtraPresets(); initNegSafetyButtons(); loadNegStyleTagsFromServer(); initSceneButtons(); initSizePresets(); loadLastSession(); loadStyleTagsFromServer(); });
 
 async function generate(){
   if(running)return;
@@ -3953,6 +4174,19 @@ async function regenPrompt(){
     }else{
       const promptIds = data.prompt_ids || [data.prompt_id];
       setStep(steps,'s_regen','done','ComfyUI: キューに追加 ('+promptIds.length+'枚)');
+      // 送信ポジティブ・ネガティブ表示を更新
+      if(data.final_prompt){
+        document.getElementById('finalLabel').style.display='block';
+        const finalEl = document.getElementById('promptFinal');
+        finalEl.textContent = data.final_prompt;
+        finalEl.style.display = 'block';
+      }
+      if(data.negative_prompt){
+        document.getElementById('negFinalLabel').style.display='block';
+        const negFinalEl = document.getElementById('promptNegFinal');
+        negFinalEl.textContent = data.negative_prompt;
+        negFinalEl.style.display = 'block';
+      }
       pollComfyUIComplete(promptIds, steps);
       return;
     }
@@ -4085,6 +4319,21 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Type','application/json')
             self.end_headers()
             self.wfile.write(json.dumps(data,ensure_ascii=False).encode('utf-8'))
+        elif self.path=='/chara_presets':
+            presets = []
+            if os.path.exists(CHARA_PRESETS_DIR):
+                for fn in sorted(os.listdir(CHARA_PRESETS_DIR)):
+                    if fn.endswith('.json'):
+                        try:
+                            with open(os.path.join(CHARA_PRESETS_DIR,fn),'r',encoding='utf-8') as f:
+                                p = json.load(f)
+                                p['_filename'] = fn
+                                presets.append(p)
+                        except: pass
+            self.send_response(200)
+            self.send_header('Content-Type','application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(presets,ensure_ascii=False).encode('utf-8'))
         elif self.path=='/extra_tags':
             self.send_response(200)
             self.send_header('Content-Type','application/json')
@@ -4129,6 +4378,41 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Type','application/json')
             self.end_headers()
             self.wfile.write(b'{"ok":true}')
+        elif self.path=='/chara_presets':
+            # body: {action:'save'|'delete', preset:{name,data}, filename?}
+            action = body.get('action','save')
+            os.makedirs(CHARA_PRESETS_DIR, exist_ok=True)
+            result = {'ok': True}
+            try:
+                if action == 'save':
+                    preset = body.get('preset',{})
+                    # ファイル名: 連番_名前.json
+                    existing = sorted([f for f in os.listdir(CHARA_PRESETS_DIR) if f.endswith('.json')])
+                    n = len(existing) + 1
+                    safe_name = preset.get('name','preset').replace('/','_').replace('\\','_')[:30]
+                    filename = f'{n:03d}_{safe_name}.json'
+                    # 同名上書き
+                    if body.get('filename'):
+                        filename = body['filename']
+                    filepath = os.path.join(CHARA_PRESETS_DIR, filename)
+                    with open(filepath,'w',encoding='utf-8') as f:
+                        json.dump(preset, f, ensure_ascii=False, indent=2)
+                    result['filename'] = filename
+                    print(f'[プリセット] 保存: {filename}')
+                elif action == 'delete':
+                    filename = body.get('filename','')
+                    if filename:
+                        filepath = os.path.join(CHARA_PRESETS_DIR, filename)
+                        if os.path.exists(filepath):
+                            os.remove(filepath)
+                            print(f'[プリセット] 削除: {filename}')
+            except Exception as e:
+                result = {'ok': False, 'error': str(e)}
+                print(f'[プリセット] エラー: {e}')
+            self.send_response(200)
+            self.send_header('Content-Type','application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(result,ensure_ascii=False).encode('utf-8'))
         elif self.path=='/extra_tags':
             save_extra_tags(body.get("tags",[]))
             self.send_response(200)
@@ -4208,7 +4492,7 @@ class Handler(BaseHTTPRequestHandler):
                     print(f"[ComfyUI] 再生成キュー ({i+1}/{count}): {pid}")
                     if fmt=='webp':
                         watch_and_convert(comfyui_url,output_dir,date_folder,pid,cid)
-                result={'prompt_ids':prompt_ids,'prompt_id':prompt_ids[0] if prompt_ids else ''}
+                result={'prompt_ids':prompt_ids,'prompt_id':prompt_ids[0] if prompt_ids else '','final_prompt':prompt,'negative_prompt':regen_negative}
                 self.send_response(200)
                 self.send_header('Content-Type','application/json')
                 self.end_headers()
