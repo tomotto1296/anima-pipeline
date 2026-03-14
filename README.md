@@ -64,7 +64,8 @@ anima_pipeline/
   anima_pipeline_guide.md    ← 詳細ガイド
   image_anima_preview.json   ← ワークフローJSON（自分で用意）
   settings/
-    pipeline_config.json     ← 設定ファイル（APIキーを入れたらgit管理注意）
+    pipeline_config.json     ← 設定ファイル（**APIキーが書き込まれるためgit管理除外推奨**）
+    pipeline_config.default.json ← 初期値テンプレート
     ui_options.json          ← UIボタン選択肢の定義
     llm_system_prompt.txt    ← LLMシステムプロンプト
 ```

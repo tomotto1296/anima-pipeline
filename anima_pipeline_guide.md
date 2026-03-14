@@ -28,7 +28,8 @@ anima_pipeline/
   anima_pipeline_guide.md        ← このファイル
   image_anima_preview.json       ← Animaワークフロー（ComfyUI用）※後述
   settings/
-    pipeline_config.json         ← 初期設定（ComfyUI URL・Node ID等）
+    pipeline_config.json         ← 初期設定（ComfyUI URL・Node ID等）※APIキー入力後はgit管理除外推奨
+    pipeline_config.default.json ← 初期値テンプレート（git管理用）
     ui_options.json              ← UIボタン選択肢の定義（編集可）
     llm_system_prompt.txt        ← LLMへのシステムプロンプト（編集可）
 ```

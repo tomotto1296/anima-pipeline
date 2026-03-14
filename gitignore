@@ -1,4 +1,6 @@
-# 個人設定（APIキー等）※設定ファイルは初期値入りで配布
+# 個人設定（APIキー等）※pipeline_config.jsonはAPIキーが書き込まれるため除外
+# 初期値は pipeline_config.default.json として管理
+settings/pipeline_config.json
 
 # 自動生成ファイル
 settings/extra_tags.json
