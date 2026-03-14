@@ -335,6 +335,14 @@
     {
       "v": "smirk",
       "label": "ニヤリ"
+    },
+    {
+      "v": "serious",
+      "label": "真剣"
+    },
+    {
+      "v": "sleepy",
+      "label": "眠そう"
     }
   ],
   "eye_state_options": [

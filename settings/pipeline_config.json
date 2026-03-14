@@ -1,15 +1,14 @@
 {
-  "llm_platform": "",
-  "llm_url": "http://localhost:1234",
-  "llm_token": "",
+  "llm_platform": "gemini",
+  "llm_token": "AIzaSyD8YNN7CEzKo0RVtWbFPl4fsuv2IMKBFEU",
   "tool_danbooru_rag": true,
   "tool_danbooru_api": true,
   "tool_duckduckgo": true,
-  "llm_model": "qwen/qwen3.5-9b-uncensored-hauhaucs-aggressive",
+  "llm_model": "gemini-2.5-flash",
+  "llm_url": "https://generativelanguage.googleapis.com/v1beta/openai",
   "comfyui_url": "http://127.0.0.1:8188",
   "workflow_json_path": "image_anima_preview.json",
+  "comfyui_output_dir": "D:\\ComfyUI_Portable\\ComfyUI_windows_portable\\ComfyUI\\output",
   "positive_node_id": "11",
-  "negative_node_id": "12",
-  "comfyui_output_dir": "",
-  "clip_node_id": "45"
+  "negative_node_id": "12"
 }

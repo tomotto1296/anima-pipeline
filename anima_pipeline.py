@@ -93,7 +93,7 @@ DEFAULT_CONFIG = {
     "workflow_json_path": "image_anima_preview.json",
     "positive_node_id": "11",
     "negative_node_id": "12",
-    "comfyui_output_dir": "",  # 空の場合はworkflow_json_pathから自動推定
+    "comfyui_output_dir": "",  # WebP変換用・絶対パスで入力推奨（空の場合は自動推定するが失敗することがある）
     "clip_node_id": "45",
 }
 
@@ -196,8 +196,15 @@ def call_llm(user_input: str, cfg: dict) -> str:
     resp.raise_for_status()
     data = resp.json()
     # OpenAI互換レスポンス
-    if "choices" in data:
-        return data["choices"][0]["message"]["content"]
+    if "choices" in data and data["choices"]:
+        msg = data["choices"][0].get("message", {})
+        content = msg.get("content")
+        if content:
+            return content
+        # contentがない場合（安全フィルターによるブロック等）
+        finish_reason = data["choices"][0].get("finish_reason", "")
+        print(f"[LLM] contentなし finish_reason={finish_reason!r} → フィルターブロックの可能性")
+        raise ValueError(f"LLMがコンテンツを返しませんでした (finish_reason={finish_reason!r}). システムプロンプトを確認してください。")
     # 旧形式フォールバック
     if "output" in data:
         blocks = [i.get("content","") for i in data["output"] if i.get("type")=="message" and i.get("content","").strip()]
@@ -765,8 +772,8 @@ HTML = r"""<!DOCTYPE html>
         </div>
       </div>
       <div class="field">
-        <label>⑨ ComfyUI output フォルダ（WebP変換用・空で自動推定）</label>
-        <input type="text" id="outputDirInput" placeholder="D:\ComfyUI_Portable\...\ComfyUI\output">
+        <label>⑨ ComfyUI output フォルダ（WebP変換用・<strong style="color:#e74c3c">絶対パスで入力推奨</strong>）</label>
+        <input type="text" id="outputDirInput" placeholder="例: D:\ComfyUI_Portable\ComfyUI_windows_portable\ComfyUI\output">
       </div>
     </div>
     <button class="save-btn" onclick="saveSettings()">💾 設定を保存</button>
@@ -1386,6 +1393,7 @@ function collectSessionData(){
     metaTags:     collectCheckedTags('metaTags'),
     lmPrompt:     document.getElementById('promptOutput').textContent||'',
     finalPrompt:  document.getElementById('promptFinal').textContent||'',
+    imgW: selectedW, imgH: selectedH, imgFmt: selectedFmt, imgCount: selectedCount,
     savedAt: new Date().toISOString(),
   };
 }
@@ -1726,6 +1734,11 @@ function applySession(data){
       pf.style.display='block';
     }
     if(data.lmPrompt){ document.getElementById('regenBtn').classList.add('show'); running=false; document.getElementById('btn').disabled=false; }
+    // 画像サイズ・フォーマット・枚数
+    if(data.imgW){ selectedW=data.imgW; document.getElementById('widthInput').value=data.imgW; }
+    if(data.imgH){ selectedH=data.imgH; document.getElementById('heightInput').value=data.imgH; }
+    if(data.imgFmt){ selectedFmt=data.imgFmt; document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.toggle('active',b.dataset.fmt===data.imgFmt)); }
+    if(data.imgCount){ selectedCount=data.imgCount; const ce=document.getElementById('countInput'); if(ce) ce.value=data.imgCount; }
   }, 50);
 }
 
@@ -3747,6 +3760,8 @@ async function generate(){
   if(running)return;
   const {valid, payload, charDirectTags} = collectInput();
   if(!valid){alert('シリーズまたはいずれかのキャラ名を入力してください');return;}
+  // 生成開始時に設定を自動保存
+  await saveSettings();
   payload.extra_tags = Array.from(extraTags);
   payload.prompt_prefix = collectPromptPrefix();
   payload.negative_prompt = collectNegativePrompt();
@@ -4053,7 +4068,10 @@ class Handler(BaseHTTPRequestHandler):
                 date_folder=datetime.date.today().strftime('%Y-%m-%d')
                 output_dir=cfg.get('comfyui_output_dir','').strip()
                 if not output_dir:
-                    wf_path=cfg.get('workflow_json_path','').replace(os.sep,'/')
+                    wf_path=cfg.get('workflow_json_path','')
+                    if wf_path and not os.path.isabs(wf_path):
+                        wf_path=os.path.join(_base_dir, wf_path)
+                    wf_path=wf_path.replace(os.sep,'/')
                     parts=wf_path.split('/')
                     output_dir=''
                     for i,p in enumerate(parts):
@@ -4061,7 +4079,7 @@ class Handler(BaseHTTPRequestHandler):
                             output_dir=os.path.normpath('/'.join(parts[:i+1])+'/output')
                             break
                     if not output_dir:
-                        output_dir=os.path.normpath(os.path.join(os.path.dirname(cfg.get('workflow_json_path','')),'..','..',  'output'))
+                        output_dir=os.path.normpath(os.path.join(os.path.dirname(wf_path),'..','..',  'output'))
                 comfyui_url=cfg.get('comfyui_url','http://127.0.0.1:8188')
                 prompt_ids=[]
                 for i in range(count):
@@ -4172,7 +4190,10 @@ class Handler(BaseHTTPRequestHandler):
                     date_folder = datetime.date.today().strftime("%Y-%m-%d")
                     output_dir = cfg.get("comfyui_output_dir","").strip()
                     if not output_dir:
-                        wf_path = cfg.get("workflow_json_path","").replace(os.sep, "/")
+                        wf_path = cfg.get("workflow_json_path","")
+                        if wf_path and not os.path.isabs(wf_path):
+                            wf_path = os.path.join(_base_dir, wf_path)
+                        wf_path = wf_path.replace(os.sep, "/")
                         parts = wf_path.split("/")
                         output_dir = ""
                         for i, p in enumerate(parts):
@@ -4181,7 +4202,7 @@ class Handler(BaseHTTPRequestHandler):
                                 break
                         if not output_dir:
                             output_dir = os.path.normpath(os.path.join(
-                                os.path.dirname(cfg.get("workflow_json_path","")), "..", "..", "output"))
+                                os.path.dirname(wf_path), "..", "..", "output"))
                     comfyui_url = cfg.get('comfyui_url','http://127.0.0.1:8188')
                     prompt_ids = []
                     for i in range(img_count):
