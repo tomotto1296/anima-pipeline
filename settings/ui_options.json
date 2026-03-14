@@ -11,9 +11,21 @@
       "fg": "#ffffff"
     },
     {
+      "v": "dark_brown_hair",
+      "label": "濃茶",
+      "bg": "#4a2c0a",
+      "fg": "#ffffff"
+    },
+    {
       "v": "brown_hair",
       "label": "茶",
       "bg": "#8B4513",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "light_brown_hair",
+      "label": "薄茶",
+      "bg": "#c68642",
       "fg": "#ffffff"
     },
     {
@@ -23,15 +35,9 @@
       "fg": "#ffffff"
     },
     {
-      "v": "blue_hair",
-      "label": "青",
-      "bg": "#3366cc",
-      "fg": "#ffffff"
-    },
-    {
-      "v": "green_hair",
-      "label": "緑",
-      "bg": "#2d8a2d",
+      "v": "orange_hair",
+      "label": "橙",
+      "bg": "#e07020",
       "fg": "#ffffff"
     },
     {
@@ -41,15 +47,63 @@
       "fg": "#222222"
     },
     {
-      "v": "silver_hair",
-      "label": "銀",
-      "bg": "#b0b8c8",
+      "v": "light_blonde_hair",
+      "label": "薄金",
+      "bg": "#f8e88a",
       "fg": "#222222"
     },
     {
-      "v": "white_hair",
-      "label": "白",
-      "bg": "#e8e8e8",
+      "v": "yellow_hair",
+      "label": "黄",
+      "bg": "#f5d800",
+      "fg": "#222222"
+    },
+    {
+      "v": "green_hair",
+      "label": "緑",
+      "bg": "#2d8a2d",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "light_green_hair",
+      "label": "薄緑",
+      "bg": "#80c880",
+      "fg": "#222222"
+    },
+    {
+      "v": "aqua_hair",
+      "label": "水緑",
+      "bg": "#00b0a0",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "blue_hair",
+      "label": "青",
+      "bg": "#3366cc",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "light_blue_hair",
+      "label": "水色",
+      "bg": "#60a8e0",
+      "fg": "#222222"
+    },
+    {
+      "v": "dark_blue_hair",
+      "label": "紺",
+      "bg": "#1a2a70",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "purple_hair",
+      "label": "紫",
+      "bg": "#8844cc",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "light_purple_hair",
+      "label": "薄紫",
+      "bg": "#c090e0",
       "fg": "#222222"
     },
     {
@@ -59,16 +113,40 @@
       "fg": "#222222"
     },
     {
-      "v": "purple_hair",
-      "label": "紫",
-      "bg": "#8844cc",
+      "v": "light_pink_hair",
+      "label": "薄桃",
+      "bg": "#f8b8c8",
+      "fg": "#222222"
+    },
+    {
+      "v": "silver_hair",
+      "label": "銀",
+      "bg": "#b0b8c8",
+      "fg": "#222222"
+    },
+    {
+      "v": "grey_hair",
+      "label": "灰",
+      "bg": "#808080",
       "fg": "#ffffff"
     },
     {
-      "v": "orange_hair",
-      "label": "橙",
-      "bg": "#e07020",
-      "fg": "#ffffff"
+      "v": "white_hair",
+      "label": "白",
+      "bg": "#e8e8e8",
+      "fg": "#222222"
+    },
+    {
+      "v": "multicolored_hair",
+      "label": "マルチ",
+      "bg": "#cc88cc",
+      "fg": "#222222"
+    },
+    {
+      "v": "gradient_hair",
+      "label": "グラデ",
+      "bg": "#88aaee",
+      "fg": "#222222"
     }
   ],
   "eye_colors": [
@@ -77,33 +155,15 @@
       "label": "－"
     },
     {
-      "v": "red_eyes",
-      "label": "赤",
-      "bg": "#cc2200",
+      "v": "black_eyes",
+      "label": "黒",
+      "bg": "#1a1a1a",
       "fg": "#ffffff"
     },
     {
-      "v": "blue_eyes",
-      "label": "青",
-      "bg": "#3366cc",
-      "fg": "#ffffff"
-    },
-    {
-      "v": "green_eyes",
-      "label": "緑",
-      "bg": "#2d8a2d",
-      "fg": "#ffffff"
-    },
-    {
-      "v": "yellow_eyes",
-      "label": "黄",
-      "bg": "#d4a800",
-      "fg": "#222222"
-    },
-    {
-      "v": "purple_eyes",
-      "label": "紫",
-      "bg": "#8844cc",
+      "v": "dark_brown_eyes",
+      "label": "濃茶",
+      "bg": "#4a2c0a",
       "fg": "#ffffff"
     },
     {
@@ -113,21 +173,15 @@
       "fg": "#ffffff"
     },
     {
-      "v": "black_eyes",
-      "label": "黒",
-      "bg": "#1a1a1a",
+      "v": "amber_eyes",
+      "label": "琥珀",
+      "bg": "#c68620",
       "fg": "#ffffff"
     },
     {
-      "v": "white_eyes",
-      "label": "白",
-      "bg": "#e8e8e8",
-      "fg": "#222222"
-    },
-    {
-      "v": "orange_eyes",
-      "label": "橙",
-      "bg": "#e07020",
+      "v": "red_eyes",
+      "label": "赤",
+      "bg": "#cc2200",
       "fg": "#ffffff"
     },
     {
@@ -137,10 +191,82 @@
       "fg": "#222222"
     },
     {
-      "v": "aqua_eyes",
-      "label": "水",
-      "bg": "#00aacc",
+      "v": "orange_eyes",
+      "label": "橙",
+      "bg": "#e07020",
       "fg": "#ffffff"
+    },
+    {
+      "v": "yellow_eyes",
+      "label": "黄",
+      "bg": "#f5d800",
+      "fg": "#222222"
+    },
+    {
+      "v": "green_eyes",
+      "label": "緑",
+      "bg": "#2d8a2d",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "teal_eyes",
+      "label": "青緑",
+      "bg": "#009090",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "aqua_eyes",
+      "label": "水緑",
+      "bg": "#00b0a0",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "blue_eyes",
+      "label": "青",
+      "bg": "#3366cc",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "light_blue_eyes",
+      "label": "水色",
+      "bg": "#60a8e0",
+      "fg": "#222222"
+    },
+    {
+      "v": "grey_eyes",
+      "label": "灰",
+      "bg": "#808080",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "silver_eyes",
+      "label": "銀",
+      "bg": "#b0b8c8",
+      "fg": "#222222"
+    },
+    {
+      "v": "purple_eyes",
+      "label": "紫",
+      "bg": "#8844cc",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "violet_eyes",
+      "label": "菫",
+      "bg": "#6633aa",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "white_eyes",
+      "label": "白",
+      "bg": "#e8e8e8",
+      "fg": "#222222"
+    },
+    {
+      "v": "gold_eyes",
+      "label": "金",
+      "bg": "#d4a800",
+      "fg": "#222222"
     }
   ],
   "skin_options": [
@@ -150,19 +276,33 @@
     },
     {
       "v": "pale_skin",
-      "label": "白い"
+      "label": "色白",
+      "bg": "#f5e6d8",
+      "fg": "#444444"
     },
     {
       "v": "light_skin",
-      "label": "薄め"
+      "label": "薄め",
+      "bg": "#e8c9a0",
+      "fg": "#444444"
+    },
+    {
+      "v": "tan",
+      "label": "日焼け",
+      "bg": "#c8924a",
+      "fg": "#ffffff"
     },
     {
       "v": "dark_skin",
-      "label": "小麦色"
+      "label": "小麦色",
+      "bg": "#a0632a",
+      "fg": "#ffffff"
     },
     {
       "v": "very_dark_skin",
-      "label": "黒い"
+      "label": "黒い",
+      "bg": "#5a3010",
+      "fg": "#ffffff"
     }
   ],
   "bust_options": [
@@ -436,13 +576,28 @@
       "group": "state"
     },
     {
+      "v": "tsurime",
+      "label": "ツリ目",
+      "group": "state"
+    },
+    {
+      "v": "tareme",
+      "label": "タレ目",
+      "group": "state"
+    },
+    {
+      "v": "sanpaku",
+      "label": "三白眼",
+      "group": "state"
+    },
+    {
       "v": "heart-shaped_eyes",
       "label": "ハート目",
       "group": "state"
     },
     {
       "v": "sparkling_eyes",
-      "label": "キラキラ目",
+      "label": "キラキラ",
       "group": "state"
     }
   ],
@@ -1159,51 +1314,15 @@
       "label": "－"
     },
     {
-      "v": "white",
-      "label": "白",
-      "bg": "#e8e8e8",
-      "fg": "#222222"
-    },
-    {
       "v": "black",
       "label": "黒",
       "bg": "#1a1a1a",
       "fg": "#ffffff"
     },
     {
-      "v": "red",
-      "label": "赤",
-      "bg": "#cc2200",
-      "fg": "#ffffff"
-    },
-    {
-      "v": "blue",
-      "label": "青",
-      "bg": "#3366cc",
-      "fg": "#ffffff"
-    },
-    {
-      "v": "green",
-      "label": "緑",
-      "bg": "#2d8a2d",
-      "fg": "#ffffff"
-    },
-    {
-      "v": "yellow",
-      "label": "黄",
-      "bg": "#d4a800",
-      "fg": "#222222"
-    },
-    {
-      "v": "pink",
-      "label": "桃",
-      "bg": "#f080a0",
-      "fg": "#222222"
-    },
-    {
-      "v": "purple",
-      "label": "紫",
-      "bg": "#8844cc",
+      "v": "dark_brown",
+      "label": "濃茶",
+      "bg": "#4a2c0a",
       "fg": "#ffffff"
     },
     {
@@ -1213,10 +1332,94 @@
       "fg": "#ffffff"
     },
     {
-      "v": "gray",
-      "label": "灰",
-      "bg": "#888888",
+      "v": "red",
+      "label": "赤",
+      "bg": "#cc2200",
       "fg": "#ffffff"
+    },
+    {
+      "v": "orange",
+      "label": "橙",
+      "bg": "#e07020",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "yellow",
+      "label": "黄",
+      "bg": "#f5d800",
+      "fg": "#222222"
+    },
+    {
+      "v": "green",
+      "label": "緑",
+      "bg": "#2d8a2d",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "light_green",
+      "label": "薄緑",
+      "bg": "#80c880",
+      "fg": "#222222"
+    },
+    {
+      "v": "blue",
+      "label": "青",
+      "bg": "#3366cc",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "light_blue",
+      "label": "水色",
+      "bg": "#60a8e0",
+      "fg": "#222222"
+    },
+    {
+      "v": "navy",
+      "label": "紺",
+      "bg": "#1a2a70",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "purple",
+      "label": "紫",
+      "bg": "#8844cc",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "pink",
+      "label": "桃",
+      "bg": "#f080a0",
+      "fg": "#222222"
+    },
+    {
+      "v": "white",
+      "label": "白",
+      "bg": "#e8e8e8",
+      "fg": "#222222"
+    },
+    {
+      "v": "grey",
+      "label": "灰",
+      "bg": "#808080",
+      "fg": "#ffffff"
+    },
+    {
+      "v": "silver",
+      "label": "銀",
+      "bg": "#b0b8c8",
+      "fg": "#222222"
+    },
+    {
+      "v": "gold",
+      "label": "金",
+      "bg": "#d4a800",
+      "fg": "#222222"
+    },
+    {
+      "v": "multicolored",
+      "label": "マルチ",
+      "bg": "#cc88cc",
+      "fg": "#222222"
     }
   ],
   "place_sub": {

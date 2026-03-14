@@ -122,6 +122,7 @@ def save_config(cfg: dict):
 
 
 SYSTEM_PROMPT_FILE = _sf('llm_system_prompt.txt')
+PRESET_GEN_PROMPT_FILE = _sf('preset_gen_prompt.txt')
 
 # 旧パスからsettingsフォルダへ自動移行
 for _fn in ['pipeline_config.json','extra_tags.json','extra_tags_negative.json','style_tags.json','style_tags_negative.json',
@@ -132,6 +133,21 @@ for _fn in ['pipeline_config.json','extra_tags.json','extra_tags_negative.json',
     if os.path.exists(_old) and not os.path.exists(_new):
         os.rename(_old, _new)
         print(f'[settings] 移行: {_fn} → settings/')
+def load_preset_gen_prompt():
+    try:
+        with open(PRESET_GEN_PROMPT_FILE, 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        return (
+            'Generate a character preset JSON for anime image generation.\n'
+            'Character: {chara_name}\nSeries: {chara_series}\nDanbooru Wiki: {wiki_text}\n\n'
+            'Output ONLY a valid JSON object: {"gender":"female or male or other","age":"adult or child or unset",'
+            '"hairstyle":"hair style tags e.g. long_hair,ponytail","haircolor":"single hair color tag e.g. purple_hair",'
+            '"eyes":"single eye color tag e.g. red_eyes","skin":"skin tag or empty","bust":"bust tag or empty",'
+            '"outfit":"default outfit tags comma separated"}\n'
+            'IMPORTANT: Be accurate about hair/eye colors.\nRules: lowercase underscore Danbooru tags only. Output ONLY the JSON.'
+        )
+
 def load_system_prompt():
     try:
         with open(SYSTEM_PROMPT_FILE, 'r', encoding='utf-8') as f:
@@ -1150,7 +1166,7 @@ function collectCharaData(idx){
     ch[f] = (document.getElementById(`chara_${f}_${idx}`)||{value:''}).value;
   });
   ch.outfit_cat   = document.querySelector(`#chara_${idx} [data-cat].active`)?.dataset.cat||'';
-  ch.outfit_color = document.querySelector(`#chara_${idx} [data-ocolor].active`)?.dataset.ocolor||'';
+  ch.outfit_color = document.querySelector(`#chara_${idx} [data-ocolor]`)?.dataset.ocolor||'';
   ch.outfit_item  = document.querySelector(`#chara_${idx} [data-oitem].active`)?.dataset.oitem||'';
   ch.outfit_free     = document.querySelector(`#chara_${idx} #chara_outfit_${idx}`)?.value||'';
   ch.skinOther       = (document.getElementById(`chara_skin_other_${idx}`)||{value:''}).value;
@@ -1159,6 +1175,37 @@ function collectCharaData(idx){
   ch.action_free     = (document.getElementById(`chara_action_free_${idx}`)||{value:''}).value;
   ch.item_free       = (document.getElementById(`chara_item_free_${idx}`)||{value:''}).value;
   return ch;
+}
+
+async function generateCharaPreset(idx){
+  const nameEl = document.getElementById('chara_name_'+idx);
+  const seriesEl = document.getElementById('chara_series_'+idx);
+  const name = nameEl?.value.trim()||'';
+  const series = seriesEl?.value.trim()||'';
+  if(!name){ alert('キャラ名を入力してください'); return; }
+  const btn = document.querySelector('#chara_'+idx+' button[title*="自動生成"]');
+  if(btn){ btn.textContent='⏳'; btn.disabled=true; }
+  try{
+    const url = '/generate_preset?name='+encodeURIComponent(name)+'&series='+encodeURIComponent(series);
+    const res = await fetch(url);
+    const data = await res.json();
+    if(data.ok){
+      const preset = data.preset;
+      charaPresets.push(preset);
+      updateAllPresetSelects();
+      // 自動的に読込
+      const sel = document.getElementById('chara_preset_sel_'+idx);
+      if(sel){ sel.value = charaPresets.length-1; }
+      loadCharaPreset(idx);
+      alert('「'+preset.name+'」のプリセットを生成・読込しました');
+    } else {
+      alert('生成失敗: '+(data.error||'不明なエラー'));
+    }
+  }catch(e){
+    alert('エラー: '+e.message);
+  } finally {
+    if(btn){ btn.textContent='🔍'; btn.disabled=false; }
+  }
 }
 
 async function saveCharaPreset(idx){
@@ -1238,7 +1285,7 @@ function loadCharaPreset(idx){
     if(gRow) gRow.querySelectorAll('.gender-btn').forEach(b=>b.classList.toggle('active', b.dataset.g===ch.gender));
     const aRow = document.querySelector(`#chara_${idx} .chara-attr-btns.age-row`);
     if(aRow) aRow.querySelectorAll('.age-btn').forEach(b=>b.classList.toggle('active', b.dataset.a===ch.age));
-    ['outfit','action','hair','hairstyle','hairstyle_lm','haircolor','eyes','skin','body','misc'].forEach(f=>{
+    ['action','hair','hairstyle','hairstyle_lm','haircolor','eyes','skin','body','misc'].forEach(f=>{
       const el = document.getElementById(`chara_${f}_${idx}`);
       if(el) el.value = ch[f]||'';
     });
@@ -1246,19 +1293,68 @@ function loadCharaPreset(idx){
       const el = document.getElementById(`chara_${f}_${idx}`);
       if(el) el.value = ch[f]||'';
     });
-    // 衣装復元
-    if(ch.outfit_cat!==undefined){
+    // 衣装復元（outfit_catがある場合はボタンUI、なければoutfit_freeに流す）
+    if(ch.outfit_cat){
       const catBtn = document.querySelector(`#chara_${idx} [data-outcat="${ch.outfit_cat}"]`);
       if(catBtn) catBtn.click();
-      if(ch.outfit_color) document.querySelectorAll(`#chara_${idx} [data-ocolor]`).forEach(b=>b.classList.toggle('active',b.dataset.ocolor===ch.outfit_color));
+      if(ch.outfit_color){
+        const oColorSel = document.querySelector(`#chara_${idx} [data-ocolor]`);
+        if(oColorSel){ oColorSel.value=ch.outfit_color; oColorSel.dataset.ocolor=ch.outfit_color; const found=OUTFIT_COLORS.find(c=>c.v===ch.outfit_color); if(found){oColorSel.style.backgroundColor=found.bg;oColorSel.style.color=found.fg;} }
+      }
       if(ch.outfit_item)  document.querySelectorAll(`#chara_${idx} [data-oitem]`).forEach(b=>b.classList.toggle('active',b.dataset.oitem===ch.outfit_item));
-      if(ch.outfit_free){ const of=document.querySelector(`#chara_${idx} #chara_outfit_${idx}`); if(of) of.value=ch.outfit_free; }
+    }
+    // outfit_freeまたはoutfit（タグ文字列）を自由入力欄に
+    const outfitFreeEl = document.getElementById(`chara_outfit_free_${idx}`);
+    if(outfitFreeEl){
+      outfitFreeEl.value = ch.outfit_free || ch.outfit || '';
+    }
+    // 髪型ボタン復元
+    if(ch.hairstyle){
+      const hsVals = ch.hairstyle.split(',').map(v=>v.trim()).filter(Boolean);
+      document.querySelector(`#chara_${idx}`)?.querySelectorAll('[data-hs]').forEach(b=>{
+        b.classList.toggle('active', hsVals.includes(b.dataset.hs));
+      });
+      const hsHid = document.getElementById(`chara_hairstyle_${idx}`);
+      if(hsHid) hsHid.value = ch.hairstyle;
+    }
+    // multiボタン復元（face/eyestate/mouth/effect）
+    ['face','eyestate','mouth','effect'].forEach(f=>{
+      const hid = document.getElementById(`chara_${f}_${idx}`);
+      if(hid && ch[f]){
+        const vals = ch[f].split(',').map(v=>v.trim()).filter(Boolean);
+        document.querySelector(`#chara_${idx}`)?.querySelectorAll(`[data-${f}]`).forEach(b=>{
+          b.classList.toggle('active', vals.includes(b.dataset[f]));
+        });
+      }
+    });
+    // bustボタン復元
+    const bustHid2 = document.getElementById(`chara_bust_${idx}`);
+    if(bustHid2 && ch.bust){
+      bustHid2.value = ch.bust;
+      const bustRow2 = document.getElementById(`chara_bust_row_${idx}`);
+      if(bustRow2) bustRow2.querySelectorAll('.age-btn').forEach(b=>b.classList.toggle('active', b.dataset.bust===ch.bust));
+    }
+    // 髪色select復元
+    const hairSelEl = document.querySelector(`#chara_${idx} select[id^=""][id=""]`) || (() => {
+      // hairSelはidがないのでhairHiddenの前のselectを探す
+      const hcHid = document.getElementById(`chara_haircolor_${idx}`);
+      return hcHid?.previousElementSibling?.tagName==='INPUT' ? hcHid?.parentElement?.querySelector('select') : hcHid?.previousElementSibling;
+    })();
+    if(hairSelEl && ch.haircolor){
+      hairSelEl.value = ch.haircolor;
+      const hcFound = HAIR_COLORS.find(c=>c.v===ch.haircolor);
+      if(hcFound){ hairSelEl.style.backgroundColor=hcFound.bg||'white'; hairSelEl.style.color=hcFound.fg||'var(--ink)'; }
+      document.getElementById(`chara_haircolor_${idx}`).value = ch.haircolor;
     }
     // 肌色復元
     const skinHid = document.getElementById(`chara_skin_${idx}`);
-    if(skinHid){ skinHid.value=ch.skin||''; document.querySelectorAll(`#chara_${idx} [data-skin]`).forEach(b=>b.classList.toggle('active',b.dataset.skin===(ch.skin||''))); }
+    if(skinHid){
+      skinHid.value = ch.skin||'';
+      const skinSelEl = skinHid.parentElement?.querySelector('select');
+      if(skinSelEl){ skinSelEl.value=ch.skin||''; const f=SKIN_OPTIONS.find(c=>c.v===(ch.skin||'')); if(f?.bg){skinSelEl.style.backgroundColor=f.bg;skinSelEl.style.color=f.fg||'var(--ink)';} }
+    }
     const skinOtherEl = document.getElementById(`chara_skin_other_${idx}`);
-    if(skinOtherEl) skinOtherEl.value = ch.skinOther||'';
+    if(skinOtherEl) skinOtherEl.value = ch.skinOther||''
     // 自由入力欄復元
     const hsf = document.getElementById(`chara_hairstyle_free_${idx}`);
     if(hsf && ch.hairstyle_free) hsf.value = ch.hairstyle_free;
@@ -1268,9 +1364,14 @@ function loadCharaPreset(idx){
     if(acf && ch.action_free) acf.value = ch.action_free;
     const itf = document.getElementById(`chara_item_free_${idx}`);
     if(itf && ch.item_free) itf.value = ch.item_free;
-    // 瞳色復元
-    const eyeHid = document.getElementById(`chara_eyes_${idx}`);
-    if(eyeHid && ch.eyes){ eyeHid.value=ch.eyes; document.querySelectorAll(`#chara_${idx} [data-eye]`).forEach(b=>b.classList.toggle('active',b.dataset.eye===ch.eyes)); }
+    // 瞳色select復元
+    const eyeHid2 = document.getElementById(`chara_eyes_${idx}`);
+    if(eyeHid2 && ch.eyes){
+      eyeHid2.value=ch.eyes;
+      const eyeWrapEl = eyeHid2.parentElement;
+      const eyeSelEl2 = eyeWrapEl?.querySelector('select');
+      if(eyeSelEl2){ eyeSelEl2.value=ch.eyes; const f=EYE_COLORS.find(c=>c.v===ch.eyes); if(f){eyeSelEl2.style.backgroundColor=f.bg||'white';eyeSelEl2.style.color=f.fg||'var(--ink)';} }
+    }
     // 詳細欄を自動展開
     const hasDetail = ['outfit','action','hair','eyes','skin','body','misc','bust'].some(f=>ch[f]);
     if(hasDetail){
@@ -1565,7 +1666,7 @@ function collectSessionData(){
     ch['posv'] = (document.getElementById(`chara_posv_${i}`)||{value:''}).value;
     ch['posh'] = (document.getElementById(`chara_posh_${i}`)||{value:''}).value;
     ch['outfit_cat']   = document.querySelector(`#chara_${i} [data-cat].active`)?.dataset.cat||'';
-    ch['outfit_color'] = document.querySelector(`#chara_${i} [data-ocolor].active`)?.dataset.ocolor||'';
+    ch['outfit_color'] = document.querySelector(`#chara_${i} [data-ocolor]`)?.dataset.ocolor||'';
     ch['outfit_item']  = document.querySelector(`#chara_${i} [data-oitem].active`)?.dataset.oitem||'';
     ch['outfit_free']  = document.querySelector(`#chara_${i} #chara_outfit_${i}`)?.value||'';
     ch['skin'] = (document.getElementById(`chara_skin_${i}`)||{value:''}).value;
@@ -1839,23 +1940,28 @@ function applySession(data){
           else b.classList.toggle('active', faceVals.includes(b.dataset.face));
         });
       }
+      // 髪色select復元
+      const hcHid = document.getElementById(`chara_haircolor_${i}`);
+      if(hcHid && ch['haircolor']){
+        hcHid.value = ch['haircolor'];
+        const hcWrap = hcHid.parentElement;
+        const hcSel = hcWrap?.querySelector('select');
+        if(hcSel){ hcSel.value=ch['haircolor']; const f=HAIR_COLORS.find(c=>c.v===ch['haircolor']); if(f){hcSel.style.backgroundColor=f.bg||'white';hcSel.style.color=f.fg||'var(--ink)';} }
+      }
       // 瞳の色復元
       let eyeHid = document.getElementById(`chara_eyes_${i}`);
       if(eyeHid && ch['eyes']){
         eyeHid.value = ch['eyes'];
-        // オッドアイか判定
-        if(ch['eyes'].includes('オッドアイ')){
-          // オッドアイUIは複雑なのでその他として表示はスキップ、値は保持
-        } else {
-          document.querySelectorAll(`#chara_${i} [data-eye]`).forEach(b=>{
-            b.classList.toggle('active', b.dataset.eye===ch['eyes']);
-          });
-        }
+        const eyeWrapEl2 = eyeHid.parentElement;
+        const eyeSelEl3 = eyeWrapEl2?.querySelector('select');
+        if(eyeSelEl3){ eyeSelEl3.value=ch['eyes']; const f=EYE_COLORS.find(c=>c.v===ch['eyes']); if(f){eyeSelEl3.style.backgroundColor=f.bg||'white';eyeSelEl3.style.color=f.fg||'var(--ink)';} }
       }
       // 肌色復元
       let skinHid = document.getElementById(`chara_skin_${i}`);
       if(skinHid){
         skinHid.value = ch['skin']||'';
+        const skinSelEl2 = skinHid.parentElement?.querySelector('select');
+        if(skinSelEl2){ skinSelEl2.value=ch['skin']||''; const f=SKIN_OPTIONS.find(c=>c.v===(ch['skin']||'')); if(f?.bg){skinSelEl2.style.backgroundColor=f.bg;skinSelEl2.style.color=f.fg||'var(--ink)';} }
         let skinOtherEl = document.getElementById(`chara_skin_other_${i}`);
         let isPreset = SKIN_OPTIONS.some(o=>o.v===ch['skin']);
         if(isPreset){
@@ -2689,10 +2795,16 @@ function makeCharaBlock(idx){
   charaPresetSaveBtn.textContent = '保存';
   charaPresetSaveBtn.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;padding:0.28rem 0;width:2.8rem;text-align:center;border:1px solid var(--accent);border-radius:5px;background:white;color:var(--accent);cursor:pointer;';
   charaPresetSaveBtn.onclick = ()=>saveCharaPreset(idx);
+  const charaPresetAutoBtn = document.createElement('button');
+  charaPresetAutoBtn.textContent = '🔍';
+  charaPresetAutoBtn.title = 'Danbooru Wiki+LLMでプリセット自動生成';
+  charaPresetAutoBtn.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;padding:0.28rem 0;width:2.8rem;text-align:center;border:1px solid #3a8c5c;border-radius:5px;background:white;color:#3a8c5c;cursor:pointer;';
+  charaPresetAutoBtn.onclick = ()=>generateCharaPreset(idx);
   cpRow1.appendChild(cpNumLbl);
   cpRow1.appendChild(charaPresetSel);
   cpRow1.appendChild(charaPresetLoadBtn);
   cpRow1.appendChild(charaPresetSaveBtn);
+  cpRow1.appendChild(charaPresetAutoBtn);
   charaPresetRow.appendChild(cpRow1);
 
   header.appendChild(charaPresetRow);
@@ -2766,12 +2878,25 @@ function makeCharaBlock(idx){
   skinLabelWrap.appendChild(makeLMCheckbox('chara_skin_lm_'+idx, false));
   const skinWrap = document.createElement('div');
   skinWrap.style.cssText = 'display:flex;flex-direction:column;gap:0.3rem;width:100%;';
-  const skinBtns = document.createElement('div');
-  skinBtns.style.cssText = 'display:flex;gap:0.25rem;flex-wrap:wrap;';
   const skinHidden = document.createElement('input');
   skinHidden.type = 'hidden';
   skinHidden.id = 'chara_skin_'+idx;
   skinHidden.value = '';
+  const skinSel = document.createElement('select');
+  skinSel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.75rem;border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.5rem;background:white;color:var(--ink);cursor:pointer;width:100%;';
+  SKIN_OPTIONS.forEach(({v,label,bg,fg})=>{
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = label;
+    if(bg){ opt.style.backgroundColor=bg; opt.style.color=fg||'#444'; }
+    skinSel.appendChild(opt);
+  });
+  skinSel.addEventListener('change',function(){
+    skinHidden.value = this.value;
+    const found = SKIN_OPTIONS.find(c=>c.v===this.value);
+    this.style.backgroundColor = found?.bg||'white';
+    this.style.color = found?.fg||'var(--ink)';
+    skinOther.value = '';
+  });
   const skinOther = document.createElement('input');
   skinOther.type = 'text';
   skinOther.id = 'chara_skin_other_'+idx;
@@ -2780,28 +2905,13 @@ function makeCharaBlock(idx){
   skinOther.style.cssText = 'width:100%;border-radius:5px;padding:0.35rem 0.6rem;font-family:DM Mono,monospace;font-size:0.75rem;outline:none;box-sizing:border-box;';
   skinOther.addEventListener('input', function(){
     if(this.value.trim()){
-      skinBtns.querySelectorAll('.age-btn').forEach(b=>b.classList.remove('active'));
+      skinSel.value = ''; skinSel.style.backgroundColor='white'; skinSel.style.color='var(--ink)';
       skinHidden.value = this.value.trim();
     } else {
-      // テキスト消したら「なし」に戻す
-      skinBtns.querySelector('[data-skin=""]').classList.add('active');
-      skinHidden.value = '';
+      skinHidden.value = skinSel.value;
     }
   });
-  SKIN_OPTIONS.forEach(({v,label})=>{
-    const btn = document.createElement('div');
-    btn.className = 'age-btn' + (v===''?' active':'');
-    btn.dataset.skin = v;
-    btn.textContent = label;
-    btn.addEventListener('click', function(){
-      skinBtns.querySelectorAll('.age-btn').forEach(b=>b.classList.remove('active'));
-      this.classList.add('active');
-      skinHidden.value = v;
-      skinOther.value = '';
-    });
-    skinBtns.appendChild(btn);
-  });
-  skinWrap.appendChild(skinBtns);
+  skinWrap.appendChild(skinSel);
   skinWrap.appendChild(skinOther);
   skinWrap.appendChild(skinHidden);
   skinRow.appendChild(skinLabelWrap);
@@ -2822,9 +2932,25 @@ function makeCharaBlock(idx){
   const eyeWrap = document.createElement('div');
   eyeWrap.style.cssText = 'display:flex;flex-direction:column;gap:0.35rem;width:100%;';
 
-  // 通常カラーボタン行
-  const eyeBtns = document.createElement('div');
-  eyeBtns.style.cssText = 'display:flex;gap:0.25rem;flex-wrap:wrap;';
+  // 通常カラーselect行
+  const eyeSel = document.createElement('select');
+  eyeSel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.75rem;border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.5rem;background:white;color:var(--ink);cursor:pointer;width:100%;';
+  EYE_COLORS.forEach(({v,label,bg,fg})=>{
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = label;
+    if(bg){ opt.style.backgroundColor=bg; opt.style.color=fg||'#fff'; }
+    eyeSel.appendChild(opt);
+  });
+  eyeSel.addEventListener('change',function(){
+    if(oddBtn.dataset.odd==='0'){
+      const sel = EYE_COLORS.find(c=>c.v===this.value);
+      this.style.backgroundColor = sel?.bg||'white';
+      this.style.color = sel?.fg||'var(--ink)';
+      updateEyeValue();
+    }
+  });
+  const eyeBtns = eyeSel; // 後続コードの互換性のためalias
   const eyeHidden = document.createElement('input');
   eyeHidden.type = 'hidden';
   eyeHidden.id = 'chara_eyes_'+idx;
@@ -2833,6 +2959,7 @@ function makeCharaBlock(idx){
   // オッドアイ切替ボタン
   const oddBtn = document.createElement('div');
   oddBtn.className = 'age-btn odd-eye-btn';
+  oddBtn.style.cssText = 'width:2.8rem;text-align:center;flex-shrink:0;font-size:0.7rem;padding:0.28rem 0;';
   oddBtn.innerHTML = '<span class="odd-long">オッドアイ</span><span class="odd-short">odd</span>';
   oddBtn.dataset.odd = '0';
 
@@ -2842,26 +2969,28 @@ function makeCharaBlock(idx){
   const oddLabels = ['左目','右目'];
   const oddSelects = oddLabels.map((lbl,oi)=>{
     const g = document.createElement('div');
-    g.style.cssText = 'display:flex;flex-direction:column;gap:0.15rem;';
+    g.style.cssText = 'display:flex;flex-direction:column;gap:0.15rem;flex:1;';
     const gl = document.createElement('div');
     gl.style.cssText = 'font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);';
     gl.textContent = lbl;
-    const row = document.createElement('div');
-    row.style.cssText = 'display:flex;gap:0.2rem;flex-wrap:wrap;';
+    const sel = document.createElement('select');
+    sel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.75rem;border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.5rem;background:white;color:var(--ink);cursor:pointer;width:100%;';
+    sel.dataset['odd'+oi] = '';
     EYE_COLORS.filter(c=>c.v!=='').forEach(({v,label,bg,fg})=>{
-      const b = document.createElement('div');
-      b.className = 'age-btn';
-      b.dataset['odd'+oi] = v;
-      b.textContent = label;
-      if(bg){ b.style.backgroundColor=bg; b.style.color=fg||'#fff'; b.style.borderColor=bg; }
-      b.addEventListener('click',function(){
-        row.querySelectorAll('.age-btn').forEach(x=>x.classList.remove('active'));
-        this.classList.add('active');
-        updateEyeValue();
-      });
-      row.appendChild(b);
+      const opt = document.createElement('option');
+      opt.value = v;
+      opt.textContent = label;
+      if(bg){ opt.style.backgroundColor=bg; opt.style.color=fg||'#fff'; }
+      sel.appendChild(opt);
     });
-    g.appendChild(gl); g.appendChild(row);
+    sel.addEventListener('change',function(){
+      const found = EYE_COLORS.find(c=>c.v===this.value);
+      this.style.backgroundColor = found?.bg||'white';
+      this.style.color = found?.fg||'var(--ink)';
+      sel.dataset['odd'+oi] = this.value;
+      updateEyeValue();
+    });
+    g.appendChild(gl); g.appendChild(sel);
     return g;
   });
   oddSelects.forEach(g=>oddWrap.appendChild(g));
@@ -2876,44 +3005,32 @@ function makeCharaBlock(idx){
 
   function updateEyeValue(){
     if(oddBtn.dataset.odd==='1'){
-      const l = oddSelects[0].querySelector('.age-btn.active')?.dataset.odd0||'';
-      const r = oddSelects[1].querySelector('.age-btn.active')?.dataset.odd1||'';
-      const eyeMap={赤:'red',青:'blue',緑:'green',黄:'yellow',紫:'purple',茶:'brown',黒:'black',白:'white'};
-      const lt=eyeMap[l]||l; const rt=eyeMap[r]||r;
-      eyeHidden.value = l&&r ? lt+'_eyes, '+rt+'_eyes, heterochromia' : (l||r||'');
+      const l = oddSelects[0].querySelector('select').value||'';
+      const r = oddSelects[1].querySelector('select').value||'';
+      eyeHidden.value = l&&r ? l+', '+r+', heterochromia' : (l||r||'');
     } else {
-      eyeHidden.value = eyeBtns.querySelector('.age-btn.active')?.dataset.eye||'';
+      eyeHidden.value = eyeSel.value||'';
     }
   }
 
-  EYE_COLORS.forEach(({v,label,bg,fg})=>{
-    const btn = document.createElement('div');
-    btn.className = 'age-btn' + (v===''?' active':'');
-    btn.dataset.eye = v;
-    btn.textContent = label;
-    if(bg){ btn.style.backgroundColor=bg; btn.style.color=fg||'#fff'; btn.style.borderColor=bg; }
-    btn.addEventListener('click',function(){
-      eyeBtns.querySelectorAll('.age-btn').forEach(b=>b.classList.remove('active'));
-      this.classList.add('active');
-      updateEyeValue();
-    });
-    eyeBtns.appendChild(btn);
-  });
-  eyeBtns.appendChild(oddBtn);
+  const eyeSelRow = document.createElement('div');
+  eyeSelRow.style.cssText = 'display:flex;gap:0.3rem;align-items:center;';
+  eyeSel.style.flex = '1';
+  eyeSel.style.width = '';
+  eyeSelRow.appendChild(eyeSel);
+  eyeSelRow.appendChild(oddBtn);
 
   oddBtn.addEventListener('click',function(){
     const isOdd = this.dataset.odd==='0';
     this.dataset.odd = isOdd?'1':'0';
     this.classList.toggle('active', isOdd);
     oddWrap.style.display = isOdd?'flex':'none';
-    eyeBtns.querySelectorAll('.age-btn:not([data-odd])').forEach(b=>{
-      b.style.display = isOdd?'none':'';
-    });
-    if(!isOdd){ eyeBtns.querySelector('[data-eye=""]').classList.add('active'); }
+    eyeSel.style.display = isOdd?'none':'';
+    if(!isOdd){ eyeSel.value=''; eyeSel.style.backgroundColor='white'; eyeSel.style.color='var(--ink)'; }
     updateEyeValue();
   });
 
-  eyeWrap.appendChild(eyeBtns);
+  eyeWrap.appendChild(eyeSelRow);
   eyeWrap.appendChild(oddWrap);
   eyeWrap.appendChild(eyeHidden);
   eyeRow.appendChild(eyeLabelWrap);
@@ -3001,20 +3118,24 @@ function makeCharaBlock(idx){
   const botLabel = makeSubLabel('下半身');
 
   function makeColorBtns(row, stateKey){
+    const sel = document.createElement('select');
+    sel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.75rem;border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.5rem;background:white;color:var(--ink);cursor:pointer;width:100%;';
+    sel.dataset.ocolor = '';
     OUTFIT_COLORS.forEach(({v,label,bg,fg})=>{
-      const btn=document.createElement('div');
-      btn.className='age-btn'+(v===''?' active':'');
-      btn.dataset.ocolor=v;
-      btn.textContent=label;
-      if(bg){ btn.style.backgroundColor=bg; btn.style.color=fg||'#fff'; btn.style.borderColor=bg; }
-      btn.addEventListener('click',function(){
-        row.querySelectorAll('.age-btn').forEach(b=>b.classList.remove('active'));
-        this.classList.add('active');
-        outfitState[stateKey].color=v;
-        buildOutfitValue();
-      });
-      row.appendChild(btn);
+      const opt=document.createElement('option');
+      opt.value=v; opt.textContent=label;
+      if(bg){ opt.style.backgroundColor=bg; opt.style.color=fg||'#fff'; }
+      sel.appendChild(opt);
     });
+    sel.addEventListener('change',function(){
+      const found=OUTFIT_COLORS.find(c=>c.v===this.value);
+      this.style.backgroundColor=found?.bg||'white';
+      this.style.color=found?.fg||'var(--ink)';
+      sel.dataset.ocolor=this.value;
+      outfitState[stateKey].color=this.value;
+      buildOutfitValue();
+    });
+    row.appendChild(sel);
   }
   function makeItemBtns(row, stateKey, items){
     row.innerHTML='';
@@ -3190,12 +3311,25 @@ function makeCharaBlock(idx){
   hairColorLabel.textContent = '② 髪色';
   hairColorLabelWrap.appendChild(hairColorLabel);
   hairColorLabelWrap.appendChild(makeLMCheckbox('chara_haircolor_lm_'+idx, false));
-  const hairBtns = document.createElement('div');
-  hairBtns.style.cssText = 'display:flex;gap:0.2rem;flex-wrap:wrap;';
   const hairHidden = document.createElement('input');
   hairHidden.type = 'hidden';
   hairHidden.id = 'chara_haircolor_'+idx;
   hairHidden.value = '';
+  const hairSel = document.createElement('select');
+  hairSel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.75rem;border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.5rem;background:white;color:var(--ink);cursor:pointer;width:100%;';
+  HAIR_COLORS.forEach(({v,label,bg,fg})=>{
+    const opt = document.createElement('option');
+    opt.value = v;
+    opt.textContent = label;
+    if(bg){ opt.style.backgroundColor=bg; opt.style.color=fg||'#fff'; }
+    hairSel.appendChild(opt);
+  });
+  hairSel.addEventListener('change',function(){
+    hairHidden.value = this.value;
+    const sel = HAIR_COLORS.find(c=>c.v===this.value);
+    this.style.backgroundColor = sel?.bg||'white';
+    this.style.color = sel?.fg||'var(--ink)';
+  });
   const hairOther = document.createElement('input');
   hairOther.type = 'text';
   hairOther.id = 'chara_hairother_'+idx;
@@ -3204,30 +3338,16 @@ function makeCharaBlock(idx){
   hairOther.style.cssText = 'width:100%;border-radius:5px;padding:0.35rem 0.6rem;font-family:DM Mono,monospace;font-size:0.75rem;outline:none;box-sizing:border-box;';
   hairOther.addEventListener('input', function(){
     if(this.value.trim()){
-      hairBtns.querySelectorAll('.age-btn').forEach(b=>b.classList.remove('active'));
+      hairSel.value = '';
+      hairSel.style.backgroundColor='white'; hairSel.style.color='var(--ink)';
       hairHidden.value = this.value.trim();
     } else {
-      hairBtns.querySelector('[data-hc=""]').classList.add('active');
-      hairHidden.value = '';
+      hairHidden.value = hairSel.value;
     }
-  });
-  HAIR_COLORS.forEach(({v,label,bg,fg})=>{
-    const btn = document.createElement('div');
-    btn.className = 'age-btn'+(v===''?' active':'');
-    btn.dataset.hc = v;
-    btn.textContent = label;
-    if(bg){ btn.style.backgroundColor=bg; btn.style.color=fg||'#fff'; btn.style.borderColor=bg; }
-    btn.addEventListener('click',function(){
-      hairBtns.querySelectorAll('.age-btn').forEach(b=>b.classList.remove('active'));
-      this.classList.add('active');
-      hairHidden.value = v;
-      hairOther.value = '';
-    });
-    hairBtns.appendChild(btn);
   });
   const hairColorWrap = document.createElement('div');
   hairColorWrap.style.cssText = 'display:flex;flex-direction:column;gap:0.2rem;width:100%;';
-  hairColorWrap.appendChild(hairBtns);
+  hairColorWrap.appendChild(hairSel);
   hairColorWrap.appendChild(hairOther);
   hairColorWrap.appendChild(hairHidden);
   hairColorRow.appendChild(hairColorLabelWrap);
@@ -3401,6 +3521,7 @@ function makeCharaBlock(idx){
       : ('multi-btn'+(v===''?' active':''));
     btn.dataset.es = v;
     btn.textContent = label;
+    if(group==='open') btn.style.minWidth = '3rem';
     btn.addEventListener('click',function(){
       if(group==='open'){
         // 単一選択
@@ -4255,7 +4376,8 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     try:
                         if platform == 'gemini':
-                            test_url = url + '/chat/completions'
+                            # Gemini OpenAI互換のmodelsエンドポイント
+                            test_url = url + '/models'
                         else:
                             base = url.removesuffix('/v1')
                             test_url = base + '/v1/models'
@@ -4319,6 +4441,83 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Type','application/json')
             self.end_headers()
             self.wfile.write(json.dumps(data,ensure_ascii=False).encode('utf-8'))
+        elif self.path.startswith('/generate_preset'):
+            from urllib.parse import urlparse, parse_qs
+            qs = parse_qs(urlparse(self.path).query)
+            chara_name = qs.get('name',[''])[0].strip()
+            chara_series = qs.get('series',[''])[0].strip()
+            if not chara_name:
+                self.send_response(400)
+                self.send_header('Content-Type','application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({'error':'キャラ名が必要です'}).encode())
+            else:
+                import urllib.request as _ureq
+                cfg = load_config()
+                wiki_text = ''
+                tag_guess = chara_name.lower().replace(' ','_').replace('\u30fb','_').replace('\u3000','_')
+                try:
+                    from urllib.parse import quote
+                    wiki_url = 'https://danbooru.donmai.us/wiki_pages/'+quote(tag_guess)+'.json'
+                    req = _ureq.Request(wiki_url, headers={'User-Agent':'anima-pipeline/1.0'})
+                    with _ureq.urlopen(req, timeout=10) as r:
+                        wiki_data = json.loads(r.read())
+                        wiki_text = wiki_data.get('body','')[:2000]
+                    print('[プリセット生成] Wiki取得: '+tag_guess+' ('+str(len(wiki_text))+'文字)')
+                except Exception as e:
+                    print('[プリセット生成] Wiki取得失敗: '+str(e))
+                _tpl = load_preset_gen_prompt()
+                preset_prompt = _tpl.replace('{chara_name}', chara_name).replace('{chara_series}', chara_series or 'unknown').replace('{wiki_text}', wiki_text or 'Not found. Use your training knowledge.')
+                try:
+                    result_json = call_llm(preset_prompt, cfg)
+                    import re as _re
+                    result_json = _re.sub(r'```[a-z]*','',result_json).strip().strip('`').strip()
+                    preset_data = json.loads(result_json)
+                    preset = {
+                        'name': chara_name,
+                        'data': {
+                            'name': chara_name,
+                            'series': chara_series,
+                            'gender': preset_data.get('gender','female'),
+                            'age': preset_data.get('age','adult'),
+                            'original': False,
+                            'hairstyle': preset_data.get('hairstyle',''),
+                            'hairstyle_lm': '',
+                            'haircolor': preset_data.get('haircolor',''),
+                            'eyes': preset_data.get('eyes',''),
+                            'skin': preset_data.get('skin',''),
+                            'bust': preset_data.get('bust',''),
+                            'outfit': '',  # outfit_freeに入れるためここは空
+                            'outfit_free': preset_data.get('outfit',''),
+                            'body': '', 'misc': '', 'action': '', 'hair': '',
+                            'face': '', 'eyestate': '', 'mouth': '', 'effect': '',
+                            'ears': '', 'tail': '', 'wings': '', 'acc': '',
+                            'item': '', 'posv': '', 'posh': '',
+                            'outfit_cat': '', 'outfit_color': '', 'outfit_item': '',
+                            'skinOther': '', 'hairstyle_free': '', 'hairother': '',
+                            'action_free': '', 'item_free': '',
+                        },
+                        'savedAt': __import__('datetime').datetime.now().isoformat(),
+                    }
+                    os.makedirs(CHARA_PRESETS_DIR, exist_ok=True)
+                    existing = sorted([f for f in os.listdir(CHARA_PRESETS_DIR) if f.endswith('.json')])
+                    n = len(existing) + 1
+                    safe_name = chara_name.replace('/','_').replace('\\','_')[:30]
+                    filename = '{:03d}_{}.json'.format(n, safe_name)
+                    with open(os.path.join(CHARA_PRESETS_DIR, filename),'w',encoding='utf-8') as f:
+                        json.dump(preset, f, ensure_ascii=False, indent=2)
+                    preset['_filename'] = filename
+                    print('[プリセット生成] 保存: '+filename)
+                    self.send_response(200)
+                    self.send_header('Content-Type','application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({'ok':True,'preset':preset},ensure_ascii=False).encode())
+                except Exception as e:
+                    print('[プリセット生成] エラー: '+str(e))
+                    self.send_response(500)
+                    self.send_header('Content-Type','application/json')
+                    self.end_headers()
+                    self.wfile.write(json.dumps({'error':str(e)}).encode())
         elif self.path=='/chara_presets':
             presets = []
             if os.path.exists(CHARA_PRESETS_DIR):
