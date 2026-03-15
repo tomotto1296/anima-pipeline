@@ -94,8 +94,15 @@ DEFAULT_CONFIG = {
     "workflow_json_path": "image_anima_preview.json",
     "positive_node_id": "11",
     "negative_node_id": "12",
-    "comfyui_output_dir": "",  # WebP変換用・絶対パスで入力推奨（空の場合は自動推定するが失敗することがある）
+    "comfyui_output_dir": "",
     "clip_node_id": "45",
+    "ksampler_node_id": "19",
+    "seed_mode": "random",   # random / fixed / increment
+    "seed_value": 0,
+    "steps": 30,
+    "cfg": 4.0,
+    "sampler_name": "er_sde",
+    "scheduler": "simple",
 }
 
 def load_config() -> dict:
@@ -442,11 +449,28 @@ def send_to_comfyui(positive_prompt: str, cfg: dict, width: int = 1024, height: 
             node["inputs"]["filename_prefix"] = f"{date_folder}/{ts}_"
             print(f"[ComfyUI] 保存先: output/{date_folder}/{ts}_ (node {nid})")
 
-    # KSamplerのseedをランダムに設定（複数枚生成時に同一画像にならないよう）
+    # KSamplerのseed/steps/cfg/samplerを設定
+    seed_mode = cfg.get('seed_mode', 'random')
+    seed_value = int(cfg.get('seed_value', 0))
+    steps_val = int(cfg.get('steps', 30))
+    cfg_val = float(cfg.get('cfg', 4.0))
+    sampler_val = cfg.get('sampler_name', 'er_sde')
+    scheduler_val = cfg.get('scheduler', 'simple')
+    ksampler_id = cfg.get('ksampler_node_id', '')
     for nid, node in api_prompt.items():
-        if node.get("class_type") == "KSampler":
-            node["inputs"]["seed"] = random.randint(0, 2**32 - 1)
-            print(f"[ComfyUI] seed設定: {node['inputs']['seed']} (node {nid})")
+        if node.get("class_type") == "KSampler" and (not ksampler_id or nid == ksampler_id):
+            if seed_mode == 'fixed':
+                node["inputs"]["seed"] = seed_value
+            elif seed_mode == 'increment':
+                node["inputs"]["seed"] = seed_value
+                # increment: 呼び出し元でseed_valueを+1する
+            else:
+                node["inputs"]["seed"] = random.randint(0, 2**32 - 1)
+            node["inputs"]["steps"] = steps_val
+            node["inputs"]["cfg"] = cfg_val
+            node["inputs"]["sampler_name"] = sampler_val
+            node["inputs"]["scheduler"] = scheduler_val
+            print(f"[ComfyUI] KSampler設定: seed={node['inputs']['seed']} steps={steps_val} cfg={cfg_val} sampler={sampler_val} (node {nid})")
 
     if client_id is None:
         client_id = str(uuid.uuid4())
@@ -485,13 +509,13 @@ HTML = r"""<!DOCTYPE html>
   body{
     background:var(--paper);color:var(--ink);
     font-family:'Zen Kaku Gothic New',sans-serif;
-    min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;
+    min-height:100vh;padding:2rem;
     background-image:
       radial-gradient(ellipse at 15% 20%, rgba(179,136,216,0.12) 0%, transparent 50%),
       radial-gradient(ellipse at 85% 75%, rgba(240,168,200,0.10) 0%, transparent 50%),
       repeating-linear-gradient(0deg,transparent,transparent 31px,rgba(221,214,240,0.5) 31px,rgba(221,214,240,0.5) 32px);
   }
-  .container{width:100%;max-width:680px;background:rgba(255,255,255,0.85);
+  .container{width:100%;max-width:680px;margin:0 auto;background:rgba(255,255,255,0.85);
     border:1px solid var(--border);
     box-shadow:0 4px 24px rgba(124,77,191,0.08), 0 1px 3px rgba(124,77,191,0.12);
     border-radius:12px;padding:2.5rem;backdrop-filter:blur(8px);}
@@ -649,6 +673,7 @@ HTML = r"""<!DOCTYPE html>
   /* シーン */
   .scene-block{margin-top:0.8rem;}
   .scene-toggle{font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);
+    background:#f4f0fa;padding:0.3rem 0.5rem;border-radius:5px;
     cursor:pointer;display:flex;align-items:center;gap:0.3rem;user-select:none;
     background:linear-gradient(90deg,rgba(179,136,216,0.13),rgba(240,168,200,0.08));
     padding:0.4rem 0.8rem;border-left:3px solid var(--accent);border-radius:0 6px 6px 0;}
@@ -738,16 +763,22 @@ HTML = r"""<!DOCTYPE html>
           <input type="text" id="negNodeInput" placeholder="12">
         </div>
       </div>
-      <div class="field">
-        <label>④ ComfyUI URL</label>
-        <input type="text" id="comfyUrlInput" placeholder="http://127.0.0.1:8188">
+      <div class="field-row">
+        <div class="field">
+          <label>④ KSampler Node ID</label>
+          <input type="text" id="ksamplerNodeInput" placeholder="19">
+        </div>
+        <div class="field">
+          <label>⑤ ComfyUI URL</label>
+          <input type="text" id="comfyUrlInput" placeholder="http://127.0.0.1:8188">
+        </div>
       </div>
     </div>
     <!-- LLM使うなら必須 -->
     <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#e67e22;font-weight:bold;margin-bottom:0.4rem;letter-spacing:0.05em;">■ LLMを使うなら必須</div>
     <div style="border:1.5px solid #e67e22;border-radius:7px;padding:0.8rem;margin-bottom:0.8rem;background:#fffaf5;">
       <div class="field">
-        <label>⑤ LLMプラットフォーム</label>
+        <label>⑥ LLMプラットフォーム</label>
         <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.3rem;" id="llmPlatformBtns">
           <div class="period-btn active" data-plat="" onclick="selLLMPlatform(this)">なし</div>
           <div class="period-btn" data-plat="lmstudio" onclick="selLLMPlatform(this)">LM Studio</div>
@@ -824,7 +855,7 @@ HTML = r"""<!DOCTYPE html>
     background:#f5f5f0;border-left:2px solid var(--border);">📄 <span id="loadedFileNameText"></span></div>
 
   <!-- ブロックA: 画像設定 -->
-  <div class="scene-toggle" onclick="toggleBlock('blockA','arrowA')" style="margin-bottom:0.5rem;">
+  <div class="scene-toggle" id="navA" onclick="toggleBlock('blockA','arrowA')" style="margin-bottom:0.5rem;">
     <span id="arrowA">▶</span> 画像設定
   </div>
   <div id="blockA" style="display:none;border:1px solid var(--border);border-radius:8px;padding:1rem;background:rgba(255,255,255,0.9);margin-bottom:1rem;">
@@ -856,8 +887,64 @@ HTML = r"""<!DOCTYPE html>
     </div>
   </div>
 
+  <!-- ブロックA2: 生成パラメータ -->
+  <div class="scene-toggle" id="navA2" onclick="toggleBlock('blockA2','arrowA2')" style="margin-bottom:0.5rem;">
+    <span id="arrowA2">▶</span> 生成パラメータ
+  </div>
+  <div id="blockA2" style="display:none;border:1px solid var(--border);border-radius:8px;padding:1rem;background:rgba(255,255,255,0.9);margin-bottom:1rem;">
+    <!-- seed -->
+    <div style="margin-bottom:0.8rem;">
+      <label style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);">Seed（シード値）</label>
+      <div style="display:flex;gap:0.4rem;align-items:center;margin-top:0.3rem;flex-wrap:wrap;">
+        <div id="seedModeBtns" style="display:flex;gap:0.2rem;">
+          <div class="period-btn active" data-smode="random" onclick="selectSeedMode(this)">ランダム</div>
+          <div class="period-btn" data-smode="fixed" onclick="selectSeedMode(this)">固定</div>
+          <div class="period-btn" data-smode="increment" onclick="selectSeedMode(this)">連番</div>
+        </div>
+        <input type="number" id="seedValueInput" value="0" min="0"
+          style="width:9rem;background:white;border:1px solid var(--border);border-radius:6px;padding:0.35rem 0.6rem;
+          font-family:'DM Mono',monospace;font-size:0.82rem;color:var(--ink);outline:none;box-sizing:border-box;">
+        <button onclick="document.getElementById('seedValueInput').value=Math.floor(Math.random()*2**32)"
+          title="ランダムな値を生成"
+          style="font-family:'DM Mono',monospace;font-size:0.7rem;padding:0.3rem 0.5rem;width:2.8rem;text-align:center;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;">🎲</button>
+      </div>
+    </div>
+    <!-- steps / cfg -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin-bottom:0.8rem;">
+      <div>
+        <label style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);">Steps</label>
+        <input type="number" id="stepsInput" value="30" min="1" max="200" step="1"
+          style="width:100%;background:white;border:1px solid var(--border);border-radius:6px;padding:0.55rem 0.6rem;
+          font-family:'DM Mono',monospace;font-size:0.82rem;color:var(--ink);outline:none;box-sizing:border-box;margin-top:0.3rem;">
+      </div>
+      <div>
+        <label style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);">CFG</label>
+        <input type="number" id="cfgInput" value="4" min="0" max="30" step="0.5"
+          style="width:100%;background:white;border:1px solid var(--border);border-radius:6px;padding:0.55rem 0.6rem;
+          font-family:'DM Mono',monospace;font-size:0.82rem;color:var(--ink);outline:none;box-sizing:border-box;margin-top:0.3rem;">
+      </div>
+    </div>
+    <!-- sampler / scheduler -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
+      <div>
+        <label style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);">Sampler</label>
+        <select id="samplerInput"
+          style="width:100%;background:white;border:1px solid var(--border);border-radius:6px;padding:0.55rem 0.6rem;
+          font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--ink);outline:none;box-sizing:border-box;margin-top:0.3rem;cursor:pointer;">
+        </select>
+      </div>
+      <div>
+        <label style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);">Scheduler</label>
+        <select id="schedulerInput"
+          style="width:100%;background:white;border:1px solid var(--border);border-radius:6px;padding:0.55rem 0.6rem;
+          font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--ink);outline:none;box-sizing:border-box;margin-top:0.3rem;cursor:pointer;">
+        </select>
+      </div>
+    </div>
+  </div>
+
   <!-- ブロックB: キャラクター・シーン -->
-  <div class="scene-toggle" onclick="toggleBlock('blockB','arrowB')" style="margin-bottom:0.5rem;">
+  <div class="scene-toggle" id="navB" onclick="toggleBlock('blockB','arrowB')" style="margin-bottom:0.5rem;">
     <span id="arrowB">▼</span> キャラクター・シーン
   </div>
   <div id="blockB">
@@ -880,11 +967,13 @@ HTML = r"""<!DOCTYPE html>
       <!-- キャラブロック -->
       <div id="charaContainer"></div>
       <!-- シーン -->
-      <div class="scene-block">
-        <div class="scene-toggle" onclick="toggleScene()" style="cursor:pointer;">
-          <span id="sceneArrow">▶</span> C. シーン・雰囲気（任意）
-        </div>
-        <div class="scene-optional" id="sceneOptional" style="display:none;padding-top:0.4rem;">
+    </div>
+  <!-- ブロックC: シーン・雰囲気 -->
+  <div id="navC" class="scene-toggle" onclick="toggleBlock('blockC','arrowC')" style="margin-bottom:0.5rem;">
+    <span id="arrowC">▶</span> シーン・雰囲気（任意）
+  </div>
+  <div id="blockC" style="display:none;border:1px solid var(--border);border-radius:8px;padding:1rem;background:rgba(255,255,255,0.9);margin-bottom:1rem;">
+      <div class="scene-optional" id="sceneOptional" style="padding-top:0.4rem;">
           <div class="opt-row">
             <label class="opt-label">C-1. 世界観</label>
             <div style="display:flex;gap:0.25rem;flex-wrap:wrap;">
@@ -939,7 +1028,6 @@ HTML = r"""<!DOCTYPE html>
           font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);outline:none;
           resize:vertical;box-sizing:border-box;"></textarea>
       </div>
-    </div>
   </div>
 
   <div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-bottom:0.5rem;">
@@ -951,7 +1039,7 @@ HTML = r"""<!DOCTYPE html>
 
   <!-- Extra（生成完了後に表示） -->
   <div class="extra-block" id="extraBlock" style="margin-top:0.8rem;border:1px solid var(--border);padding:0.8rem;background:#fafaf8;">
-    <div class="scene-toggle" onclick="toggleExtraContent()" style="cursor:pointer;margin-bottom:0.5rem;">
+    <div class="scene-toggle" id="navExtra" onclick="toggleExtraContent()" style="cursor:pointer;margin-bottom:0.5rem;">
       <span id="extraContentArrow">▶</span> プロンプト調整・追加（再生成に反映されます）
     </div>
     <div id="extraContent" style="display:none;">
@@ -1034,7 +1122,7 @@ HTML = r"""<!DOCTYPE html>
 
   <!-- ネガティブプロンプト調整 -->
   <div style="margin-top:0.6rem;border:1px solid #e8c4c4;border-radius:8px;padding:0.8rem;background:#fff9f9;">
-    <div class="scene-toggle" onclick="toggleNegContent()" style="cursor:pointer;margin-bottom:0.5rem;color:#c0392b;">
+    <div class="scene-toggle" id="navNeg" onclick="toggleNegContent()" style="cursor:pointer;margin-bottom:0.5rem;color:#c0392b;">
       <span id="negContentArrow">▶</span> ネガティブプロンプト調整
     </div>
     <div id="negContent" style="display:none;">
@@ -1105,6 +1193,7 @@ HTML = r"""<!DOCTYPE html>
   </div>
 
   <button class="btn-regen" id="regenBtn" onclick="regenPrompt()">↺ 再画像生成</button>
+  <div id="navStatus"></div>
 
   <div class="status-box" id="statusBox">
     <div class="status-label">処理状況</div>
@@ -1125,10 +1214,125 @@ HTML = r"""<!DOCTYPE html>
     </div>
     <div class="prompt-final" id="promptNegFinal" style="display:none;font-family:'DM Mono',monospace;font-size:0.8rem;color:#c0392b;"></div>
   </div>
+
+  <!-- ギャラリー -->
+  <div id="gallerySection" style="display:none;margin-top:1rem;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;gap:0.5rem;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);font-weight:bold;white-space:nowrap;">📷 生成履歴（このセッション）</div>
+      <button onclick="clearGallery()" style="font-family:'DM Mono',monospace;font-size:0.7rem;padding:0.2rem 0.8rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--muted);cursor:pointer;white-space:nowrap;flex-shrink:0;width:auto;">クリア</button>
+    </div>
+    <div id="galleryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem;"></div>
+  </div>
+
+  <!-- ギャラリーモーダル -->
+  <div id="galleryModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:none;align-items:center;justify-content:center;padding:1rem;" onclick="closeGalleryModal(event)">
+    <div style="max-width:860px;width:100%;max-height:90vh;overflow-y:auto;padding:1rem;background:white;border-radius:12px;" onclick="event.stopPropagation()">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem;">
+        <div style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--muted);" id="modalTitle">生成結果</div>
+        <div style="display:flex;gap:0.4rem;">
+          <button id="modalReuseBtn" onclick="reusePromptFromModal()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0.7rem;border:1px solid var(--accent);border-radius:5px;background:white;color:var(--accent);cursor:pointer;">↺ プロンプト再利用</button>
+          <button id="modalFolderBtn" onclick="openFolderFromModal()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0.7rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;">📁 フォルダを開く</button>
+          <button onclick="document.getElementById('galleryModal').style.display='none'" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0.7rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;">✕ 閉じる</button>
+        </div>
+      </div>
+      <img id="modalImg" src="" style="width:100%;border-radius:8px;margin-bottom:0.8rem;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:0.3rem;">▸ 送信ポジティブプロンプト</div>
+      <div id="modalPositive" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--ink);background:#f8f8f8;border-radius:6px;padding:0.6rem;margin-bottom:0.6rem;white-space:pre-wrap;word-break:break-all;"></div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:0.3rem;">▸ 送信ネガティブプロンプト</div>
+      <div id="modalNegative" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:#c0392b;background:#fff5f5;border-radius:6px;padding:0.6rem;white-space:pre-wrap;word-break:break-all;"></div>
+    </div>
+  </div>
 </div>
 
 <script>
 let running=false, settingsOpen=false, lastPositivePrompt=null;
+let lastFinalPrompt='', lastNegativePrompt='';
+
+// ===== ギャラリー =====
+let galleryItems = []; // {imagePaths:[], positivePrompt:'', negativePrompt:'', timestamp:''}
+let modalItemIndex = -1;
+let modalCurrentImgUrl = '';
+
+function addGalleryItems(imagePaths, positivePrompt, negativePrompt){
+  if(!imagePaths || imagePaths.length===0) return;
+  const item = {
+    imagePaths,
+    positivePrompt: positivePrompt||'',
+    negativePrompt: negativePrompt||'',
+    timestamp: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'})
+  };
+  galleryItems.push(item);
+  renderGalleryItem(item, galleryItems.length-1);
+  document.getElementById('gallerySection').style.display='block';
+}
+
+function renderGalleryItem(item, idx){
+  const grid = document.getElementById('galleryGrid');
+  item.imagePaths.forEach((imgPath, pi)=>{
+    const card = document.createElement('div');
+    card.style.cssText = 'position:relative;cursor:pointer;border-radius:8px;overflow:hidden;background:#f0f0f0;aspect-ratio:1;';
+    const img = document.createElement('img');
+    img.src = imgPath.startsWith('http') ? imgPath : '/get_image?path='+encodeURIComponent(imgPath);
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+    img.onerror = ()=>{ img.style.display='none'; card.style.background='#e0e0e0'; };
+    const ts = document.createElement('div');
+    ts.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);color:white;font-family:DM Mono,monospace;font-size:0.6rem;padding:0.2rem 0.4rem;';
+    ts.textContent = item.timestamp;
+    card.appendChild(img);
+    card.appendChild(ts);
+    card.onclick = ()=>openGalleryModal(idx, imgPath, item);
+    grid.insertBefore(card, grid.firstChild);
+  });
+}
+
+function openGalleryModal(idx, imgPath, item){
+  modalItemIndex = idx;
+  // bodyに直接appendしてスタック親要素の影響を受けないようにする
+  const modal = document.getElementById('galleryModal');
+  if(modal.parentElement !== document.body) document.body.appendChild(modal);
+  modal.style.display='flex';
+  modalCurrentImgUrl = imgPath;
+  document.getElementById('modalImg').src = imgPath.startsWith('http') ? imgPath : '/get_image?path='+encodeURIComponent(imgPath);
+  document.getElementById('modalTitle').textContent = '生成結果 ' + item.timestamp;
+  document.getElementById('modalPositive').textContent = item.positivePrompt||'（なし）';
+  document.getElementById('modalNegative').textContent = item.negativePrompt||'（なし）';
+}
+
+function closeGalleryModal(event){
+  document.getElementById('galleryModal').style.display='none';
+}
+
+async function openFolderFromModal(){
+  if(!modalCurrentImgUrl) return;
+  await fetch('/open_folder?path='+encodeURIComponent(modalCurrentImgUrl));
+}
+
+function reusePromptFromModal(){
+  if(modalItemIndex<0) return;
+  const item = galleryItems[modalItemIndex];
+  if(!item) return;
+  lastPositivePrompt = item.positivePrompt;
+  document.getElementById('galleryModal').style.display='none';
+  document.getElementById('regenBtn').classList.add('show');
+  alert('プロンプトを再利用モードに設定しました。「↺ 再画像生成」ボタンで送信できます。');
+}
+
+function updateNavPosition(){
+  // CSS固定のため何もしない
+}
+window.addEventListener('resize', updateNavPosition);
+
+function navScrollTo(id){
+  const el = document.getElementById(id);
+  if(!el) return;
+  el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function clearGallery(){
+  galleryItems = [];
+  document.getElementById('galleryGrid').innerHTML='';
+  document.getElementById('gallerySection').style.display='none';
+}
 let charaPresets = [];  // キャラプリセット一覧
 
 // ===== キャラプリセット管理 =====
@@ -1384,6 +1588,39 @@ function loadCharaPreset(idx){
 let selectedW=1024, selectedH=1024;
 let selectedFmt='png';
 let selectedCount=1;
+let selectedSeedMode='random';
+
+function initGenParams(){
+  const samplerSel = document.getElementById('samplerInput');
+  const schedulerSel = document.getElementById('schedulerInput');
+  (__OPT__.sampler_options||[]).forEach(({v,label})=>{
+    const opt=document.createElement('option'); opt.value=v; opt.textContent=label; samplerSel.appendChild(opt);
+  });
+  (__OPT__.scheduler_options||[]).forEach(({v,label})=>{
+    const opt=document.createElement('option'); opt.value=v; opt.textContent=label; schedulerSel.appendChild(opt);
+  });
+  // デフォルト値を設定
+  samplerSel.value='er_sde';
+  schedulerSel.value='simple';
+}
+
+function selectSeedMode(el){
+  document.querySelectorAll('#seedModeBtns .period-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  selectedSeedMode = el.dataset.smode;
+  document.getElementById('seedValueInput').disabled = (selectedSeedMode==='random');
+}
+
+function collectGenParams(){
+  return {
+    seed_mode: selectedSeedMode,
+    seed_value: parseInt(document.getElementById('seedValueInput')?.value)||0,
+    steps: parseInt(document.getElementById('stepsInput')?.value)||30,
+    cfg: parseFloat(document.getElementById('cfgInput')?.value)||4.0,
+    sampler_name: document.getElementById('samplerInput')?.value.trim()||'er_sde',
+    scheduler: document.getElementById('schedulerInput')?.value.trim()||'simple',
+  };
+}
 
 function selectFmt(el){
   document.querySelectorAll('[data-fmt]').forEach(b=>b.classList.remove('active'));
@@ -1562,6 +1799,18 @@ async function loadSettings(){
     document.getElementById('workflowInput').value=cfg.workflow_json_path||'';
     document.getElementById('posNodeInput').value=cfg.positive_node_id||'';
     document.getElementById('negNodeInput').value=cfg.negative_node_id||'';
+    document.getElementById('ksamplerNodeInput').value=cfg.ksampler_node_id||'19';
+    // 生成パラメータ
+    if(cfg.seed_mode){
+      selectedSeedMode=cfg.seed_mode;
+      document.querySelectorAll('#seedModeBtns .period-btn').forEach(b=>b.classList.toggle('active',b.dataset.smode===cfg.seed_mode));
+      const seedEl=document.getElementById('seedValueInput'); if(seedEl){ seedEl.value=cfg.seed_value||0; seedEl.disabled=(cfg.seed_mode==='random'); }
+    }
+    if(cfg.steps!==undefined) { const el=document.getElementById('stepsInput'); if(el) el.value=cfg.steps; }
+    if(cfg.cfg!==undefined) { const el=document.getElementById('cfgInput'); if(el) el.value=cfg.cfg; }
+    if(cfg.sampler_name) { const el=document.getElementById('samplerInput'); if(el) el.value=cfg.sampler_name; }
+    if(cfg.scheduler) { const el=document.getElementById('schedulerInput'); if(el) el.value=cfg.scheduler; }
+    selectedSeedMode = cfg.seed_mode||'random';
     document.getElementById('outputDirInput').value=cfg.comfyui_output_dir||'';
   }catch(e){console.warn(e);}
 }
@@ -1607,6 +1856,8 @@ async function saveSettings(){
     comfyui_output_dir:document.getElementById('outputDirInput').value,
     positive_node_id:document.getElementById('posNodeInput').value,
     negative_node_id:document.getElementById('negNodeInput').value,
+    ksampler_node_id:document.getElementById('ksamplerNodeInput').value||'19',
+    ...collectGenParams(),
   };
   await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});
   const n=document.getElementById('saveNotice');
@@ -1711,6 +1962,7 @@ function collectSessionData(){
     finalPrompt:  document.getElementById('promptFinal').textContent||'',
     negFinalPrompt: document.getElementById('promptNegFinal').textContent||'',
     imgW: selectedW, imgH: selectedH, imgFmt: selectedFmt, imgCount: selectedCount,
+    useLLM: document.getElementById('useLLM').checked,
     savedAt: new Date().toISOString(),
   };
 }
@@ -1992,6 +2244,12 @@ function applySession(data){
       const itemFreeEl = document.getElementById(`chara_item_free_${i}`);
       if(itemFreeEl && ch['item_free']) itemFreeEl.value = ch['item_free'];
     });
+    // シーンブロック（データがあれば展開）
+    if(data.place||data.world||data.tod||data.weather||data.placeActiveCat){
+      const blockC = document.getElementById('blockC');
+      const arrowC = document.getElementById('arrowC');
+      if(blockC && blockC.style.display==='none'){ blockC.style.display='block'; if(arrowC) arrowC.textContent='▼'; }
+    }
     // シーン
     document.getElementById('f_place').value = data.place||'';
     document.getElementById('f_misc').value  = data.misc||'';
@@ -2091,23 +2349,28 @@ function applySession(data){
       document.getElementById('statusBox').classList.add('show');
     }
     if(data.finalPrompt){
+      lastPositivePrompt = lastPositivePrompt || data.finalPrompt; // LLMなし時はfinalPromptから復元
+      lastFinalPrompt = data.finalPrompt;
       document.getElementById('finalLabel').style.display='block';
       const pf = document.getElementById('promptFinal');
       pf.textContent = data.finalPrompt;
       pf.style.display='block';
+      document.getElementById('statusBox').classList.add('show');
     }
     if(data.negFinalPrompt){
+      lastNegativePrompt = data.negFinalPrompt;
       document.getElementById('negFinalLabel').style.display='block';
       const nf = document.getElementById('promptNegFinal');
       nf.textContent = data.negFinalPrompt;
       nf.style.display='block';
     }
-    if(data.lmPrompt){ document.getElementById('regenBtn').classList.add('show'); running=false; document.getElementById('btn').disabled=false; }
+    if(lastPositivePrompt){ document.getElementById('regenBtn').classList.add('show'); running=false; document.getElementById('btn').disabled=false; }
     // 画像サイズ・フォーマット・枚数
     if(data.imgW){ selectedW=data.imgW; document.getElementById('widthInput').value=data.imgW; }
     if(data.imgH){ selectedH=data.imgH; document.getElementById('heightInput').value=data.imgH; }
     if(data.imgFmt){ selectedFmt=data.imgFmt; document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.toggle('active',b.dataset.fmt===data.imgFmt)); }
     if(data.imgCount){ selectedCount=data.imgCount; const ce=document.getElementById('countInput'); if(ce) ce.value=data.imgCount; }
+    if(data.useLLM !== undefined){ const el=document.getElementById('useLLM'); if(el) el.checked=data.useLLM; }
   }, 50);
 }
 
@@ -3950,12 +4213,7 @@ function selScene(group, el){
   el.classList.add('active');
   document.getElementById('f_'+group).value = el.dataset[group]||'';
 }
-function toggleScene(){
-  const opt = document.getElementById('sceneOptional');
-  const open = opt.style.display === 'none';
-  opt.style.display = open ? 'block' : 'none';
-  document.getElementById('sceneArrow').textContent = open ? '▼' : '▶';
-}
+// toggleScene: blockCに統合したため削除
 
 function updateCharaBlocks(){
   const count = Math.max(1, Math.min(6, parseInt(document.getElementById('f_charcount').value)||1));
@@ -4188,7 +4446,7 @@ function initCharaAttrButtons(idx){
   // 性別ボタン動的生成（makeCharaBlock呼び出し時に使用）
 }
 
-document.addEventListener('DOMContentLoaded', ()=>{ loadCharaPresets().then(()=>updateCharaBlocks()); loadSettings(); initExtraPresets(); initQualityMeta(); initQualityMetaNeg(); initNegExtraPresets(); initNegSafetyButtons(); loadNegStyleTagsFromServer(); initSceneButtons(); initSizePresets(); loadLastSession(); loadStyleTagsFromServer(); });
+document.addEventListener('DOMContentLoaded', ()=>{ loadCharaPresets().then(()=>updateCharaBlocks()); loadSettings(); initExtraPresets(); initQualityMeta(); initQualityMetaNeg(); initNegExtraPresets(); initNegSafetyButtons(); loadNegStyleTagsFromServer(); initSceneButtons(); initSizePresets(); initGenParams(); loadLastSession(); loadStyleTagsFromServer(); });
 
 async function generate(){
   if(running)return;
@@ -4243,13 +4501,15 @@ async function generate(){
       setStep(steps,'s1','done','LLM: スキップ');
     }
     else { setStep(steps,'s1','active','LLM: プロンプト生成中...'); }
-    const res=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input,use_llm:document.getElementById('useLLM').checked,width:selectedW,height:selectedH,fmt:selectedFmt,count:selectedCount,extra_tags:Array.from(extraTags),char_direct_tags:charDirectTags,prompt_prefix:collectPromptPrefix(),extra_note_en:document.getElementById('extraNoteEn').value.trim(),negative_prompt:collectNegativePrompt()})});
+    const res=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input,use_llm:document.getElementById('useLLM').checked,width:selectedW,height:selectedH,fmt:selectedFmt,count:selectedCount,extra_tags:Array.from(extraTags),char_direct_tags:charDirectTags,prompt_prefix:collectPromptPrefix(),extra_note_en:document.getElementById('extraNoteEn').value.trim(),negative_prompt:collectNegativePrompt(),gen_params:collectGenParams()})});
     const data=await res.json();
     if(data.error){
       setStep(steps,'s1','error','エラー: '+data.error);
     }else{
       setStep(steps,'s1','done','LLM: 完了');
-      lastPositivePrompt=data.positive_prompt;
+      lastPositivePrompt=data.positive_prompt || data.final_prompt || '';
+      lastFinalPrompt=data.final_prompt||'';
+      lastNegativePrompt=data.negative_prompt||'';
       // LLM生成部
       document.getElementById('lmLabel').style.display='block';
       promptOutput.textContent=data.positive_prompt.replace(/\\n/g,'\n');
@@ -4304,6 +4564,7 @@ async function pollComfyUIComplete(promptIds, steps){
   // Pipelineサーバー経由でComfyUI /historyを確認（CORS回避）
   const pending = new Set(promptIds);
   let tries = 0;
+  const collectedPaths = [];
   while(pending.size > 0 && tries < 300){
     await new Promise(r=>setTimeout(r, 2000));
     tries++;
@@ -4312,6 +4573,15 @@ async function pollComfyUIComplete(promptIds, steps){
       const res = await fetch(`/poll_status?ids=${encodeURIComponent(ids)}`).catch(()=>null);
       if(!res) continue;
       const data = await res.json();
+      // 画像パスを収集
+      if(data.image_paths){
+        for(const [pid, info] of Object.entries(data.image_paths)){
+          // view_urls（ComfyUI直接）を優先、なければfile_paths経由
+          const urls = info.view_urls || info;
+          if(Array.isArray(urls) && urls.length) collectedPaths.push(...urls);
+          else if(Array.isArray(info) && info.length) collectedPaths.push(...info);
+        }
+      }
       for(const pid of (data.completed||[])) pending.delete(pid);
       const done = promptIds.length - pending.size;
       const q = data.queue||{};
@@ -4325,6 +4595,12 @@ async function pollComfyUIComplete(promptIds, steps){
     }catch(e){}
   }
   setStep(steps,'s3','done',`ComfyUI: 生成完了 (${promptIds.length}枚)`);
+  // ギャラリーに追加
+  if(collectedPaths.length > 0){
+    const posPrompt = document.getElementById('promptFinal')?.textContent||lastFinalPrompt||'';
+    const negPrompt = document.getElementById('promptNegFinal')?.textContent||lastNegativePrompt||'';
+    addGalleryItems(collectedPaths, posPrompt, negPrompt);
+  }
   running=false;
   document.getElementById('btn').disabled=false;
   document.getElementById('cancelBtn').classList.remove('show');
@@ -4349,7 +4625,8 @@ async function regenPrompt(){
       body:JSON.stringify({prompt:lastPositivePrompt,width:selectedW,height:selectedH,fmt:selectedFmt,count:selectedCount,
         extra_tags:regenExtraTags, extra_note_en:regenExtraEn,
         prompt_prefix:collectPromptPrefix(),
-        negative_prompt:collectNegativePrompt()})});
+        negative_prompt:collectNegativePrompt(),
+        gen_params:collectGenParams()})});
     const data=await res.json();
     if(data.error){
       setStep(steps,'s_regen','error','エラー: '+data.error);
@@ -4389,6 +4666,19 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&e.ctrlKey) generate();
 });
 </script>
+<!-- フローティングナビゲーション -->
+  <div id="floatNav" style="position:fixed;right:16px;top:50%;transform:translateY(-50%);z-index:500;display:flex;flex-direction:column;gap:0.3rem;background:rgba(255,255,255,0.97);border:1px solid var(--border);border-radius:10px;padding:0.5rem 0.4rem;box-shadow:0 2px 12px rgba(0,0,0,0.12);width:fit-content;">
+    <div style="font-family:'DM Mono',monospace;font-size:0.55rem;color:var(--muted);text-align:center;margin-bottom:0.2rem;letter-spacing:0.05em;">NAV</div>
+    <button onclick="navScrollTo('navA')" title="画像設定" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">🖼 画像</button>
+    <button onclick="navScrollTo('navA2')" title="生成パラメータ" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">⚙ パラメータ</button>
+    <button onclick="navScrollTo('navB')" title="キャラクター" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">🎭 キャラ</button>
+    <button onclick="navScrollTo('navC')" title="シーン・雰囲気" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">🌍 シーン</button>
+    <button onclick="navScrollTo('navExtra')" title="プロンプト調整" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">✨ ポジ調整</button>
+    <button onclick="navScrollTo('navNeg')" title="ネガティブ調整" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:0.3rem 0.5rem;border:1px solid #e0779a;border-radius:5px;background:white;color:#c0392b;cursor:pointer;white-space:nowrap;">🚫 ネガ調整</button>
+    <button onclick="navScrollTo('navStatus')" title="処理状況" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">📋 状況</button>
+    <button onclick="window.scrollTo({top:0,behavior:'smooth'})" title="先頭へ" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--muted);cursor:pointer;white-space:nowrap;">↑ TOP</button>
+  </div>
+
 </body>
 </html>"""
 
@@ -4464,10 +4754,13 @@ class Handler(BaseHTTPRequestHandler):
             from urllib.parse import urlparse, parse_qs
             import urllib.request as _ureq
             qs = parse_qs(urlparse(self.path).query)
-            ids = qs.get('ids',[''])[0].split(',')
+            from urllib.parse import unquote
+            ids_raw = qs.get('ids',[''])[0]
+            ids = unquote(ids_raw).split(',')
             cfg = load_config()
             comfy = cfg.get('comfyui_url','http://127.0.0.1:8188').rstrip('/')
             completed = []
+            image_paths = {}
             queue_info = {'running': 0, 'pending': 0, 'position': None}
             try:
                 with _ureq.urlopen(comfy+'/history',timeout=3) as r:
@@ -4475,8 +4768,41 @@ class Handler(BaseHTTPRequestHandler):
                 for pid in ids:
                     if pid and pid in hist and hist[pid].get('status',{}).get('completed'):
                         completed.append(pid)
-            except Exception:
-                pass
+                        # 画像ファイル名を取得
+                        outputs = hist[pid].get('outputs', {})
+                        for nid, out in outputs.items():
+                            imgs = out.get('images', [])
+                            if imgs:
+                                # output_dirを特定してフルパスを組み立て
+                                output_dir = cfg.get('comfyui_output_dir','').strip()
+                                if not output_dir:
+                                    wf_path = cfg.get('workflow_json_path','')
+                                    if wf_path and not os.path.isabs(wf_path):
+                                        wf_path = os.path.join(_base_dir, wf_path)
+                                    wf_path = wf_path.replace(os.sep,'/')
+                                    parts = wf_path.split('/')
+                                    for i,p in enumerate(parts):
+                                        if p.lower()=='comfyui':
+                                            output_dir=os.path.normpath('/'.join(parts[:i+1])+'/output')
+                                            break
+                                    if not output_dir:
+                                        output_dir=os.path.normpath(os.path.join(os.path.dirname(wf_path),'..','..','output'))
+                                paths = []
+                                for img in imgs:
+                                    subfolder = img.get('subfolder','')
+                                    fname = img.get('filename','')
+                                    if fname:
+                                        full = os.path.normpath(os.path.join(output_dir, subfolder, fname)) if subfolder else os.path.normpath(os.path.join(output_dir, fname))
+                                        paths.append(full.replace('\\', '/'))
+                                        # ComfyUI /view URLも追加
+                                if paths:
+                                    image_paths[pid] = {
+                                        'file_paths': paths,
+                                        'view_urls': [f'{comfy}/view?filename={img["filename"]}&subfolder={img.get("subfolder","")}&type=output' for img in imgs if img.get('filename')]
+                                    }
+                                break
+            except Exception as _pe:
+                print(f'[poll_status] history exception: {_pe}')
             try:
                 with _ureq.urlopen(comfy+'/queue',timeout=3) as r:
                     q = json.loads(r.read())
@@ -4484,7 +4810,6 @@ class Handler(BaseHTTPRequestHandler):
                 pending_list = q.get('queue_pending', [])
                 queue_info['running'] = len(running_list)
                 queue_info['pending'] = len(pending_list)
-                # 自分のジョブがキュー内の何番目か
                 for pid in ids:
                     if pid not in completed:
                         for i, item in enumerate(pending_list):
@@ -4496,7 +4821,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type','application/json')
             self.end_headers()
-            self.wfile.write(json.dumps({'completed':completed,'total':len(ids),'queue':queue_info},ensure_ascii=False).encode('utf-8'))
+            self.wfile.write(json.dumps({'completed':completed,'total':len(ids),'queue':queue_info,'image_paths':image_paths},ensure_ascii=False).encode('utf-8'))
         elif self.path=='/session':
             sf=_sf('anima_session_last.json')
             data={}
@@ -4620,6 +4945,58 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Type','application/json')
             self.end_headers()
             self.wfile.write(json.dumps({"tags":load_neg_style_tags()},ensure_ascii=False).encode('utf-8'))
+        elif self.path.startswith('/open_folder'):
+            from urllib.parse import urlparse, parse_qs, unquote
+            qs = parse_qs(urlparse(self.path).query)
+            url_or_path = unquote(qs.get('path',[''])[0].strip())
+            folder_path = ''
+            # ComfyUIの/view URLの場合はoutput_dirから組み立て
+            if '/view?' in url_or_path or url_or_path.startswith('http'):
+                cfg2 = load_config()
+                output_dir = cfg2.get('comfyui_output_dir','').strip()
+                if not output_dir:
+                    wf_path = cfg2.get('workflow_json_path','')
+                    if wf_path and not os.path.isabs(wf_path):
+                        wf_path = os.path.join(_base_dir, wf_path)
+                    parts = wf_path.replace(os.sep,'/').split('/')
+                    for i,p in enumerate(parts):
+                        if p.lower()=='comfyui':
+                            output_dir=os.path.normpath('/'.join(parts[:i+1])+'/output')
+                            break
+                # subfolderをURLから取得
+                try:
+                    vqs = parse_qs(urlparse(url_or_path).query)
+                    subfolder = unquote(vqs.get('subfolder',[''])[0])
+                    folder_path = os.path.normpath(os.path.join(output_dir, subfolder)) if subfolder else os.path.normpath(output_dir)
+                except Exception:
+                    folder_path = os.path.normpath(output_dir) if output_dir else ''
+            else:
+                # ファイルパスの場合は親フォルダ
+                p = url_or_path.replace('/', os.sep)
+                folder_path = os.path.dirname(p) if os.path.isfile(p) else p
+            result = {'ok': False, 'message': ''}
+            print(f'[open_folder] folder_path={folder_path!r} exists={os.path.isdir(folder_path)}')
+            if os.path.isdir(folder_path):
+                try:
+                    import subprocess, sys
+                    if sys.platform == 'win32':
+                        subprocess.Popen(['explorer', folder_path])
+                    elif sys.platform == 'darwin':
+                        subprocess.Popen(['open', folder_path])
+                    else:
+                        subprocess.Popen(['xdg-open', folder_path])
+                    result = {'ok': True, 'message': folder_path}
+                    print(f'[open_folder] opened: {folder_path}')
+                except Exception as e:
+                    result = {'ok': False, 'message': str(e)}
+            else:
+                result = {'ok': False, 'message': f'フォルダが見つかりません: {folder_path}'}
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(result, ensure_ascii=False).encode())
+            return
+
         else:
             self.send_response(404)
             self.end_headers()
@@ -4713,6 +5090,10 @@ class Handler(BaseHTTPRequestHandler):
                 width=body.get('width',1024)
                 height=body.get('height',1024)
                 fmt=body.get('fmt','png')
+                gen_params=body.get('gen_params',{})
+                if gen_params:
+                    for k in ('seed_mode','seed_value','steps','cfg','sampler_name','scheduler'):
+                        if k in gen_params: cfg[k]=gen_params[k]
                 if not prompt:
                     raise ValueError('プロンプトが空です')
                 # Extraタグ・英語追記を適用
@@ -4768,6 +5149,30 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(json.dumps({'error':str(e)}).encode())
             return
 
+        elif self.path.startswith('/get_image'):
+            from urllib.parse import urlparse, parse_qs, unquote
+            raw_query = urlparse(self.path).query
+            # parse_qsは自動デコードするのでそのまま使う
+            qs = parse_qs(raw_query, keep_blank_values=True)
+            img_path = qs.get('path',[''])[0].strip()
+            # スラッシュをOSのセパレータに変換（Windows対応）
+            img_path = img_path.replace('/', os.sep)
+            if not img_path or not os.path.exists(img_path):
+                self.send_response(404)
+                self.end_headers()
+                return
+            ext = os.path.splitext(img_path)[1].lower()
+            mime = {'png':'image/png','jpg':'image/jpeg','jpeg':'image/jpeg','webp':'image/webp'}.get(ext.lstrip('.'), 'image/png')
+            with open(img_path, 'rb') as f:
+                data = f.read()
+            self.send_response(200)
+            self.send_header('Content-Type', mime)
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
+
+
         elif self.path=='/cancel':
             try:
                 cfg=load_config()
@@ -4813,6 +5218,11 @@ class Handler(BaseHTTPRequestHandler):
             img_count=max(1,int(body.get('count',1)))
             print(f"[DEBUG] 受信: fmt={img_fmt} width={body.get('width')} height={body.get('height')} count={img_count}")
             cfg=load_config()
+            # gen_paramsでcfgを上書き
+            gen_params=body.get('gen_params',{})
+            if gen_params:
+                for k in ('seed_mode','seed_value','steps','cfg','sampler_name','scheduler'):
+                    if k in gen_params: cfg[k]=gen_params[k]
             Handler.cancel_event.clear()
             result={"positive_prompt":"","comfyui_sent":False,"prompt_id":"","error":"","comfyui_error":""}
 
@@ -4880,6 +5290,13 @@ class Handler(BaseHTTPRequestHandler):
                         print(f"[ComfyUI] キューに追加 ({i+1}/{img_count}): {pid}")
                         if img_fmt == "webp":
                             watch_and_convert(comfyui_url, output_dir, date_folder, pid, cid)
+                        # incrementモード: seed+1して保存
+                        if cfg.get('seed_mode') == 'increment':
+                            cfg['seed_value'] = int(cfg.get('seed_value', 0)) + 1
+                            save_cfg = load_config()
+                            save_cfg['seed_value'] = cfg['seed_value']
+                            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+                                json.dump(save_cfg, f, ensure_ascii=False, indent=2)
                     result["comfyui_sent"] = True
                     result["prompt_ids"] = prompt_ids
                     result["prompt_id"] = prompt_ids[0] if prompt_ids else ""

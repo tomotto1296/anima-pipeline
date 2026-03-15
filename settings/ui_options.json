@@ -1902,5 +1902,165 @@
       "score_2",
       "score_1"
     ]
-  }
+  },
+  "sampler_options": [
+    {
+      "v": "er_sde",
+      "label": "er_sde"
+    },
+    {
+      "v": "euler",
+      "label": "euler"
+    },
+    {
+      "v": "euler_cfg_pp",
+      "label": "euler_cfg_pp"
+    },
+    {
+      "v": "euler_ancestral",
+      "label": "euler_ancestral"
+    },
+    {
+      "v": "euler_ancestral_cfg_pp",
+      "label": "euler_ancestral_cfg_pp"
+    },
+    {
+      "v": "heun",
+      "label": "heun"
+    },
+    {
+      "v": "heunpp2",
+      "label": "heunpp2"
+    },
+    {
+      "v": "dpm_2",
+      "label": "dpm_2"
+    },
+    {
+      "v": "dpm_2_ancestral",
+      "label": "dpm_2_ancestral"
+    },
+    {
+      "v": "lms",
+      "label": "lms"
+    },
+    {
+      "v": "dpm_fast",
+      "label": "dpm_fast"
+    },
+    {
+      "v": "dpm_adaptive",
+      "label": "dpm_adaptive"
+    },
+    {
+      "v": "dpmpp_2s_ancestral",
+      "label": "dpmpp_2s_ancestral"
+    },
+    {
+      "v": "dpmpp_sde",
+      "label": "dpmpp_sde"
+    },
+    {
+      "v": "dpmpp_sde_gpu",
+      "label": "dpmpp_sde_gpu"
+    },
+    {
+      "v": "dpmpp_2m",
+      "label": "dpmpp_2m"
+    },
+    {
+      "v": "dpmpp_2m_sde",
+      "label": "dpmpp_2m_sde"
+    },
+    {
+      "v": "dpmpp_2m_sde_gpu",
+      "label": "dpmpp_2m_sde_gpu"
+    },
+    {
+      "v": "dpmpp_3m_sde",
+      "label": "dpmpp_3m_sde"
+    },
+    {
+      "v": "dpmpp_3m_sde_gpu",
+      "label": "dpmpp_3m_sde_gpu"
+    },
+    {
+      "v": "ddpm",
+      "label": "ddpm"
+    },
+    {
+      "v": "lcm",
+      "label": "lcm"
+    },
+    {
+      "v": "ipndm",
+      "label": "ipndm"
+    },
+    {
+      "v": "ipndm_v",
+      "label": "ipndm_v"
+    },
+    {
+      "v": "deis",
+      "label": "deis"
+    },
+    {
+      "v": "uni_pc",
+      "label": "uni_pc"
+    },
+    {
+      "v": "uni_pc_bh2",
+      "label": "uni_pc_bh2"
+    }
+  ],
+  "scheduler_options": [
+    {
+      "v": "simple",
+      "label": "simple"
+    },
+    {
+      "v": "normal",
+      "label": "normal"
+    },
+    {
+      "v": "karras",
+      "label": "karras"
+    },
+    {
+      "v": "exponential",
+      "label": "exponential"
+    },
+    {
+      "v": "sgm_uniform",
+      "label": "sgm_uniform"
+    },
+    {
+      "v": "log_linear",
+      "label": "log_linear"
+    },
+    {
+      "v": "beta",
+      "label": "beta"
+    },
+    {
+      "v": "linear_quadratic",
+      "label": "linear_quadratic"
+    },
+    {
+      "v": "kl_optimal",
+      "label": "kl_optimal"
+    },
+    {
+      "v": "align_your_steps",
+      "label": "align_your_steps"
+    },
+    {
+      "v": "gits",
+      "label": "gits"
+    },
+    {
+      "v": "laplace",
+      "label": "laplace"
+    }
+  ]
 }
