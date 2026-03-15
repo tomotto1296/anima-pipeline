@@ -719,6 +719,16 @@
       "group": "全体"
     },
     {
+      "v": "drill_hair",
+      "label": "縦ロール",
+      "group": "全体"
+    },
+    {
+      "v": "ringlets",
+      "label": "リングレット",
+      "group": "全体"
+    },
+    {
       "v": "bangs",
       "label": "前髪あり",
       "group": "前"
@@ -786,6 +796,16 @@
     {
       "v": "hime_cut",
       "label": "姫カット",
+      "group": "後ろ"
+    },
+    {
+      "v": "sidelocks",
+      "label": "サイドロック",
+      "group": "後ろ"
+    },
+    {
+      "v": "drill_twintails",
+      "label": "縦ロールツインテ",
       "group": "後ろ"
     }
   ],
@@ -1624,31 +1644,31 @@
       "label": "－"
     },
     {
-      "v": "日常",
+      "v": "everyday_life",
       "label": "日常"
     },
     {
-      "v": "和風",
+      "v": "japanese_style",
       "label": "和風"
     },
     {
-      "v": "西洋",
+      "v": "western_style",
       "label": "西洋"
     },
     {
-      "v": "中華",
+      "v": "chinese_style",
       "label": "中華"
     },
     {
-      "v": "ファンタジー",
+      "v": "fantasy",
       "label": "ファンタジー"
     },
     {
-      "v": "SF",
+      "v": "science_fiction",
       "label": "SF"
     },
     {
-      "v": "ポストアポカリプス",
+      "v": "post-apocalyptic",
       "label": "廃墟"
     }
   ],
@@ -1658,19 +1678,19 @@
       "label": "－"
     },
     {
-      "v": "朝",
+      "v": "morning",
       "label": "朝"
     },
     {
-      "v": "昼",
+      "v": "day",
       "label": "昼"
     },
     {
-      "v": "夕方",
+      "v": "evening",
       "label": "夕"
     },
     {
-      "v": "夜",
+      "v": "night",
       "label": "夜"
     }
   ],
@@ -1680,19 +1700,19 @@
       "label": "－"
     },
     {
-      "v": "晴れ",
+      "v": "sunny",
       "label": "晴"
     },
     {
-      "v": "曇り",
+      "v": "cloudy",
       "label": "曇"
     },
     {
-      "v": "雨",
+      "v": "rain",
       "label": "雨"
     },
     {
-      "v": "雪",
+      "v": "snow",
       "label": "雪"
     }
   ],

@@ -43,7 +43,9 @@ If tools are unavailable, infer from training knowledge and proceed directly to 
    - If original is absent → character is a NAMED character from a known series.
      → semantic_search "name_(series_abbr)" → CHAR_TAG (freq>=50)
      → If NOT found in Danbooru: convert name to lowercase_underscore as CHAR_TAG (e.g. miyu_edelfelt_(fate)). DO NOT use original_character.
-     FGO/Fate→(fate), ウマ娘→(umamusume), ブルアカ→(blue_archive)
+     FGO/Fate→(fate), ウマ娘→(umamusume), ブルアカ→(blue_archive), VOICEVOX→(voicevox)
+     English name input: convert to lowercase_underscore and append series e.g. "zundamon"→zundamon, "shikoku metan"→shikoku_metan_(voicevox)
+     If Danbooru tag search fails: NEVER use original_character. Use lowercase_underscore name as CHAR_TAG.
      Male character → male tag only. NEVER use _(female) tag for male.
 2. For non-original characters only: get_wiki_page or get_character_image → fill ONLY fields absent from JSON input
 3. semantic_search scene keywords (place+mood) → SCENE_TAGS

@@ -1685,6 +1685,7 @@ function collectSessionData(){
     characters: chars,
     place:     document.getElementById('f_place').value,
     misc:      document.getElementById('f_misc').value,
+    placeActiveCat: placeActiveCat||'',
     world:     document.getElementById('f_world')?.value||'',
     outdoor:   document.getElementById('f_outdoor')?.value||'',
     tod:       document.getElementById('f_tod')?.value||'',
@@ -1994,6 +1995,38 @@ function applySession(data){
     // シーン
     document.getElementById('f_place').value = data.place||'';
     document.getElementById('f_misc').value  = data.misc||'';
+    // 旧セッション値の変換マップ（日本語→Danbooruタグ）
+    const _legacyMap = {
+      '朝':'morning','昼':'day','夕方':'evening','夜':'night',
+      '日常':'everyday_life','和風':'japanese_style','西洋':'western_style',
+      '中華':'chinese_style','ファンタジー':'fantasy','SF':'science_fiction','ポストアポカリプス':'post-apocalyptic',
+      '晴れ':'sunny','曇り':'cloudy','雨':'rain','雪':'snow',
+    };
+    ['tod','world','weather'].forEach(g=>{ if(data[g] && _legacyMap[data[g]]) data[g]=_legacyMap[data[g]]; });
+    // 場所カテゴリ復元
+    if(data.placeActiveCat){
+      const catBtn = document.querySelector(`[data-placecat="${data.placeActiveCat}"]`);
+      showPlaceCat(data.placeActiveCat, catBtn);
+      // アイテムボタンのactive復元
+      if(data.place){
+        const itemRow = document.getElementById('place_item_row');
+        itemRow?.querySelectorAll('[data-placeval]').forEach(b=>{
+          b.classList.toggle('active', b.textContent===data.place);
+        });
+      }
+      // サブボタン（outdoor）のactive復元
+      if(data.outdoor){
+        const subRow = document.getElementById('place_sub_row');
+        if(subRow){
+          const subOpts = PLACE_SUB[data.placeActiveCat]||[];
+          const matchSub = subOpts.find(o=>o.v===data.outdoor);
+          subRow.querySelectorAll('.period-btn').forEach(b=>{
+            b.classList.toggle('active', matchSub ? b.textContent===matchSub.label : false);
+          });
+        }
+        document.getElementById('f_outdoor').value = data.outdoor;
+      }
+    }
     ['world','outdoor','tod','weather'].forEach(g=>{
       const val = data[g]||'';
       const hid = document.getElementById('f_'+g);
@@ -3935,7 +3968,7 @@ function updateCharaBlocks(){
   }
 }
 
-function collectInput(){
+function collectInput(useLLM=true){
   const series = document.getElementById('f_series').value.trim();
   const count = Math.max(1, Math.min(6, parseInt(document.getElementById('f_charcount').value)||1));
   const characters = [];
@@ -3960,11 +3993,14 @@ function collectInput(){
     });
     // 動作（選択式+自由入力）
     const actionVal = (document.getElementById(`chara_action_${i}`)||{value:''}).value.trim();
+    const actionFreeVal = (document.getElementById(`chara_action_free_${i}`)||{value:''}).value.trim();
     if(actionVal){
-      if((document.getElementById(`chara_action_lm_${i}_lm`)||{checked:true}).checked) ch['action']=actionVal;
+      if(useLLM && (document.getElementById(`chara_action_lm_${i}_lm`)||{checked:true}).checked) ch['action']=actionVal;
       else actionVal.split(',').forEach(tag=>{ if(tag.trim()) addDirect(tag.trim()); });
     }
-    function isLM(fieldId){ return (document.getElementById(fieldId+'_lm')||{checked:false}).checked; }
+    // 動作自由入力（LLMチェックに関わらず常にdirectTags）
+    if(actionFreeVal) actionFreeVal.split(',').forEach(tag=>{ if(tag.trim()) addDirect(tag.trim()); });
+    function isLM(fieldId){ return useLLM && (document.getElementById(fieldId+'_lm')||{checked:false}).checked; }
     // 性別: LLMチェックOFF→直接タグ化
     if(!isLM(`chara_gender_lm_${i}`)){
       const gTag = {female:'1girl',male:'1boy',other:''}[gender]||'';
@@ -3991,18 +4027,26 @@ function collectInput(){
     if(eyeVal){ if(isLM(`chara_eyes_lm_${i}`)) ch['eyes']=eyeVal; else addDirect(eyeVal); } // heterochromia等はそのまま
     // 衣装
     let outfitVal = (document.getElementById(`chara_outfit_${i}`)||{value:''}).value.trim();
-    if(isLM(`chara_outfit_lm_${i}`)) ch['outfit'] = outfitVal || 'default';
-    else if(outfitVal) addDirect(outfitVal);
+    let outfitFreeVal = (document.getElementById(`chara_outfit_free_${i}`)||{value:''}).value.trim();
+    if(isLM(`chara_outfit_lm_${i}`)){
+      ch['outfit'] = outfitFreeVal || outfitVal || 'default';
+    } else {
+      if(outfitFreeVal) outfitFreeVal.split(',').forEach(v=>{ if(v.trim()) addDirect(v.trim()); });
+      else if(outfitVal) addDirect(outfitVal);
+    }
     // 髪
     let hairColor = (document.getElementById(`chara_haircolor_${i}`)||{value:''}).value.trim();
     let hairOther = (document.getElementById(`chara_hairother_${i}`)||{value:''}).value.trim();
     let hairStyle = (document.getElementById(`chara_hairstyle_${i}`)||{value:''}).value.trim();
+    let hairStyleFree = (document.getElementById(`chara_hairstyle_free_${i}`)||{value:''}).value.trim();
+    if(hairStyleFree && !hairStyle) hairStyle = hairStyleFree; // hiddenが空の場合のフォールバック
     let hairColorFinal = hairOther || hairColor;
     if(isLM(`chara_haircolor_lm_${i}`)){
       if(hairColorFinal || hairStyle) ch['hair'] = [hairStyle, hairColorFinal].filter(Boolean).join('、');
     } else {
       if(hairColorFinal) addDirect(hairColorFinal);
-      if(hairStyle) ch['hair'] = hairStyle; // 髪型は常にLMへ
+      if(hairStyle) hairStyle.split(',').forEach(v=>{ if(v.trim()) addDirect(v.trim()); });
+      if(hairStyleFree && hairStyle) hairStyleFree.split(',').forEach(v=>{ if(v.trim()) addDirect(v.trim()); }); // 日本語自由入力もdirect
     }
     // 体格
     let heightVal = (document.getElementById(`chara_height_${i}`)||{value:''}).value.trim();
@@ -4148,7 +4192,8 @@ document.addEventListener('DOMContentLoaded', ()=>{ loadCharaPresets().then(()=>
 
 async function generate(){
   if(running)return;
-  const {valid, payload, charDirectTags} = collectInput();
+  const useLLMflag = document.getElementById('useLLM').checked;
+  const {valid, payload, charDirectTags} = collectInput(useLLMflag);
   if(!valid){alert('シリーズまたはいずれかのキャラ名を入力してください');return;}
   // 生成開始時に設定を自動保存
   await saveSettings();
@@ -4175,10 +4220,30 @@ async function generate(){
   document.getElementById('promptNegFinal').style.display='none';
 
   try{
-    const useLLM = document.getElementById('useLLM').checked;
-    if(!useLLM){ setStep(steps,'s1','done','LLM: スキップ'); }
+    const useLLM = useLLMflag;
+    // LLM未使用時: キャラ名を name_(series) 形式のDanbooruタグに変換してdirectTagsに追加
+    if(!useLLM){
+      payload.characters.forEach(ch=>{
+        if(!ch.name || ch.original) return;
+        const namePart = ch.name.toLowerCase().replace(/\s+/g,'_').replace(/[^\w]/g,'_');
+        const seriesPart = (ch.series||'').toLowerCase().replace(/\s+/g,'_').replace(/[^\w]/g,'_');
+        const charTag = seriesPart ? `${namePart}_(${seriesPart})` : namePart;
+        charDirectTags.unshift(charTag);
+      });
+      // シーン情報をdirectTagsに追加
+      const sceneVals = [
+        document.getElementById('f_world')?.value,
+        document.getElementById('f_outdoor')?.value,
+        document.getElementById('f_tod')?.value,
+        document.getElementById('f_weather')?.value,
+        document.getElementById('f_place')?.value,
+        document.getElementById('f_misc')?.value,
+      ].filter(Boolean);
+      sceneVals.forEach(v=>{ if(v) charDirectTags.push(v); });
+      setStep(steps,'s1','done','LLM: スキップ');
+    }
     else { setStep(steps,'s1','active','LLM: プロンプト生成中...'); }
-    const res=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input,use_llm:document.getElementById('useLLM').checked,width:selectedW,height:selectedH,fmt:selectedFmt,count:selectedCount,extra_tags:Array.from(extraTags),char_direct_tags:charDirectTags,prompt_prefix:collectPromptPrefix(),extra_note_en:document.getElementById('extraNoteEn').value.trim()})});
+    const res=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input,use_llm:document.getElementById('useLLM').checked,width:selectedW,height:selectedH,fmt:selectedFmt,count:selectedCount,extra_tags:Array.from(extraTags),char_direct_tags:charDirectTags,prompt_prefix:collectPromptPrefix(),extra_note_en:document.getElementById('extraNoteEn').value.trim(),negative_prompt:collectNegativePrompt()})});
     const data=await res.json();
     if(data.error){
       setStep(steps,'s1','error','エラー: '+data.error);
