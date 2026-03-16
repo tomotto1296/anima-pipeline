@@ -17,7 +17,7 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
-__version__ = "1.4.1"
+__version__ = "1.4.2"
 
 def _sf(name): return os.path.join(_settings_dir, name)
 
@@ -482,6 +482,20 @@ def send_to_comfyui(positive_prompt: str, cfg: dict, width: int = 1024, height: 
         lora_nodes = [(nid, node) for nid, node in api_prompt.items()
                       if node.get('class_type') == 'LoraLoader']
         lora_nodes.sort(key=lambda x: int(x[0]) if x[0].isdigit() else 0)
+
+        def bypass_lora_node(nid, node):
+            """LoraLoaderノードを削除して上流と下流を直接繋ぐ"""
+            model_src = node['inputs'].get('model')
+            clip_src  = node['inputs'].get('clip')
+            for other_nid, other_node in api_prompt.items():
+                for inp_name, inp_val in list(other_node['inputs'].items()):
+                    if isinstance(inp_val, list) and inp_val[0] == nid:
+                        if inp_val[1] == 0 and model_src:
+                            other_node['inputs'][inp_name] = model_src
+                        elif inp_val[1] == 1 and clip_src:
+                            other_node['inputs'][inp_name] = clip_src
+            del api_prompt[nid]
+
         for i, (nid, node) in enumerate(lora_nodes):
             if i < len(active_slots):
                 slot = active_slots[i]
@@ -490,12 +504,9 @@ def send_to_comfyui(positive_prompt: str, cfg: dict, width: int = 1024, height: 
                 node['inputs']['lora_name'] = lora_name
                 node['inputs']['strength_model'] = strength
                 node['inputs']['strength_clip'] = strength
-                print(f"[ComfyUI] LoRA注入: {lora_name} strength={strength} (node {nid})")
             else:
-                # スロット余り → 強度0でパススルー
-                node['inputs']['strength_model'] = 0.0
-                node['inputs']['strength_clip'] = 0.0
-                print(f"[ComfyUI] LoRAスキップ: strength=0 (node {nid})")
+                # 余りLoraLoaderはバイパス削除
+                bypass_lora_node(nid, node)
 
     if client_id is None:
         client_id = str(uuid.uuid4())
