@@ -5,11 +5,18 @@
   "tool_danbooru_rag": true,
   "tool_danbooru_api": true,
   "tool_duckduckgo": true,
-  "llm_model": "qwen/qwen3.5-9b-uncensored-hauhaucs-aggressive",
+  "llm_model": "",
   "comfyui_url": "http://127.0.0.1:8188",
-  "workflow_json_path": "image_anima_preview.json",
+  "workflow_json_path": "workflows/image_anima_preview.json",
   "positive_node_id": "11",
   "negative_node_id": "12",
+  "ksampler_node_id": "19",
   "comfyui_output_dir": "",
-  "clip_node_id": "45"
+  "clip_node_id": "45",
+  "seed_mode": "random",
+  "seed_value": 0,
+  "steps": 30,
+  "cfg": 4.0,
+  "sampler_name": "er_sde",
+  "scheduler": "simple"
 }
