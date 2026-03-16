@@ -93,7 +93,7 @@ DEFAULT_CONFIG = {
     "tool_duckduckgo": True,
     "llm_model": "qwen/qwen3.5-9b-uncensored-hauhaucs-aggressive",
     "comfyui_url": "http://127.0.0.1:8188",
-    "workflow_json_path": "image_anima_preview.json",
+    "workflow_json_path": "workflows/image_anima_preview.json",
     "positive_node_id": "11",
     "negative_node_id": "12",
     "comfyui_output_dir": "",
