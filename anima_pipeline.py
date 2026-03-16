@@ -17,6 +17,8 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
+__version__ = "1.4.1"
+
 def _sf(name): return os.path.join(_settings_dir, name)
 
 CONFIG_FILE        = _sf('pipeline_config.json')
@@ -607,7 +609,7 @@ HTML = r"""<!DOCTYPE html>
   .lm-check-wrap{display:flex;align-items:center;gap:0.25rem;margin-left:0.4rem;flex-shrink:0;}
   .lm-check-wrap input[type=checkbox]{width:11px;height:11px;accent-color:var(--multi);cursor:pointer;margin:0;}
   .lm-check-wrap label{font-family:'DM Mono',monospace;font-size:0.6rem;color:var(--muted);cursor:pointer;white-space:nowrap;user-select:none;}
-  .opt-label-wrap{display:flex;align-items:center;justify-content:flex-end;gap:0;}
+  .opt-label-wrap{display:flex;align-items:center;justify-content:flex-end;gap:0;cursor:pointer;user-select:none;}
   .odd-eye-btn .odd-short{display:none;}
   .odd-eye-btn .odd-long{display:inline;}
   .odd-eye-btn{overflow:hidden;white-space:nowrap;min-width:0;}
@@ -632,6 +634,7 @@ HTML = r"""<!DOCTYPE html>
   select:focus{border-color:var(--ink);}
   .size-row{display:grid;grid-template-columns:1fr 80px auto 80px;gap:0.5rem;align-items:center;margin-top:0.2rem;}
   .size-row select{min-width:0;}
+  .size-inputs{display:flex;align-items:center;gap:0.5rem;}
   .size-row input[type=number]{width:80px;background:white;border:1px solid var(--border);
     padding:0.7rem 0.4rem;font-family:'DM Mono',monospace;font-size:0.83rem;color:var(--ink);
     outline:none;text-align:center;transition:border-color 0.2s;}
@@ -670,6 +673,11 @@ HTML = r"""<!DOCTYPE html>
   .chara-header{display:flex;flex-direction:column;gap:0.4rem;
     background:linear-gradient(90deg,rgba(179,136,216,0.08),transparent);padding:0.5rem 0.6rem;border-radius:5px;}
   .chara-header-row1{display:grid;grid-template-columns:auto 1fr 1fr auto;gap:0.5rem;align-items:end;}
+  .chara-preset-row-wrap{display:flex;gap:0.3rem;align-items:center;}
+  .chara-preset-row-wrap .chara-preset-btns{margin-top:0;}
+  /* PC: プリセット行を横並び */
+  #charaContainer .chara-preset-btns{display:inline-flex;}
+  .chara-header > div:first-child{display:flex;gap:0.3rem;align-items:center;flex-wrap:wrap;}
   .chara-header-row2{display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;align-items:start;}
   .chara-attr-group{display:flex;flex-direction:column;gap:0.15rem;}
   .chara-attr-label{font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);letter-spacing:0.05em;}
@@ -683,12 +691,21 @@ HTML = r"""<!DOCTYPE html>
     text-align:center;transition:all 0.15s;user-select:none;}
   .gender-btn:hover{border-color:#2d7a4f;}
   .gender-btn.active{background:#2d7a4f;color:white;border-color:#2d7a4f;}
+  .chara-preset-btns{margin-top:0.2rem;}
   .chara-expand{background:none;border:1px solid var(--border);padding:0.3rem 0.6rem;
     font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);cursor:pointer;white-space:nowrap;}
   .chara-expand:hover{border-color:var(--ink);color:var(--ink);}
   .chara-optional{margin-top:0.5rem;border-top:1px solid var(--border);padding-top:0.5rem;}
-  .opt-row{display:grid;grid-template-columns:7rem 1fr;gap:0.4rem;align-items:center;margin-bottom:0.3rem;}
-  .opt-label{font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);text-align:right;padding-right:0.4rem;white-space:nowrap;}
+  .opt-row{display:flex;flex-direction:column;gap:0.15rem;align-items:flex-start;margin-bottom:0.3rem;}
+  .opt-label{font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);white-space:nowrap;font-weight:600;}
+  /* prompt-section-labelトグル */
+  .prompt-section-label{ cursor:pointer; user-select:none; }
+  .prompt-section-label.collapsed span::before{ content:''; }
+  /* opt-rowトグル */
+  .opt-label-wrap::before{ content:'▼'; font-size:0.55rem; margin-right:0.2rem; display:inline-block; transition:transform 0.15s; }
+  .opt-row.collapsed .opt-label-wrap::before{ transform:rotate(-90deg); }
+  .opt-row.collapsed .opt-row-body{ display:none; }
+  .opt-row .opt-row-body{ width:100%; }
   .opt-row input{background:white;border:1px solid var(--border);padding:0.45rem 0.6rem;
     font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);outline:none;
     width:100%;box-sizing:border-box;}
@@ -729,7 +746,7 @@ HTML = r"""<!DOCTYPE html>
   .style-badge:hover{opacity:0.7;}
   .period-row{display:flex;gap:0.3rem;flex-wrap:wrap;margin-top:0.3rem;}
   .period-btn{border:1px solid var(--border);background:white;padding:0.35rem 0.6rem;
-    border-radius:5px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);cursor:pointer;user-select:none;}
+    border-radius:5px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);cursor:pointer;user-select:none;white-space:nowrap;}
   .period-btn:hover{border-color:#2d7a4f;}
   .period-btn.active{background:#2d7a4f;color:white;border-color:#2d7a4f;}
   .tag-check-group{display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.3rem;}
@@ -758,20 +775,142 @@ HTML = r"""<!DOCTYPE html>
   .age-btn.active{background:#2d7a4f;color:white;border-color:#2d7a4f;}
   .age-btn[style*="background-color"].active{outline:3px solid #222;outline-offset:1px;filter:brightness(1.15);}
   .age-btn[style*="background-color"]:hover{filter:brightness(1.1);}
+
+  /* ===== モバイル対応 ===== */
+  @media (max-width: 700px){
+    body{ padding:0.5rem; padding-bottom:5rem; }
+    .container{ padding:1.2rem 1rem; border-radius:8px; }
+    h1{ font-size:0.72rem; letter-spacing:0.2em; }
+    h2{ font-size:1.2rem; margin-bottom:1.2rem; }
+
+    /* ボタンのタップ領域を広げる */
+    button, .period-btn, .scene-toggle, .fmt-btn, .size-btn{
+      min-height:40px;
+    }
+
+    /* period-btnの縦書き防止 */
+    .period-btn{
+      white-space:nowrap;
+      writing-mode:horizontal-tb;
+      min-width:3rem;
+    }
+
+    /* グリッドを縦並びに */
+    .field-row{ flex-direction:column; }
+    .size-row{ display:flex; flex-direction:column; gap:0.4rem; }
+    .size-row select{ width:100%; }
+    .size-inputs{ display:flex; align-items:center; gap:0.4rem; }
+    .size-inputs input[type=number]{ width:5.5rem; flex:0 0 auto; }
+    .size-sep{ align-self:center; }
+
+    /* プリセット選択を全幅にして改行 */
+    #charaContainer .chara-preset-btns{ margin-top:0; }
+    [id^="chara_preset_sel_"]{ width:100%; flex-basis:100%; }
+
+    /* キャラ名・作品名行: モバイルは2行に */
+    .chara-header-row1{
+      display:grid !important;
+      grid-template-columns:auto auto !important;
+      grid-template-rows:auto auto !important;
+    }
+    .chara-header-row1 > :nth-child(1){ grid-column:1; grid-row:1; align-self:center; }
+    .chara-header-row1 > :nth-child(2){ grid-column:1 / 3; grid-row:2; }
+    .chara-header-row1 > :nth-child(3){ grid-column:1 / 3; grid-row:3; }
+    .chara-header-row1 > :nth-child(4){ grid-column:2; grid-row:1; justify-self:end; }
+
+    /* セッションボタン行 */
+    .session-row{ flex-wrap:wrap; gap:0.4rem; }
+
+    /* キャラ名・作品名入力欄を広げる */
+    .inp-ja, .inp-en{
+      min-width:0;
+      width:100%;
+      box-sizing:border-box;
+    }
+
+    /* フローティングナビをモバイルでは画面下部に横並び */
+    #floatNav{
+      right:auto !important;
+      left:0 !important;
+      top:auto !important;
+      bottom:0 !important;
+      transform:none !important;
+      width:100% !important;
+      flex-direction:row !important;
+      flex-wrap:nowrap;
+      justify-content:space-around;
+      border-radius:0;
+      border-left:none;
+      border-right:none;
+      border-bottom:none;
+      border-top:1px solid var(--border);
+      padding:0.3rem 0.2rem;
+      gap:0.1rem;
+      background:rgba(255,255,255,0.98);
+      box-shadow:0 -2px 12px rgba(0,0,0,0.1);
+      z-index:500;
+      overflow-x:auto;
+    }
+    #floatNav button{
+      font-size:0.58rem;
+      padding:0.25rem 0.3rem;
+      min-height:36px;
+      flex:1;
+      min-width:2.8rem;
+      max-width:4.5rem;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    #floatNav > div:first-child{ display:none; } /* NAVラベル非表示 */
+
+
+    /* LoRAグリッドをモバイルで3列固定 */
+    #loraCardGrid{
+      grid-template-columns: repeat(3, 1fr) !important;
+      max-height: 240px;
+    }
+    #loraCardGrid > div{
+      min-height: 90px;
+    }
+
+
+    /* struct-fields */
+    .struct-row{ flex-direction:column; }
+    .struct-label{ text-align:left !important; padding-right:0 !important; }
+
+    /* カラムグリッドを縦に */
+    [style*="grid-template-columns:1fr 1fr"]{
+      grid-template-columns:1fr !important;
+    }
+    [style*="grid-template-columns:1fr 1fr 1fr"]{
+      grid-template-columns:1fr 1fr !important;
+    }
+
+    /* ギャラリーモーダルのボタン縦書き防止 */
+    #galleryModal button{
+      white-space:nowrap;
+      font-size:0.65rem;
+      padding:0.4rem 0.5rem;
+    }
+    #galleryModal .modalBtnRow{
+      flex-wrap:wrap;
+      gap:0.3rem;
+    }
+  }
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>Anima Pipeline</h1>
+  <h1>Anima Pipeline <span id="versionBadge" style="font-weight:300;letter-spacing:0.2em;color:var(--muted);"></span></h1>
   <h2>キャラクター生成（プロンプト+画像）</h2>
 
   <div class="stoggle" onclick="toggleSettings()">
     <span id="sarrow">▶</span> 設定
   </div>
   <div class="sbody" id="sbody">
-    <!-- 必須 -->
-    <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#c0392b;font-weight:bold;margin-bottom:0.4rem;letter-spacing:0.05em;">■ 必須</div>
-    <div style="border:1.5px solid #e74c3c;border-radius:7px;padding:0.8rem;margin-bottom:0.8rem;background:#fff9f9;">
+    <div class="settings-section-header" data-target="sectionRequired" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#c0392b;font-weight:bold;margin-bottom:0.4rem;letter-spacing:0.05em;cursor:pointer;user-select:none;">▼ ■ 必須</div>
+    <div id="sectionRequired" style="border:1.5px solid #e74c3c;border-radius:7px;padding:0.8rem;margin-bottom:0.8rem;background:#fff9f9;">
       <div class="field">
         <label>① ワークフローJSONパス（フォールバック）</label>
         <input type="text" id="workflowInput" placeholder="C:\ComfyUI\...\image_anima_preview.json">
@@ -811,9 +950,8 @@ HTML = r"""<!DOCTYPE html>
         </div>
       </div>
     </div>
-    <!-- LLM使うなら必須 -->
-    <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#e67e22;font-weight:bold;margin-bottom:0.4rem;letter-spacing:0.05em;">■ LLMを使うなら必須</div>
-    <div style="border:1.5px solid #e67e22;border-radius:7px;padding:0.8rem;margin-bottom:0.8rem;background:#fffaf5;">
+    <div class="settings-section-header" data-target="sectionLLM" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#e67e22;font-weight:bold;margin-bottom:0.4rem;letter-spacing:0.05em;cursor:pointer;user-select:none;">▼ ■ LLMを使うなら必須</div>
+    <div id="sectionLLM" style="border:1.5px solid #e67e22;border-radius:7px;padding:0.8rem;margin-bottom:0.8rem;background:#fffaf5;">
       <div class="field">
         <label>⑥ LLMプラットフォーム</label>
         <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.3rem;" id="llmPlatformBtns">
@@ -838,9 +976,8 @@ HTML = r"""<!DOCTYPE html>
         </div>
       </div>
     </div>
-    <!-- 任意 -->
-    <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#27ae60;font-weight:bold;margin-bottom:0.4rem;letter-spacing:0.05em;">■ 任意</div>
-    <div style="border:1.5px solid #27ae60;border-radius:7px;padding:0.8rem;margin-bottom:0.8rem;background:#f9fff9;">
+    <div class="settings-section-header" data-target="sectionOptional" style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#27ae60;font-weight:bold;margin-bottom:0.4rem;letter-spacing:0.05em;cursor:pointer;user-select:none;">▼ ■ 任意</div>
+    <div id="sectionOptional" style="border:1.5px solid #27ae60;border-radius:7px;padding:0.8rem;margin-bottom:0.8rem;background:#f9fff9;">
       <div class="field">
         <label>⑧ LLMツール統合</label>
         <div style="display:flex;gap:0.8rem;flex-wrap:wrap;margin-top:0.3rem;">
@@ -870,7 +1007,6 @@ HTML = r"""<!DOCTYPE html>
       <button class="sl-btn" style="flex:1" onclick="testConnection('llm')">🤖 LLM 接続テスト</button>
     </div>
     <div id="testResult" style="display:none;font-family:'DM Mono',monospace;font-size:0.75rem;margin-top:0.4rem;padding:0.4rem 0.6rem;border-radius:5px;"></div>
-    <!-- キャラプリセット削除 -->
     <div style="margin-top:0.8rem;padding:0.6rem 0.7rem;background:#fff5f5;border:1px solid #e0779a;border-radius:7px;">
       <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#c0392b;font-weight:bold;margin-bottom:0.4rem;">📋 キャラプリセット削除</div>
       <div style="display:flex;gap:0.4rem;align-items:center;">
@@ -891,7 +1027,6 @@ HTML = r"""<!DOCTYPE html>
     color:var(--muted);margin-top:-0.6rem;margin-bottom:0.8rem;padding:0.3rem 0.5rem;
     background:#f5f5f0;border-left:2px solid var(--border);">📄 <span id="loadedFileNameText"></span></div>
 
-  <!-- ブロックA: 画像設定 -->
   <div class="scene-toggle" id="navA" onclick="toggleBlock('blockA','arrowA')" style="margin-bottom:0.5rem;">
     <span id="arrowA">▶</span> 画像設定
   </div>
@@ -900,9 +1035,11 @@ HTML = r"""<!DOCTYPE html>
       <label>画像サイズ（Anima推奨）</label>
       <div class="size-row">
         <select id="sizePreset" onchange="applyPreset(this.value)" style="min-width:0;"></select>
-        <input type="number" id="widthInput" value="1024" min="1" max="8192" step="1" oninput="selectedW=parseInt(this.value)||1024">
-        <span class="size-sep">×</span>
-        <input type="number" id="heightInput" value="1024" min="1" max="8192" step="1" oninput="selectedH=parseInt(this.value)||1024">
+        <div class="size-inputs">
+          <input type="number" id="widthInput" value="1024" min="1" max="8192" step="1" oninput="selectedW=parseInt(this.value)||1024">
+          <span class="size-sep">×</span>
+          <input type="number" id="heightInput" value="1024" min="1" max="8192" step="1" oninput="selectedH=parseInt(this.value)||1024">
+        </div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;align-items:start;">
@@ -924,12 +1061,10 @@ HTML = r"""<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- ブロックA2: 生成パラメータ -->
   <div class="scene-toggle" id="navA2" onclick="toggleBlock('blockA2','arrowA2')" style="margin-bottom:0.5rem;">
     <span id="arrowA2">▶</span> 生成パラメータ
   </div>
   <div id="blockA2" style="display:none;border:1px solid var(--border);border-radius:8px;padding:1rem;background:rgba(255,255,255,0.9);margin-bottom:1rem;">
-    <!-- seed -->
     <div style="margin-bottom:0.8rem;">
       <label style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);">Seed（シード値）</label>
       <div style="display:flex;gap:0.4rem;align-items:center;margin-top:0.3rem;flex-wrap:wrap;">
@@ -946,7 +1081,6 @@ HTML = r"""<!DOCTYPE html>
           style="font-family:'DM Mono',monospace;font-size:0.7rem;padding:0.3rem 0.5rem;width:2.8rem;text-align:center;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;">🎲</button>
       </div>
     </div>
-    <!-- steps / cfg -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin-bottom:0.8rem;">
       <div>
         <label style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);">Steps</label>
@@ -961,7 +1095,6 @@ HTML = r"""<!DOCTYPE html>
           font-family:'DM Mono',monospace;font-size:0.82rem;color:var(--ink);outline:none;box-sizing:border-box;margin-top:0.3rem;">
       </div>
     </div>
-    <!-- sampler / scheduler -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;">
       <div>
         <label style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);">Sampler</label>
@@ -980,20 +1113,17 @@ HTML = r"""<!DOCTYPE html>
     </div>
   </div>
 
-  <!-- ブロックB: キャラクター・シーン -->
   <div class="scene-toggle" id="navB" onclick="toggleBlock('blockB','arrowB')" style="margin-bottom:0.5rem;">
-    <span id="arrowB">▼</span> キャラクター・シーン
+    <span id="arrowB">▼</span> キャラクター
   </div>
   <div id="blockB">
     <div style="border:1px solid var(--border);border-radius:8px;padding:1rem;background:rgba(255,255,255,0.9);margin-bottom:1rem;">
-      <!-- 共通作品 -->
       <div class="struct-fields" style="margin-bottom:0.8rem;">
         <div class="struct-row required">
           <label class="struct-label">A. 共通作品（任意）</label>
           <input type="text" id="f_series" class="inp-ja" placeholder="例: ウマ娘、ブルアカ（複数作品の場合はキャラごとに入力）">
         </div>
       </div>
-      <!-- キャラ数 -->
       <div style="margin-bottom:0.5rem;display:grid;grid-template-columns:9rem 1fr;gap:0.5rem;align-items:center;">
         <label class="struct-label" style="text-align:right;padding-right:0.5rem;font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);">B. キャラ数 *</label>
         <input type="number" id="f_charcount" value="1" min="1" max="6" step="1"
@@ -1001,55 +1131,48 @@ HTML = r"""<!DOCTYPE html>
           font-family:'DM Mono',monospace;font-size:0.82rem;color:var(--ink);outline:none;"
           oninput="updateCharaBlocks()">
       </div>
-      <!-- キャラブロック -->
       <div id="charaContainer"></div>
-      <!-- シーン -->
     </div>
   </div>
-  <!-- ブロックC: シーン・雰囲気 -->
   <div id="navC" class="scene-toggle" onclick="toggleBlock('blockC','arrowC')" style="margin-bottom:0.5rem;">
     <span id="arrowC">▶</span> シーン・雰囲気（任意）
   </div>
   <div id="blockC" style="display:none;border:1px solid var(--border);border-radius:8px;padding:1rem;background:rgba(255,255,255,0.9);margin-bottom:1rem;">
       <div class="scene-optional" id="sceneOptional" style="padding-top:0.4rem;">
           <div class="opt-row">
-            <label class="opt-label">C-1. 世界観</label>
+            <div class="opt-label-wrap"><span class="opt-label">C-1. 世界観</span></div>
             <div style="display:flex;gap:0.25rem;flex-wrap:wrap;">
               <div id="world_btns" style="display:flex;gap:0.25rem;flex-wrap:wrap;"></div>
             </div>
           </div>
           <div class="opt-row" style="margin-top:0.4rem;align-items:start;">
-            <label class="opt-label" style="padding-top:0.3rem;">C-2. 場所</label>
+            <div class="opt-label-wrap"><span class="opt-label">C-2. 場所</span></div>
             <div style="display:flex;flex-direction:column;gap:0.3rem;width:100%;">
-              <!-- カテゴリタブ（屋外/屋内/特殊） -->
               <div id="place_cat_row" style="display:flex;gap:0.2rem;flex-wrap:wrap;">
                 <div class="period-btn" data-placecat="屋外" onclick="showPlaceCat('屋外',this)">屋外</div>
                 <div class="period-btn" data-placecat="屋内" onclick="showPlaceCat('屋内',this)">屋内</div>
                 <div class="period-btn" data-placecat="特殊" onclick="showPlaceCat('特殊',this)">特殊</div>
               </div>
-              <!-- 屋外/屋上/室内 サブ選択（カテゴリ連動） -->
               <div id="place_sub_row" style="display:none;gap:0.2rem;flex-wrap:wrap;"></div>
-              <!-- 場所選択肢エリア -->
               <div id="place_item_row" style="display:none;gap:0.2rem;flex-wrap:wrap;"></div>
-              <!-- 自由入力 -->
               <input type="text" id="f_place" class="inp-ja" placeholder="場所を自由入力（例: 競馬場、魔法学校）">
               <input type="hidden" id="f_outdoor" value="">
             </div>
           </div>
           <div class="opt-row" style="margin-top:0.4rem;">
-            <label class="opt-label">C-4. 時間帯</label>
+            <div class="opt-label-wrap"><span class="opt-label">C-3. 時間帯</span></div>
             <div style="display:flex;gap:0.25rem;flex-wrap:wrap;">
               <div id="tod_btns" style="display:flex;gap:0.25rem;flex-wrap:wrap;"></div>
             </div>
           </div>
           <div class="opt-row" style="margin-top:0.4rem;">
-            <label class="opt-label">C-5. 天気</label>
+            <div class="opt-label-wrap"><span class="opt-label">C-4. 天気</span></div>
             <div style="display:flex;gap:0.25rem;flex-wrap:wrap;">
               <div id="weather_btns" style="display:flex;gap:0.25rem;flex-wrap:wrap;"></div>
             </div>
           </div>
           <div class="opt-row" style="margin-top:0.4rem;">
-            <label class="opt-label">C-6. その他</label>
+            <div class="opt-label-wrap"><span class="opt-label">C-5. その他</span></div>
             <input type="text" id="f_misc" class="inp-ja" placeholder="例: 緊張感、幻想的な雰囲気">
           </div>
           <input type="hidden" id="f_world" value="">
@@ -1058,7 +1181,6 @@ HTML = r"""<!DOCTYPE html>
           <input type="hidden" id="f_weather" value="">
         </div>
       </div>
-      <!-- 補足メモ -->
       <div style="margin-top:0.6rem;">
         <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">D. 補足メモ（日本語）→ LLMに渡す（1回目のプロンプト生成のみ）</div>
         <textarea id="extraNoteJa" class="inp-ja" rows="2" placeholder="例: お姉さんが弟分を甘やかしている雰囲気、ドキドキしている"
@@ -1066,7 +1188,6 @@ HTML = r"""<!DOCTYPE html>
           font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);outline:none;
           resize:vertical;box-sizing:border-box;"></textarea>
       </div>
-  <!-- ブロックLoRA -->
   <div id="navLora" class="scene-toggle" onclick="toggleBlock('blockLora','arrowLora')" style="margin-bottom:0.5rem;">
     <span id="arrowLora">▶</span> LoRA
   </div>
@@ -1082,16 +1203,14 @@ HTML = r"""<!DOCTYPE html>
   <button id="btn" onclick="generate()">▶ 生成開始　(Ctrl+Enter)</button>
   <button class="btn-cancel" id="cancelBtn" onclick="cancelGenerate()">■ 生成中止</button>
 
-  <!-- Extra（生成完了後に表示） -->
   <div class="extra-block" id="extraBlock" style="margin-top:0.8rem;border:1px solid var(--border);padding:0.8rem;background:#fafaf8;">
     <div class="scene-toggle" id="navExtra" onclick="toggleExtraContent()" style="cursor:pointer;margin-bottom:0.5rem;">
       <span id="extraContentArrow">▶</span> プロンプト調整・追加（再生成に反映されます）
     </div>
     <div id="extraContent" style="display:none;">
 
-    <!-- 期間タグ（Anima推奨: 先頭） -->
     <div style="margin-bottom:0.7rem;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">① 期間タグ</div>
+      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ① 期間タグ</div>
       <div class="period-row">
         <div class="period-btn" data-p="" onclick="selPeriod(this)">－</div>
         <div class="period-btn" data-p="newest" onclick="selPeriod(this)">newest</div>
@@ -1108,31 +1227,27 @@ HTML = r"""<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- 品質タグ -->
     <div style="margin-bottom:0.7rem;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">② 品質タグ（人間ベース）</div>
+      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ② 品質タグ（人間ベース）</div>
       <div class="tag-check-group" id="qualityHuman"></div>
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin:0.4rem 0 0.3rem;">② 品質タグ（PonyV7 aestheticベース）</div>
+      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin:0.4rem 0 0.3rem;">▼ ② 品質タグ（PonyV7 aestheticベース）</div>
       <div class="tag-check-group" id="qualityPony"></div>
     </div>
 
-    <!-- メタタグ -->
     <div style="margin-bottom:0.7rem;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">③ メタタグ</div>
+      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ③ メタタグ</div>
       <div class="tag-check-group" id="metaTags"></div>
     </div>
 
-    <!-- 安全タグ -->
     <div style="margin-bottom:0.7rem;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">④ 安全タグ（単一選択）</div>
+      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ④ 安全タグ（単一選択）</div>
       <div style="display:flex;gap:0.3rem;">
         <div id="safety_btns" style="display:flex;gap:0.25rem;flex-wrap:wrap;"></div>
       </div>
     </div>
 
-    <!-- スタイル（@artist） -->
     <div style="margin-bottom:0.7rem;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">⑤ スタイル（@アーティスト名）<span style="color:#c0392b;"> ※英語表記で入力（例: takeuchi naoko）</span></div>
+      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ⑤ スタイル（@アーティスト名）<span style="color:#c0392b;"> ※英語表記で入力（例: takeuchi naoko）</span></div>
       <div class="extra-presets" id="stylePresets"></div>
       <div class="style-row" style="margin-top:0.4rem;">
         <input type="text" id="styleInput" class="inp-en" placeholder="新規追加（例: takeuchi naoko）"
@@ -1146,17 +1261,15 @@ HTML = r"""<!DOCTYPE html>
       <div id="styleBadges" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.4rem;min-height:1rem;"></div>
     </div>
 
-    <!-- ⑥ Extraタグ（キャラ・シーンの後） -->
-    <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">⑥ Extraタグ（キャラ・シーンタグの後に追加）</div>
+    <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ⑥ Extraタグ（キャラ・シーンタグの後に追加）</div>
     <div class="extra-presets" id="extraPresets"></div>
     <div class="extra-custom" style="margin-top:0.5rem;">
       <input type="text" id="extraCustomInput" class="inp-en" placeholder="カスタムタグを入力（例: breast_grab）">
       <button onclick="addCustomTag()">追加</button>
     </div>
     <div class="extra-badges" id="extraBadges"></div>
-    <!-- ⑦ 追記文（英語） -->
     <div style="margin-top:0.6rem;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">⑦ 追記文（英語）→ プロンプト末尾に直接追加</div>
+      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">▼ ⑦ 追記文（英語）→ プロンプト末尾に直接追加</div>
       <textarea id="extraNoteEn" class="inp-en" rows="2" placeholder="e.g. she gently strokes his hair with a warm smile"
         style="width:100%;background:white;border:1px solid var(--border);border-radius:6px;padding:0.5rem 0.6rem;
         font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);outline:none;
@@ -1165,42 +1278,36 @@ HTML = r"""<!DOCTYPE html>
     </div><!-- /extraContent -->
   </div>
 
-  <!-- ネガティブプロンプト調整 -->
   <div style="margin-top:0.6rem;border:1px solid #e8c4c4;border-radius:8px;padding:0.8rem;background:#fff9f9;">
     <div class="scene-toggle" id="navNeg" onclick="toggleNegContent()" style="cursor:pointer;margin-bottom:0.5rem;color:#c0392b;">
       <span id="negContentArrow">▶</span> ネガティブプロンプト調整
     </div>
     <div id="negContent" style="display:none;">
 
-    <!-- ① 期間タグ（ポジティブと共有） -->
     <div style="margin-bottom:0.7rem;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">① 期間タグ（ポジティブと共通）</div>
+      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ① 期間タグ（ポジティブと共通）</div>
       <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#aaa;">ポジティブの期間タグ設定がネガティブにも反映されます</div>
     </div>
 
-    <!-- ② 品質タグ -->
     <div style="margin-bottom:0.7rem;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">② 品質タグ（人間ベース: NORMAL/LOW/WORST）</div>
+      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ② 品質タグ（人間ベース: NORMAL/LOW/WORST）</div>
       <div class="tag-check-group" id="qualityHumanNeg"></div>
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin:0.4rem 0 0.3rem;">② 品質タグ（Pony）</div>
+      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin:0.4rem 0 0.3rem;">▼ ② 品質タグ（Pony）</div>
       <div class="tag-check-group" id="qualityPonyNeg"></div>
     </div>
 
-    <!-- ③ メタタグ -->
     <div style="margin-bottom:0.7rem;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">③ メタタグ</div>
+      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ③ メタタグ</div>
       <div class="tag-check-group" id="metaTagsNeg"></div>
     </div>
 
-    <!-- ④ 安全タグ（ネガティブ独立） -->
     <div style="margin-bottom:0.7rem;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">④ 安全タグ（単一選択）</div>
+      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ④ 安全タグ（単一選択）</div>
       <div id="neg_safety_btns" style="display:flex;gap:0.25rem;flex-wrap:wrap;"></div>
     </div>
 
-    <!-- ⑤ スタイル（ネガティブ独立） -->
     <div style="margin-bottom:0.7rem;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">⑤ スタイル（@アーティスト名・ネガティブ専用）<span style="color:#c0392b;"> ※英語表記</span></div>
+      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ⑤ スタイル（@アーティスト名・ネガティブ専用）<span style="color:#c0392b;"> ※英語表記</span></div>
       <div class="extra-presets" id="negStylePresets"></div>
       <div class="style-row" style="margin-top:0.4rem;">
         <input type="text" id="negStyleInput" class="inp-en" placeholder="新規追加（例: bad_artist）"
@@ -1214,9 +1321,8 @@ HTML = r"""<!DOCTYPE html>
       <div id="negStyleBadges" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.4rem;min-height:1rem;"></div>
     </div>
 
-    <!-- ⑥ Extraタグ（ネガティブ専用） -->
     <div style="margin-bottom:0.7rem;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">⑥ Extraタグ（ネガティブ専用・右クリックで削除）</div>
+      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ⑥ Extraタグ（ネガティブ専用・右クリックで削除）</div>
       <div class="extra-presets" id="negExtraPresets"></div>
       <div class="extra-custom" style="margin-top:0.5rem;">
         <input type="text" id="negExtraCustomInput" class="inp-en" placeholder="タグを追加（例: bad anatomy）">
@@ -1225,9 +1331,8 @@ HTML = r"""<!DOCTYPE html>
       <div class="extra-badges" id="negExtraBadges"></div>
     </div>
 
-    <!-- ⑦ 追記文（英語） -->
     <div style="margin-top:0.6rem;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">⑦ 追記文（英語）→ ネガティブプロンプト末尾に直接追加</div>
+      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.2rem;">▼ ⑦ 追記文（英語）→ ネガティブプロンプト末尾に直接追加</div>
       <textarea id="negExtraNoteEn" class="inp-en" rows="2" placeholder="e.g. cropped, out of frame"
         style="width:100%;background:white;border:1px solid #e8c4c4;border-radius:6px;padding:0.5rem 0.6rem;
         font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);outline:none;
@@ -1243,24 +1348,23 @@ HTML = r"""<!DOCTYPE html>
   <div class="status-box" id="statusBox">
     <div class="status-label">処理状況</div>
     <div id="steps"></div>
-    <div class="prompt-section-label" id="lmLabel" style="display:none;">
+    <div class="prompt-section-label" id="lmLabel" style="display:none;" onclick="togglePromptSection('promptOutput',this)">
       <span>▸ LLM生成ポジティブプロンプト</span>
-      <button class="copy-btn" onclick="copyPrompt('promptOutput',this)">コピー</button>
+      <button class="copy-btn" onclick="event.stopPropagation();copyPrompt('promptOutput',this)">コピー</button>
     </div>
     <div class="prompt-output" id="promptOutput"></div>
-    <div class="prompt-section-label" id="finalLabel" style="display:none;">
+    <div class="prompt-section-label" id="finalLabel" style="display:none;" onclick="togglePromptSection('promptFinal',this)">
       <span>▸ ComfyUI 送信ポジティブプロンプト（生成＋追加タグ）</span>
-      <button class="copy-btn" onclick="copyPrompt('promptFinal',this)">コピー</button>
+      <button class="copy-btn" onclick="event.stopPropagation();copyPrompt('promptFinal',this)">コピー</button>
     </div>
     <div class="prompt-final" id="promptFinal" style="display:none;font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--ink);"></div>
-    <div class="prompt-section-label" id="negFinalLabel" style="display:none;">
+    <div class="prompt-section-label" id="negFinalLabel" style="display:none;" onclick="togglePromptSection('promptNegFinal',this)">
       <span>▸ ComfyUI 送信ネガティブプロンプト</span>
-      <button class="copy-btn" onclick="copyPrompt('promptNegFinal',this)">コピー</button>
+      <button class="copy-btn" onclick="event.stopPropagation();copyPrompt('promptNegFinal',this)">コピー</button>
     </div>
     <div class="prompt-final" id="promptNegFinal" style="display:none;font-family:'DM Mono',monospace;font-size:0.8rem;color:#c0392b;"></div>
   </div>
 
-  <!-- ギャラリー -->
   <div id="gallerySection" style="display:none;margin-top:1rem;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;gap:0.5rem;">
       <div style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);font-weight:bold;white-space:nowrap;">📷 生成履歴（このセッション）</div>
@@ -1269,15 +1373,14 @@ HTML = r"""<!DOCTYPE html>
     <div id="galleryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem;"></div>
   </div>
 
-  <!-- ギャラリーモーダル -->
   <div id="galleryModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:none;align-items:center;justify-content:center;padding:1rem;" onclick="closeGalleryModal(event)">
     <div style="max-width:860px;width:100%;max-height:90vh;overflow-y:auto;padding:1rem;background:white;border-radius:12px;" onclick="event.stopPropagation()">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.8rem;flex-wrap:wrap;gap:0.4rem;">
         <div style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--muted);" id="modalTitle">生成結果</div>
-        <div style="display:flex;gap:0.4rem;">
-          <button id="modalReuseBtn" onclick="reusePromptFromModal()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0.7rem;border:1px solid var(--accent);border-radius:5px;background:white;color:var(--accent);cursor:pointer;">↺ プロンプト再利用</button>
-          <button id="modalFolderBtn" onclick="openFolderFromModal()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0.7rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;">📁 フォルダを開く</button>
-          <button onclick="document.getElementById('galleryModal').style.display='none'" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0.7rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;">✕ 閉じる</button>
+        <div class="modalBtnRow" style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+          <button id="modalReuseBtn" onclick="reusePromptFromModal()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0.7rem;border:1px solid var(--accent);border-radius:5px;background:white;color:var(--accent);cursor:pointer;white-space:nowrap;">↺ プロンプト再利用</button>
+          <button id="modalFolderBtn" onclick="openFolderFromModal()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0.7rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">📁 フォルダを開く</button>
+          <button onclick="document.getElementById('galleryModal').style.display='none'" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0.7rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">✕ 閉じる</button>
         </div>
       </div>
       <img id="modalImg" src="" style="width:100%;border-radius:8px;margin-bottom:0.8rem;">
@@ -1332,7 +1435,6 @@ function renderGalleryItem(item, idx){
 
 function openGalleryModal(idx, imgPath, item){
   modalItemIndex = idx;
-  // bodyに直接appendしてスタック親要素の影響を受けないようにする
   const modal = document.getElementById('galleryModal');
   if(modal.parentElement !== document.body) document.body.appendChild(modal);
   modal.style.display='flex';
@@ -1363,9 +1465,103 @@ function reusePromptFromModal(){
 }
 
 function updateNavPosition(){
-  // CSS固定のため何もしない
+  const nav = document.getElementById('floatNav');
+  if(!nav) return;
+  if(window.innerWidth <= 700){
+    nav.style.removeProperty('right');
+    nav.style.removeProperty('left');
+    nav.style.removeProperty('top');
+    nav.style.display = 'flex';
+    return;
+  }
+  nav.style.right = '16px';
+  nav.style.left = 'auto';
+  nav.style.display = 'flex';
 }
 window.addEventListener('resize', updateNavPosition);
+
+// ===== opt-rowトグル（PC/スマホ共通） =====
+// ===== 設定パネル・ポジネガセクショントグル =====
+function initSectionToggles(){
+  document.querySelectorAll('.settings-section-header').forEach(header=>{
+    if(header.dataset.toggleInit) return;
+    header.dataset.toggleInit = '1';
+    const targetId = header.dataset.target;
+    const target = document.getElementById(targetId);
+    if(!target) return;
+    header.addEventListener('click', ()=>{
+      const collapsed = target.style.display === 'none';
+      target.style.display = collapsed ? '' : 'none';
+      header.textContent = header.textContent.replace(collapsed ? '▶' : '▼', collapsed ? '▼' : '▶');
+    });
+  });
+
+  document.querySelectorAll('.toggle-section-header').forEach(header=>{
+    if(header.dataset.toggleInit) return;
+    header.dataset.toggleInit = '1';
+    header.style.cursor = 'pointer';
+    header.style.userSelect = 'none';
+
+    // ラベルから次のtoggle-section-headerまでの要素をopt-section-bodyでラップ
+    if(!header.nextElementSibling || header.nextElementSibling.classList.contains('opt-section-body')){
+    } else {
+      const body = document.createElement('div');
+      body.className = 'opt-section-body';
+      const siblings = [];
+      let next = header.nextElementSibling;
+      while(next && !next.classList.contains('toggle-section-header')){
+        siblings.push(next);
+        next = next.nextElementSibling;
+      }
+      if(siblings.length > 0){
+        header.parentNode.insertBefore(body, siblings[0]);
+        siblings.forEach(s => body.appendChild(s));
+      }
+    }
+
+    header.addEventListener('click', ()=>{
+      const body = header.nextElementSibling;
+      if(!body || !body.classList.contains('opt-section-body')) return;
+      const collapsed = body.style.display === 'none';
+      body.style.display = collapsed ? '' : 'none';
+      const text = header.textContent;
+      header.textContent = text.replace(collapsed ? '▶' : '▼', collapsed ? '▼' : '▶');
+    });
+  });
+}
+
+function togglePromptSection(targetId, labelEl){
+  const target = document.getElementById(targetId);
+  if(!target) return;
+  const collapsed = labelEl.classList.toggle('collapsed');
+  if(collapsed){
+    target.dataset.prevDisplay = target.style.display || '';
+    target.style.display = 'none';
+  } else {
+    target.style.display = target.dataset.prevDisplay || 'block';
+  }
+}
+
+function initOptRows(root){
+  const target = root || document;
+  target.querySelectorAll('.opt-row').forEach(row=>{
+    const labelWrap = row.querySelector('.opt-label-wrap');
+    if(!labelWrap) return;
+    if(labelWrap.dataset.toggleInit) return;
+    labelWrap.dataset.toggleInit = '1';
+    if(!row.querySelector('.opt-row-body')){
+      const body = document.createElement('div');
+      body.className = 'opt-row-body';
+      const children = [...row.children].filter(c => !c.classList.contains('opt-label-wrap'));
+      children.forEach(c => body.appendChild(c));
+      row.appendChild(body);
+    }
+    if(window.innerWidth <= 700) row.classList.add('collapsed');
+    labelWrap.addEventListener('click', ()=>{
+      row.classList.toggle('collapsed');
+    });
+  });
+}
 
 function navScrollTo(id){
   const el = document.getElementById(id);
@@ -1442,7 +1638,6 @@ async function generateCharaPreset(idx){
       const preset = data.preset;
       charaPresets.push(preset);
       updateAllPresetSelects();
-      // 自動的に読込
       const sel = document.getElementById('chara_preset_sel_'+idx);
       if(sel){ sel.value = charaPresets.length-1; }
       loadCharaPreset(idx);
@@ -1470,19 +1665,6 @@ async function saveCharaPreset(idx){
     updateAllPresetSelects();
     alert(`「${preset.name}」を保存しました`);
   }
-}
-
-async function deleteCharaPreset(idx){
-  const sel = document.getElementById('chara_preset_sel_'+idx);
-  if(!sel || sel.value==='') return;
-  const i = parseInt(sel.value);
-  if(isNaN(i)) return;
-  const preset = charaPresets[i];
-  if(!preset) return;
-  if(!confirm(`「${preset.name}」を削除しますか？`)) return;
-  await deleteCharaPresetFromServer(preset._filename);
-  charaPresets.splice(i, 1);
-  updateAllPresetSelects();
 }
 
 function updatePresetSelect(selEl){
@@ -1521,7 +1703,6 @@ function loadCharaPreset(idx){
   if(!sel || sel.value==='') return;
   const preset = charaPresets[parseInt(sel.value)];
   if(!preset) return;
-  // applySessionのキャラ部分を流用
   const ch = preset.data;
   setTimeout(()=>{
     if(document.getElementById('chara_series_'+idx)) document.getElementById('chara_series_'+idx).value = ch.series||'';
@@ -1542,7 +1723,6 @@ function loadCharaPreset(idx){
       const el = document.getElementById(`chara_${f}_${idx}`);
       if(el) el.value = ch[f]||'';
     });
-    // 衣装復元（outfit_catがある場合はボタンUI、なければoutfit_freeに流す）
     if(ch.outfit_cat){
       const catBtn = document.querySelector(`#chara_${idx} [data-outcat="${ch.outfit_cat}"]`);
       if(catBtn) catBtn.click();
@@ -1552,12 +1732,10 @@ function loadCharaPreset(idx){
       }
       if(ch.outfit_item)  document.querySelectorAll(`#chara_${idx} [data-oitem]`).forEach(b=>b.classList.toggle('active',b.dataset.oitem===ch.outfit_item));
     }
-    // outfit_freeまたはoutfit（タグ文字列）を自由入力欄に
     const outfitFreeEl = document.getElementById(`chara_outfit_free_${idx}`);
     if(outfitFreeEl){
       outfitFreeEl.value = ch.outfit_free || ch.outfit || '';
     }
-    // 髪型ボタン復元
     if(ch.hairstyle){
       const hsVals = ch.hairstyle.split(',').map(v=>v.trim()).filter(Boolean);
       document.querySelector(`#chara_${idx}`)?.querySelectorAll('[data-hs]').forEach(b=>{
@@ -1566,7 +1744,6 @@ function loadCharaPreset(idx){
       const hsHid = document.getElementById(`chara_hairstyle_${idx}`);
       if(hsHid) hsHid.value = ch.hairstyle;
     }
-    // multiボタン復元（face/eyestate/mouth/effect）
     ['face','eyestate','mouth','effect'].forEach(f=>{
       const hid = document.getElementById(`chara_${f}_${idx}`);
       if(hid && ch[f]){
@@ -1576,16 +1753,13 @@ function loadCharaPreset(idx){
         });
       }
     });
-    // bustボタン復元
     const bustHid2 = document.getElementById(`chara_bust_${idx}`);
     if(bustHid2 && ch.bust){
       bustHid2.value = ch.bust;
       const bustRow2 = document.getElementById(`chara_bust_row_${idx}`);
       if(bustRow2) bustRow2.querySelectorAll('.age-btn').forEach(b=>b.classList.toggle('active', b.dataset.bust===ch.bust));
     }
-    // 髪色select復元
     const hairSelEl = document.querySelector(`#chara_${idx} select[id^=""][id=""]`) || (() => {
-      // hairSelはidがないのでhairHiddenの前のselectを探す
       const hcHid = document.getElementById(`chara_haircolor_${idx}`);
       return hcHid?.previousElementSibling?.tagName==='INPUT' ? hcHid?.parentElement?.querySelector('select') : hcHid?.previousElementSibling;
     })();
@@ -1595,7 +1769,6 @@ function loadCharaPreset(idx){
       if(hcFound){ hairSelEl.style.backgroundColor=hcFound.bg||'white'; hairSelEl.style.color=hcFound.fg||'var(--ink)'; }
       document.getElementById(`chara_haircolor_${idx}`).value = ch.haircolor;
     }
-    // 肌色復元
     const skinHid = document.getElementById(`chara_skin_${idx}`);
     if(skinHid){
       skinHid.value = ch.skin||'';
@@ -1604,7 +1777,6 @@ function loadCharaPreset(idx){
     }
     const skinOtherEl = document.getElementById(`chara_skin_other_${idx}`);
     if(skinOtherEl) skinOtherEl.value = ch.skinOther||''
-    // 自由入力欄復元
     const hsf = document.getElementById(`chara_hairstyle_free_${idx}`);
     if(hsf && ch.hairstyle_free) hsf.value = ch.hairstyle_free;
     const hof = document.getElementById(`chara_hairother_${idx}`);
@@ -1613,7 +1785,6 @@ function loadCharaPreset(idx){
     if(acf && ch.action_free) acf.value = ch.action_free;
     const itf = document.getElementById(`chara_item_free_${idx}`);
     if(itf && ch.item_free) itf.value = ch.item_free;
-    // 瞳色select復元
     const eyeHid2 = document.getElementById(`chara_eyes_${idx}`);
     if(eyeHid2 && ch.eyes){
       eyeHid2.value=ch.eyes;
@@ -1621,7 +1792,6 @@ function loadCharaPreset(idx){
       const eyeSelEl2 = eyeWrapEl?.querySelector('select');
       if(eyeSelEl2){ eyeSelEl2.value=ch.eyes; const f=EYE_COLORS.find(c=>c.v===ch.eyes); if(f){eyeSelEl2.style.backgroundColor=f.bg||'white';eyeSelEl2.style.color=f.fg||'var(--ink)';} }
     }
-    // 詳細欄を自動展開
     const hasDetail = ['outfit','action','hair','eyes','skin','body','misc','bust'].some(f=>ch[f]);
     if(hasDetail){
       const opt = document.getElementById('chara_opt_'+idx);
@@ -1646,7 +1816,6 @@ async function loadWorkflowList(){
     const res = await fetch('/workflows');
     const data = await res.json();
     const current = sel.value;
-    // 既存オプションをクリア（デフォルトは残す）
     while(sel.options.length > 1) sel.remove(1);
     (data.files||[]).forEach(f=>{
       const opt = document.createElement('option');
@@ -1654,9 +1823,7 @@ async function loadWorkflowList(){
       opt.textContent = f.replace(/\.json$/i,'');
       sel.appendChild(opt);
     });
-    // 以前の選択を復元
     if(current && [...sel.options].some(o=>o.value===current)) sel.value = current;
-    console.log('[workflow] loaded:', data.files);
   }catch(e){ console.warn('[workflow] load failed:', e); }
 }
 
@@ -1672,69 +1839,126 @@ async function loadLoraList(){
     const res = await fetch('/lora_list');
     const data = await res.json();
     _loraList = data.loras || [];
-    // 既存のselectを更新
     for(let i=0; i<LORA_SLOT_COUNT; i++){
       const sel = document.getElementById(`lora_name_${i}`);
-      if(!sel || sel.tagName !== 'SELECT') continue;
+      if(!sel) continue;
       const current = sel.value;
       while(sel.options.length > 1) sel.remove(1);
       _loraList.forEach(name=>{
         const opt = document.createElement('option');
         opt.value = name;
-        opt.textContent = name.replace(/\\/g, '/');  // バックスラッシュをスラッシュに統一して表示
-        opt.title = name;
+        opt.textContent = name.replace(/\\/g,'/');
         sel.appendChild(opt);
       });
       if(current && [...sel.options].some(o=>o.value===current)) sel.value = current;
     }
-    console.log(`[lora] loaded ${_loraList.length} loras`);
+    updateLoraCardGrid();
   }catch(e){ console.warn('[lora] load failed:', e); }
+}
+
+function updateLoraCardGrid(){
+  const grid = document.getElementById('loraCardGrid');
+  if(!grid) return;
+  const loraOpen = document.getElementById('blockLora')?.style.display !== 'none';
+  grid.innerHTML = '';
+  _loraList.forEach(name=>{
+    const card = document.createElement('div');
+    card.style.cssText = 'position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;background:#f0f0f0;aspect-ratio:1;transition:border-color 0.15s;';
+    card.dataset.loraName = name;
+    card.title = name.replace(/\\/g,'/');
+    const img = document.createElement('img');
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:none;';
+    img.onload = ()=>{ img.style.display='block'; };
+    img.onerror = ()=>{};
+    img.dataset.src = '/lora_thumbnail?name=' + encodeURIComponent(name);
+    if(loraOpen) img.src = img.dataset.src;
+    card.appendChild(img);
+    const label = document.createElement('div');
+    const shortName = name.replace(/\\/g,'/').split('/').pop().replace(/\.(safetensors|ckpt|pt)$/i,'');
+    label.textContent = shortName;
+    label.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.65);color:white;font-family:DM Mono,monospace;font-size:0.58rem;padding:0.2rem 0.3rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+    card.appendChild(label);
+    const badge = document.createElement('div');
+    badge.className = 'lora-card-badge';
+    badge.dataset.loraName = name;
+    badge.style.cssText = 'display:none;position:absolute;top:3px;right:3px;background:var(--multi);color:white;font-family:DM Mono,monospace;font-size:0.6rem;padding:0.1rem 0.35rem;border-radius:4px;font-weight:bold;';
+    card.appendChild(badge);
+    card.addEventListener('click', ()=>assignLoraSlot(name));
+    grid.appendChild(card);
+  });
+  updateLoraCardBadges();
+}
+
+function assignLoraSlot(name){
+  for(let i=0; i<LORA_SLOT_COUNT; i++){
+    const sel = document.getElementById(`lora_name_${i}`);
+    if(sel && sel.value === name){ sel.value=''; updateLoraCardBadges(); return; }
+  }
+  for(let i=0; i<LORA_SLOT_COUNT; i++){
+    const sel = document.getElementById(`lora_name_${i}`);
+    if(sel && !sel.value){ sel.value=name; updateLoraCardBadges(); return; }
+  }
+  const sel = document.getElementById('lora_name_0');
+  if(sel){ sel.value=name; updateLoraCardBadges(); }
+}
+
+function updateLoraCardBadges(){
+  document.querySelectorAll('.lora-card-badge').forEach(b=>{ b.style.display='none'; });
+  document.querySelectorAll('#loraCardGrid > div').forEach(c=>{ c.style.borderColor='var(--border)'; });
+  for(let i=0; i<LORA_SLOT_COUNT; i++){
+    const sel = document.getElementById(`lora_name_${i}`);
+    if(!sel || !sel.value) continue;
+    const card = [...document.querySelectorAll('#loraCardGrid > div')].find(c=>c.dataset.loraName===sel.value);
+    if(card){
+      card.style.borderColor='var(--multi)';
+      const badge = card.querySelector('.lora-card-badge');
+      if(badge){ badge.textContent=`S${i+1}`; badge.style.display='block'; }
+    }
+  }
 }
 
 function initLoraSlots(){
   const container = document.getElementById('loraSlots');
   if(!container) return;
-  // ヘッダー行（🔄ボタン）
   const header = document.createElement('div');
-  header.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:0.4rem;';
+  header.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:0.5rem;';
   const reloadBtn = document.createElement('button');
   reloadBtn.textContent = '🔄 LoRA一覧取得';
   reloadBtn.onclick = loadLoraList;
   reloadBtn.style.cssText = 'font-family:DM Mono,monospace;font-size:0.68rem;padding:0.25rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--muted);cursor:pointer;white-space:nowrap;';
   header.appendChild(reloadBtn);
   container.appendChild(header);
-
+  const grid = document.createElement('div');
+  grid.id = 'loraCardGrid';
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:0.4rem;margin-bottom:0.6rem;max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:0.4rem;background:#fafaf8;';
+  container.appendChild(grid);
+  const slotNote = document.createElement('div');
+  slotNote.style.cssText = 'font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);margin-bottom:0.3rem;';
+  slotNote.textContent = 'カードをクリックでスロットに割り当て（再クリックで解除）';
+  container.appendChild(slotNote);
   for(let i=0; i<LORA_SLOT_COUNT; i++){
     const row = document.createElement('div');
-    row.style.cssText = 'display:grid;grid-template-columns:1fr auto auto;gap:0.4rem;align-items:center;margin-bottom:0.4rem;';
-    // select（LoRA選択）
+    row.style.cssText = 'display:grid;grid-template-columns:1fr auto auto;gap:0.4rem;align-items:center;margin-bottom:0.3rem;';
     const sel = document.createElement('select');
     sel.id = `lora_name_${i}`;
-    sel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.75rem;border:1px solid var(--accent-en);border-radius:5px;padding:0.3rem 0.5rem;outline:none;box-sizing:border-box;background:white;color:var(--ink);cursor:pointer;';
+    sel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.72rem;border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.5rem;outline:none;background:white;color:var(--ink);cursor:pointer;';
+    sel.addEventListener('change', updateLoraCardBadges);
     const emptyOpt = document.createElement('option');
     emptyOpt.value = '';
-    emptyOpt.textContent = `— スロット${i+1}（未使用）—`;
+    emptyOpt.textContent = `— S${i+1} 未使用 —`;
     sel.appendChild(emptyOpt);
-    // 強度ラベル
-    const strengthLabel = document.createElement('span');
-    strengthLabel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);white-space:nowrap;';
-    strengthLabel.textContent = '強度';
-    // 強度input
-    const strengthInput = document.createElement('input');
-    strengthInput.type = 'number';
-    strengthInput.id = `lora_strength_${i}`;
-    strengthInput.value = '1';
-    strengthInput.min = '0';
-    strengthInput.max = '2';
-    strengthInput.step = '0.05';
-    strengthInput.style.cssText = 'font-family:DM Mono,monospace;font-size:0.75rem;border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.4rem;outline:none;width:4.5rem;box-sizing:border-box;';
-    row.appendChild(sel);
-    row.appendChild(strengthLabel);
-    row.appendChild(strengthInput);
+    const strLabel = document.createElement('span');
+    strLabel.textContent = '強度';
+    strLabel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);white-space:nowrap;';
+    const strInput = document.createElement('input');
+    strInput.type = 'number';
+    strInput.id = `lora_strength_${i}`;
+    strInput.value = '1'; strInput.min = '0'; strInput.max = '2'; strInput.step = '0.05';
+    strInput.style.cssText = 'font-family:DM Mono,monospace;font-size:0.75rem;border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.4rem;outline:none;width:4.5rem;box-sizing:border-box;';
+    row.appendChild(sel); row.appendChild(strLabel); row.appendChild(strInput);
     container.appendChild(row);
   }
-  // 起動時に自動取得
-  loadLoraList();
+  // LoRAセクションを開いた時に自動取得（toggleBlockから呼ばれる）
 }
 
 function collectLoraSlots(){
@@ -1754,7 +1978,6 @@ function applyLoraSlots(slots){
     const nameEl = document.getElementById(`lora_name_${i}`);
     const strEl = document.getElementById(`lora_strength_${i}`);
     if(nameEl){
-      // selectの場合、optionがなければ追加してから選択
       if(nameEl.tagName === 'SELECT' && slot.name){
         if(![...nameEl.options].some(o=>o.value===slot.name)){
           const opt = document.createElement('option');
@@ -1781,7 +2004,6 @@ function initGenParams(){
   (__OPT__.scheduler_options||[]).forEach(({v,label})=>{
     const opt=document.createElement('option'); opt.value=v; opt.textContent=label; schedulerSel.appendChild(opt);
   });
-  // デフォルト値を設定
   samplerSel.value='er_sde';
   schedulerSel.value='simple';
 }
@@ -1810,7 +2032,6 @@ function selectFmt(el){
   selectedFmt=el.dataset.fmt;
 }
 
-
 function applyPreset(val){
   const [w,h]=val.split('x').map(Number);
   selectedW=w; selectedH=h;
@@ -1820,7 +2041,6 @@ function applyPreset(val){
 
 const PLACE_CATEGORIES = __OPT__.place_categories;
 
-// カテゴリごとのサブ選択肢（屋外/屋上/室内）
 const PLACE_SUB = __OPT__.place_sub;
 
 let placeActiveCat = null;
@@ -1841,7 +2061,6 @@ function showPlaceCat(cat, btnEl){
     b.classList.toggle('active', b.dataset.placecat===cat);
   });
 
-  // サブ行（屋外/屋上/室内）
   subRow.innerHTML = '';
   outdoorHid.value = '';
   (PLACE_SUB[cat]||[]).forEach(({v,label})=>{
@@ -1855,14 +2074,12 @@ function showPlaceCat(cat, btnEl){
     });
     subRow.appendChild(btn);
   });
-  // 屋内は室内を自動選択
   if(cat==='屋内'){
     const indoorBtn = [...subRow.querySelectorAll('.period-btn')].find(b=>b.textContent==='室内');
     if(indoorBtn){ indoorBtn.classList.add('active'); outdoorHid.value='indoors'; }
   }
   subRow.style.display = (PLACE_SUB[cat]||[]).length > 0 ? 'flex' : 'none';
 
-  // 場所選択肢
   itemRow.innerHTML = '';
   (PLACE_CATEGORIES[cat]||[]).forEach(({v,label})=>{
     const btn = document.createElement('div');
@@ -1874,7 +2091,7 @@ function showPlaceCat(cat, btnEl){
       itemRow.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
       if(!isActive){
         this.classList.add('active');
-        document.getElementById('f_place').value = label;
+        document.getElementById('f_place').value = v; // 英語タグ
       } else {
         document.getElementById('f_place').value = '';
       }
@@ -1884,8 +2101,6 @@ function showPlaceCat(cat, btnEl){
   itemRow.style.display = 'flex';
 }
 
-// LLMプラットフォームの選択肢定義
-// PFごとのデフォルト値（初回選択時のみ補完）
 const LLM_PLATFORM_PRESETS = {
   lmstudio: {
     url:   'http://localhost:1234',
@@ -1904,7 +2119,6 @@ const LLM_PLATFORM_PRESETS = {
   },
 };
 
-// PFごとの入力値をメモリに保持（切り替え時に退避・復元）
 const _llmPlatValues = {};  // { 'lmstudio': {url, token, model}, ... }
 let _currentPlat = '';
 
@@ -1920,7 +2134,6 @@ function _savePlatFields(plat){
 function _restorePlatFields(plat){
   const saved  = _llmPlatValues[plat];
   const preset = LLM_PLATFORM_PRESETS[plat];
-  // 保存値があればそれを、なければプリセットのデフォルトを使う
   const val = saved || preset || {url:'', token:'', model:''};
   document.getElementById('lmsUrlInput').value = val.url   || '';
   document.getElementById('tokenInput').value  = val.token || '';
@@ -1928,7 +2141,6 @@ function _restorePlatFields(plat){
 }
 
 function selLLMPlatform(el){
-  // 切り替え前に現在の入力値を退避
   _savePlatFields(_currentPlat);
   document.querySelectorAll('#llmPlatformBtns .period-btn').forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
@@ -1946,12 +2158,12 @@ function toggleSettings(){
   settingsOpen=!settingsOpen;
   document.getElementById('sbody').classList.toggle('open',settingsOpen);
   document.getElementById('sarrow').textContent=settingsOpen?'▼':'▶';
+  if(settingsOpen) setTimeout(initSectionToggles, 50);
 }
 
 async function loadSettings(){
   try{
     const cfg=await(await fetch('/config')).json();
-    // LLMプラットフォーム：保存値をメモリに展開してから復元
     const plat = cfg.llm_platform||'';
     _currentPlat = plat;
     if(plat){
@@ -1966,7 +2178,6 @@ async function loadSettings(){
     });
     document.getElementById('llmDetailFields').style.display = plat ? '' : 'none';
     if(plat) _restorePlatFields(plat);
-    // フォールバック（platなしでも個別フィールドは読み込んでおく）
     if(!plat){
       document.getElementById('lmsUrlInput').value = cfg.llm_url   || '';
       document.getElementById('tokenInput').value  = cfg.llm_token || '';
@@ -1982,7 +2193,6 @@ async function loadSettings(){
     document.getElementById('posNodeInput').value=cfg.positive_node_id||'';
     document.getElementById('negNodeInput').value=cfg.negative_node_id||'';
     document.getElementById('ksamplerNodeInput').value=cfg.ksampler_node_id||'19';
-    // 生成パラメータ
     if(cfg.seed_mode){
       selectedSeedMode=cfg.seed_mode;
       document.querySelectorAll('#seedModeBtns .period-btn').forEach(b=>b.classList.toggle('active',b.dataset.smode===cfg.seed_mode));
@@ -2023,7 +2233,6 @@ async function testConnection(target){
 }
 
 async function saveSettings(){
-  // 保存前に現在の入力値をメモリに退避
   _savePlatFields(_currentPlat);
   const cfg={
     llm_platform: _currentPlat||'',
@@ -2054,7 +2263,6 @@ function copyPrompt(elId, btn){
     btn.classList.add('copied');
     setTimeout(()=>{ btn.textContent='コピー'; btn.classList.remove('copied'); }, 2000);
   }).catch(()=>{
-    // fallback
     const ta = document.createElement('textarea');
     ta.value = text; document.body.appendChild(ta); ta.select();
     document.execCommand('copy'); document.body.removeChild(ta);
@@ -2072,7 +2280,6 @@ function setStep(steps,id,state,text){
 
 // ===== セッション保存・読み込み =====
 function collectSessionData(){
-  // キャラ情報収集
   const count = Math.max(1, Math.min(6, parseInt(document.getElementById('f_charcount').value)||1));
   const chars = [];
   for(let i=0;i<count;i++){
@@ -2180,7 +2387,6 @@ function saveSession(){
   a.download = filename;
   a.click();
   URL.revokeObjectURL(a.href);
-  // サーバーにも保存
   autoSaveSession();
 }
 
@@ -2200,40 +2406,32 @@ async function loadSession(input){
 }
 
 function applySession(data){
-  // シリーズ
   document.getElementById('f_series').value = data.series||'';
-  // キャラ数・ブロック
   const count = data.charcount||1;
   document.getElementById('f_charcount').value = count;
   updateCharaBlocks();
-  // 少し遅延してDOMが生成されてから値をセット
   setTimeout(()=>{
     (data.characters||[]).forEach((ch,i)=>{
       if(document.getElementById('chara_series_'+i))
         document.getElementById('chara_series_'+i).value = ch.series||'';
-      // オリジナル復元
       if(ch.original){
         const ob = document.getElementById('chara_orig_'+i);
         if(ob && !ob.classList.contains('active')) ob.click();
       }
       if(document.getElementById('chara_name_'+i))
         document.getElementById('chara_name_'+i).value = ch.name||'';
-      // 性別
       const gRow = document.querySelector(`#chara_${i} .chara-attr-btns.gender-row`);
       if(gRow) gRow.querySelectorAll('.gender-btn').forEach(b=>{
         b.classList.toggle('active', b.dataset.g===ch.gender);
       });
-      // 年齢
       const aRow = document.querySelector(`#chara_${i} .chara-attr-btns.age-row`);
       if(aRow) aRow.querySelectorAll('.age-btn').forEach(b=>{
         b.classList.toggle('active', b.dataset.a===ch.age);
       });
-      // 任意フィールド
       ['outfit','action','hair','hairstyle','hairstyle_lm','haircolor','eyes','skin','body','misc'].forEach(f=>{
         const el = document.getElementById(`chara_${f}_${i}`);
         if(el) el.value = ch[f]||'';
       });
-      // 動作ボタン復元
       const actionHidEl = document.getElementById(`chara_action_${i}`);
       if(actionHidEl && ch['action']!==undefined){
         actionHidEl.value = ch['action']||'';
@@ -2241,22 +2439,18 @@ function applySession(data){
         document.getElementById(`chara_${i}`)?.querySelectorAll('[data-act]').forEach(b=>{
           b.classList.toggle('active', actVals.includes(b.dataset.act));
         });
-        // 「持つ」が含まれていれば持ち物行を表示
         if(actVals.includes('holding')){
           const hr = document.getElementById(`chara_${i}`)?.querySelector('.opt-row[style*="display:none"]');
-          // holdingRowを特定してdisplay:flex
           document.getElementById(`chara_${i}`)?.querySelectorAll('.opt-row').forEach(r=>{
             if(r.querySelector('#chara_item_'+i)) r.style.display='flex';
           });
         }
-        // 自由入力復元（選択式に含まれない値の場合）
         const freeEl = document.getElementById(`chara_action_free_${i}`);
         if(freeEl){
           const isPresetOnly = actVals.every(v=>ACTION_OPTIONS.some(o=>o.v===v));
           freeEl.value = (ch['action'] && !isPresetOnly) ? ch['action'] : '';
         }
       }
-      // バストボタン復元
       let bustHid = document.getElementById(`chara_bust_${i}`);
       if(bustHid){
         bustHid.value = ch['bust']||'';
@@ -2265,12 +2459,10 @@ function applySession(data){
           b.classList.toggle('active', b.dataset.bust===(ch['bust']||''));
         });
       }
-      // 持ち物復元
       const itemHidEl = document.getElementById(`chara_item_${i}`);
       if(itemHidEl && ch['item']!==undefined){
         itemHidEl.value = ch['item']||'';
       }
-      // 位置復元
       ['posv','posh'].forEach(f=>{
         const hid = document.getElementById(`chara_${f}_${i}`);
         if(hid && ch[f]!==undefined){
@@ -2280,32 +2472,26 @@ function applySession(data){
           });
         }
       });
-      // 衣装復元
       if(ch['outfit_cat']!==undefined){
         const charEl = document.getElementById(`chara_${i}`);
         if(charEl){
           const cat = ch['outfit_cat']||'';
-          // カテゴリボタンをクリックでUI再現
           const catBtn = charEl.querySelector(`[data-outcat="${cat}"]`);
           if(catBtn) catBtn.click();
-          // 色
           if(ch['outfit_color']){
             charEl.querySelectorAll('[data-ocolor]').forEach(b=>{
               b.classList.toggle('active', b.dataset.ocolor===ch['outfit_color']);
             });
           }
-          // 種類
           if(ch['outfit_item']){
             charEl.querySelectorAll('[data-oitem]').forEach(b=>{
               b.classList.toggle('active', b.dataset.oitem===ch['outfit_item']);
             });
           }
-          // 自由入力
           const freeIn = document.getElementById(`chara_outfit_free_${i}`);
           if(freeIn && ch['outfit_free']) freeIn.value = ch['outfit_free'];
         }
       }
-      // 髪型復元
       const hairstyleEl = document.getElementById(`chara_hairstyle_${i}`);
       if(hairstyleEl && ch['hairstyle']!==undefined){
         hairstyleEl.value = ch['hairstyle']||'';
@@ -2313,7 +2499,6 @@ function applySession(data){
         const hsBtns = hairstyleEl.closest('.opt-row')?.querySelectorAll('[data-hs]');
         if(hsBtns) hsBtns.forEach(b=>b.classList.toggle('active', hsVals.includes(b.dataset.hs)));
       }
-      // 付属復元
       ['ears','tail','wings'].forEach(f=>{
         const hid = document.getElementById(`chara_${f}_${i}`);
         if(hid && ch[f]!==undefined){
@@ -2333,7 +2518,6 @@ function applySession(data){
           b.classList.toggle('active', accVals.includes(b.dataset.val));
         });
       }
-      // エフェクト復元
       let efHid = document.getElementById(`chara_effect_${i}`);
       if(efHid && ch['effect']!==undefined){
         efHid.value = ch['effect'];
@@ -2344,7 +2528,6 @@ function applySession(data){
           else b.classList.toggle('active', efVals.includes(b.dataset.effect));
         });
       }
-      // 口の状態復元
       let mHid = document.getElementById(`chara_mouth_${i}`);
       if(mHid && ch['mouth']!==undefined){
         mHid.value = ch['mouth'];
@@ -2355,7 +2538,6 @@ function applySession(data){
           else b.classList.toggle('active', mVals.includes(b.dataset.mouth));
         });
       }
-      // 目の状態復元
       let esHid = document.getElementById(`chara_eyestate_${i}`);
       if(esHid && ch['eyestate']!==undefined){
         esHid.value = ch['eyestate'];
@@ -2366,7 +2548,6 @@ function applySession(data){
           else b.classList.toggle('active', esVals.includes(b.dataset.es));
         });
       }
-      // 表情復元
       let faceHid = document.getElementById(`chara_face_${i}`);
       if(faceHid && ch['face']!==undefined){
         faceHid.value = ch['face'];
@@ -2377,7 +2558,6 @@ function applySession(data){
           else b.classList.toggle('active', faceVals.includes(b.dataset.face));
         });
       }
-      // 髪色select復元
       const hcHid = document.getElementById(`chara_haircolor_${i}`);
       if(hcHid && ch['haircolor']){
         hcHid.value = ch['haircolor'];
@@ -2385,7 +2565,6 @@ function applySession(data){
         const hcSel = hcWrap?.querySelector('select');
         if(hcSel){ hcSel.value=ch['haircolor']; const f=HAIR_COLORS.find(c=>c.v===ch['haircolor']); if(f){hcSel.style.backgroundColor=f.bg||'white';hcSel.style.color=f.fg||'var(--ink)';} }
       }
-      // 瞳の色復元
       let eyeHid = document.getElementById(`chara_eyes_${i}`);
       if(eyeHid && ch['eyes']){
         eyeHid.value = ch['eyes'];
@@ -2393,7 +2572,6 @@ function applySession(data){
         const eyeSelEl3 = eyeWrapEl2?.querySelector('select');
         if(eyeSelEl3){ eyeSelEl3.value=ch['eyes']; const f=EYE_COLORS.find(c=>c.v===ch['eyes']); if(f){eyeSelEl3.style.backgroundColor=f.bg||'white';eyeSelEl3.style.color=f.fg||'var(--ink)';} }
       }
-      // 肌色復元
       let skinHid = document.getElementById(`chara_skin_${i}`);
       if(skinHid){
         skinHid.value = ch['skin']||'';
@@ -2411,14 +2589,12 @@ function applySession(data){
           document.querySelectorAll(`#chara_${i} [data-skin]`).forEach(b=>b.classList.remove('active'));
         }
       }
-      // 詳細欄を自動展開（入力があれば）
       const hasDetail = ['outfit','action','hair','eyes','skin','body','misc','bust'].some(f=>ch[f]);
       if(hasDetail){
         const opt = document.getElementById('chara_opt_'+i);
         const btn = opt?.previousElementSibling?.querySelector('.chara-expand');
         if(opt && opt.style.display==='none'){ opt.style.display='block'; if(btn) btn.textContent='－ 詳細'; }
       }
-      // 自由入力欄の復元
       const hairStyleFreeEl = document.getElementById(`chara_hairstyle_free_${i}`);
       if(hairStyleFreeEl && ch['hairstyle_free']) hairStyleFreeEl.value = ch['hairstyle_free'];
       const hairOtherEl = document.getElementById(`chara_hairother_${i}`);
@@ -2428,35 +2604,39 @@ function applySession(data){
       const itemFreeEl = document.getElementById(`chara_item_free_${i}`);
       if(itemFreeEl && ch['item_free']) itemFreeEl.value = ch['item_free'];
     });
-    // シーンブロック（データがあれば展開）
     if(data.place||data.world||data.tod||data.weather||data.placeActiveCat){
       const blockC = document.getElementById('blockC');
       const arrowC = document.getElementById('arrowC');
       if(blockC && blockC.style.display==='none'){ blockC.style.display='block'; if(arrowC) arrowC.textContent='▼'; }
     }
-    // シーン
     document.getElementById('f_place').value = data.place||'';
     document.getElementById('f_misc').value  = data.misc||'';
-    // 旧セッション値の変換マップ（日本語→Danbooruタグ）
     const _legacyMap = {
       '朝':'morning','昼':'day','夕方':'evening','夜':'night',
       '日常':'everyday_life','和風':'japanese_style','西洋':'western_style',
       '中華':'chinese_style','ファンタジー':'fantasy','SF':'science_fiction','ポストアポカリプス':'post-apocalyptic',
       '晴れ':'sunny','曇り':'cloudy','雨':'rain','雪':'snow',
+      '公園':'park','海岸':'beach','海':'ocean','山':'mountain','森':'forest','草原':'field',
+      '街中':'street','神社':'shrine','庭園':'garden','川':'river','湖':'lake',
+      '校庭':'school_courtyard','競技場':'stadium','戦場':'battlefield',
+      '教室':'classroom','寝室':'bedroom','リビング':'living_room','風呂':'bathroom',
+      '図書館':'library','カフェ':'cafe','レストラン':'restaurant','体育館':'gym',
+      '病院':'hospital','城内':'castle_interior','教会':'church','研究室':'laboratory',
+      '廊下':'hallway','ステージ':'stage','ダンジョン':'dungeon',
+      '宇宙':'space','水中':'underwater','空中':'sky','異世界':'fantasy_world',
+      '廃墟':'ruins','神殿':'temple','天界':'heaven','地獄':'hell','虚空':'void','夢の中':'dream',
     };
     ['tod','world','weather'].forEach(g=>{ if(data[g] && _legacyMap[data[g]]) data[g]=_legacyMap[data[g]]; });
-    // 場所カテゴリ復元
+    if(data.place && _legacyMap[data.place]) data.place = _legacyMap[data.place];
     if(data.placeActiveCat){
       const catBtn = document.querySelector(`[data-placecat="${data.placeActiveCat}"]`);
       showPlaceCat(data.placeActiveCat, catBtn);
-      // アイテムボタンのactive復元
       if(data.place){
         const itemRow = document.getElementById('place_item_row');
         itemRow?.querySelectorAll('[data-placeval]').forEach(b=>{
           b.classList.toggle('active', b.textContent===data.place);
         });
       }
-      // サブボタン（outdoor）のactive復元
       if(data.outdoor){
         const subRow = document.getElementById('place_sub_row');
         if(subRow){
@@ -2477,10 +2657,8 @@ function applySession(data){
         b.classList.toggle('active', (b.dataset[g]||'')=== val);
       });
     });
-    // 補足・英語追記
     document.getElementById('extraNoteJa').value = data.extraNoteJa||'';
     document.getElementById('extraNoteEn').value = data.extraNoteEn||'';
-    // Extraタグ
     extraTags = new Set(data.extraTags||[]);
     if(data.negExtraPresetList){ negExtraPresetList = data.negExtraPresetList; }
     negExtraTags = new Set(data.negExtraTags||[]);
@@ -2498,23 +2676,19 @@ function applySession(data){
       });
     }
     renderExtraBadges();
-    // スタイル
     styleTags = data.styleTags||[];
     if(data.stylePresetList) stylePresetList = data.stylePresetList;
     renderStylePresets();
     renderStyleBadges();
-    // 期間
     selectedPeriod = data.selectedPeriod||'';
     document.querySelectorAll('.period-btn[data-p]').forEach(b=>{
       b.classList.toggle('active', b.dataset.p===selectedPeriod);
     });
     if(data.year) document.getElementById('yearInput').value = data.year;
-    // 安全タグ
     selectedSafety = data.selectedSafety||'';
     document.querySelectorAll('.safety-btn').forEach(b=>{
       b.classList.toggle('active', b.dataset.s===selectedSafety);
     });
-    // 品質・メタタグ（チェックボックス）
     function applyChecks(containerId, checked){
       document.querySelectorAll(`#${containerId} input[type=checkbox]`).forEach(cb=>{
         cb.checked = checked.includes(cb.dataset.tag);
@@ -2523,10 +2697,9 @@ function applySession(data){
     if(data.qualityHuman) applyChecks('qualityHuman', data.qualityHuman);
     if(data.qualityPony)  applyChecks('qualityPony',  data.qualityPony);
     if(data.metaTags)     applyChecks('metaTags',     data.metaTags);
-    // 生成済みプロンプトを復元
     if(data.lmPrompt){
       lastPositivePrompt = data.lmPrompt;
-      document.getElementById('lmLabel').style.display='block';
+      document.getElementById('lmLabel').style.display='block'; document.getElementById('lmLabel').classList.remove('collapsed');
       const po = document.getElementById('promptOutput');
       po.textContent = data.lmPrompt;
       po.classList.add('show');
@@ -2535,7 +2708,7 @@ function applySession(data){
     if(data.finalPrompt){
       lastPositivePrompt = lastPositivePrompt || data.finalPrompt; // LLMなし時はfinalPromptから復元
       lastFinalPrompt = data.finalPrompt;
-      document.getElementById('finalLabel').style.display='block';
+      document.getElementById('finalLabel').style.display='block'; document.getElementById('finalLabel').classList.remove('collapsed');
       const pf = document.getElementById('promptFinal');
       pf.textContent = data.finalPrompt;
       pf.style.display='block';
@@ -2543,13 +2716,12 @@ function applySession(data){
     }
     if(data.negFinalPrompt){
       lastNegativePrompt = data.negFinalPrompt;
-      document.getElementById('negFinalLabel').style.display='block';
+      document.getElementById('negFinalLabel').style.display='block'; document.getElementById('negFinalLabel').classList.remove('collapsed');
       const nf = document.getElementById('promptNegFinal');
       nf.textContent = data.negFinalPrompt;
       nf.style.display='block';
     }
     if(lastPositivePrompt){ document.getElementById('regenBtn').classList.add('show'); running=false; document.getElementById('btn').disabled=false; }
-    // 画像サイズ・フォーマット・枚数
     if(data.imgW){ selectedW=data.imgW; document.getElementById('widthInput').value=data.imgW; }
     if(data.imgH){ selectedH=data.imgH; document.getElementById('heightInput').value=data.imgH; }
     if(data.imgFmt){ selectedFmt=data.imgFmt; document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.toggle('active',b.dataset.fmt===data.imgFmt)); }
@@ -2591,7 +2763,6 @@ function initQualityMeta(){
   QUALITY_PONY.forEach(t=> qp.appendChild(makeTagCheck(t, QUALITY_PONY_DEFAULT.has(t))));
   const mt = document.getElementById('metaTags');
   META_TAGS.forEach(t=> mt.appendChild(makeTagCheck(t, META_DEFAULT.has(t))));
-  // 安全タグ初期「なし」選択
   document.querySelector('.safety-btn[data-s=""]')?.classList.add('active');
 }
 
@@ -2605,7 +2776,6 @@ function initQualityMetaNeg(){
   const NEG_PONY_TAGS = __OPT__.quality_pony_neg ? __OPT__.quality_pony_neg.tags : QUALITY_PONY;
   const qpn = document.getElementById('qualityPonyNeg');
   if(qpn) NEG_PONY_TAGS.forEach(t=> qpn.appendChild(makeTagCheck(t, NEG_PONY_DEFAULT.has(t))));
-  // メタネガティブ（デフォルト全OFF）
   const mtn = document.getElementById('metaTagsNeg');
   if(mtn) META_TAGS.forEach(t=> mtn.appendChild(makeTagCheck(t, false)));
 }
@@ -2638,7 +2808,6 @@ function collectPromptPrefix(){
 }
 
 // ===== スタイル・期間タグ管理 =====
-// スタイルタグ: presetList=保存済一覧, styleTags=現在選択中
 let stylePresetList = [];
 let styleTags = [];
 let selectedPeriod = '';
@@ -2662,12 +2831,10 @@ function addStyle(){
   const raw = input.value.trim();
   if(!raw) return;
   const tag = raw.startsWith('@') ? raw : '@'+raw;
-  // プリセット一覧に追加（未登録なら）
   if(!stylePresetList.includes(tag)){
     stylePresetList.push(tag);
     saveStylePresetsToServer();
   }
-  // 現在選択にも追加
   if(!styleTags.includes(tag)) styleTags.push(tag);
   input.value = '';
   renderStylePresets();
@@ -2683,7 +2850,6 @@ function renderStylePresets(){
     const isActive = styleTags.includes(tag);
     btn.className = 'extra-preset-btn' + (isActive ? ' active' : '');
     btn.textContent = tag;
-    // 左クリック: ON/OFF
     btn.addEventListener('click', ()=>{
       if(styleTags.includes(tag)){
         styleTags = styleTags.filter(t=>t!==tag);
@@ -2693,7 +2859,6 @@ function renderStylePresets(){
       renderStylePresets();
       renderStyleBadges();
     });
-    // 右クリック: プリセットから削除
     btn.addEventListener('contextmenu', e=>{
       e.preventDefault();
       stylePresetList = stylePresetList.filter(t=>t!==tag);
@@ -2829,6 +2994,7 @@ function toggleNegContent(){
   const open = el.style.display === 'none';
   el.style.display = open ? '' : 'none';
   document.getElementById('negContentArrow').textContent = open ? '▼' : '▶';
+  if(open) setTimeout(initSectionToggles, 50);
 }
 
 // ===== ネガティブ Extraタグ管理 =====
@@ -2841,7 +3007,6 @@ async function loadNegExtraTagsFromServer(){
     const d = await r.json();
     const tags = d.tags||[];
     negExtraPresetList = tags;
-    // extra_tags_negative.jsonが存在しない初回のみ全タグON
     if(d.is_default){
       tags.forEach(t => negExtraTags.add(t));
     }
@@ -2920,21 +3085,14 @@ function renderNegExtraBadges(){
 // ===== ネガティブプロンプト組み立て =====
 function collectNegativePrompt(){
   const parts = [];
-  // ① 期間タグ（ポジティブと共通）
   if(selectedPeriod) parts.push(selectedPeriod);
-  // ② 品質タグ
   function collectCheckedNeg(id){ return Array.from(document.querySelectorAll(`#${id} input[type=checkbox]:checked`)).map(cb=>cb.dataset.tag); }
   parts.push(...collectCheckedNeg('qualityHumanNeg'));
   parts.push(...collectCheckedNeg('qualityPonyNeg'));
-  // ③ メタタグ
   parts.push(...collectCheckedNeg('metaTagsNeg'));
-  // ④ 安全タグ（ネガティブ独立）
   if(selectedNegSafety) parts.push(selectedNegSafety);
-  // ⑤ スタイル（ネガティブ独立）
   parts.push(...negStyleTags);
-  // ⑥ Extraタグ
   parts.push(...negExtraTags);
-  // ⑦ 追記文
   const note = (document.getElementById('negExtraNoteEn')||{}).value||'';
   if(note.trim()) parts.push(note.trim());
   return parts.filter(Boolean).join(', ');
@@ -2949,7 +3107,6 @@ function selPeriod(el){
 document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('styleInput')?.addEventListener('keydown', e=>{ if(e.key==='Enter') addStyle(); });
   document.getElementById('negStyleInput')?.addEventListener('keydown', e=>{ if(e.key==='Enter') addNegStyle(); });
-  // 「なし」を初期選択
   document.querySelector('.period-btn[data-p=""]')?.classList.add('active');
 });
 
@@ -2974,7 +3131,6 @@ function buildPresetButtons(){
       }
       renderExtraBadges();
     });
-    // 右クリックで削除
     btn.addEventListener('contextmenu', e=>{
       e.preventDefault();
       if(confirm(`"${tag}" をリストから削除しますか？`)){
@@ -3012,7 +3168,6 @@ function addCustomTag(){
   const input = document.getElementById('extraCustomInput');
   const tag = input.value.trim().toLowerCase().replace(/\s+/g,'_');
   if(!tag) return;
-  // プリセットになければ追加して保存
   if(!extraPresetList.includes(tag)){
     extraPresetList.push(tag);
     saveExtraTagsToServer();
@@ -3032,7 +3187,6 @@ function renderExtraBadges(){
     badge.innerHTML = tag + ' <span>×</span>';
     badge.addEventListener('click', ()=>{
       extraTags.delete(tag);
-      // プリセットボタンのactiveも解除
       document.querySelectorAll('.preset-btn').forEach(b=>{
         if(b.textContent===tag) b.classList.remove('active');
       });
@@ -3041,8 +3195,6 @@ function renderExtraBadges(){
     container.appendChild(badge);
   });
 }
-
-
 
 document.getElementById('extraCustomInput')?.addEventListener('keydown', e=>{
   if(e.key==='Enter') addCustomTag();
@@ -3063,8 +3215,6 @@ const POS_CAMERA     = __OPT__.pos_camera;
 const BODY_HEIGHT = __OPT__.body_height;
 const BODY_BUILD  = __OPT__.body_build;
 const BODY_LEGS   = __OPT__.body_legs;
-// Danbooruタグ直接変換マップ
-// 年齢直接タグ（LMチェックOFF時: gender+ageで決定）
 // female+child→loli, male+child→shota, adult→no tag (モデル依存なので空)
 const AGE_TAG_MAP = {
   female: {adult:'', child:'loli'},
@@ -3109,11 +3259,9 @@ function makeCharaBlock(idx){
   div.className = 'chara-block';
   div.id = 'chara_'+idx;
 
-  // ヘッダー（2行構造）
   const header = document.createElement('div');
   header.className = 'chara-header';
 
-  // --- 1行目: キャラ番号 / キャラ名 / 作品名 / 詳細ボタン ---
   const row1 = document.createElement('div');
   row1.className = 'chara-header-row1';
 
@@ -3121,8 +3269,8 @@ function makeCharaBlock(idx){
   num.className = 'chara-num';
   num.textContent = 'キャラ '+n;
 
-  // キャラ名
   const nameWrap = document.createElement('div');
+  nameWrap.style.cssText = 'display:flex;flex-direction:column;min-width:0;';
   nameWrap.appendChild(makeLabelDiv('キャラ名 *'));
   const nameInput = document.createElement('input');
   nameInput.type = 'text';
@@ -3132,8 +3280,8 @@ function makeCharaBlock(idx){
   nameInput.style.cssText = 'width:100%;background:#f8f4ff;border:1px solid var(--accent);border-radius:5px;padding:0.45rem 0.6rem;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--ink);outline:none;box-sizing:border-box;';
   nameWrap.appendChild(nameInput);
 
-  // 作品名
   const seriesWrap = document.createElement('div');
+  seriesWrap.style.cssText = 'display:flex;flex-direction:column;min-width:0;';
   seriesWrap.appendChild(makeLabelDiv('作品名'));
   const seriesInnerWrap = document.createElement('div');
   seriesInnerWrap.style.cssText = 'display:flex;gap:0.3rem;align-items:center;';
@@ -3144,7 +3292,6 @@ function makeCharaBlock(idx){
   seriesInput.className = 'inp-ja';
   seriesInput.style.cssText = 'flex:1;min-width:0;background:white;border:1px solid var(--border);border-radius:5px;padding:0.45rem 0.6rem;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--ink);outline:none;box-sizing:border-box;';
 
-  // オリジナルボタン
   const origBtn = document.createElement('div');
   origBtn.className = 'age-btn';
   origBtn.id = 'chara_orig_'+idx;
@@ -3153,11 +3300,9 @@ function makeCharaBlock(idx){
   origBtn.addEventListener('click', function(){
     const isOrig = !this.classList.contains('active');
     this.classList.toggle('active', isOrig);
-    // 作品名欄
     seriesInput.disabled = isOrig;
     seriesInput.style.opacity = isOrig ? '0.4' : '1';
     if(isOrig) seriesInput.value = '';
-    // LLMチェック欄を一括ON/OFF＋表示切替
     div.querySelectorAll('.lm-check-wrap').forEach(w=>{
       const cb = w.querySelector('input[type="checkbox"]');
       if(cb) cb.checked = false;
@@ -3169,7 +3314,6 @@ function makeCharaBlock(idx){
   seriesInnerWrap.appendChild(origBtn);
   seriesWrap.appendChild(seriesInnerWrap);
 
-  // 詳細ボタン
   const expandBtn = document.createElement('button');
   expandBtn.className = 'chara-expand';
   expandBtn.textContent = '＋ 詳細';
@@ -3179,11 +3323,9 @@ function makeCharaBlock(idx){
   row1.appendChild(seriesWrap);
   row1.appendChild(expandBtn);
 
-  // --- 2行目: 性別 / 年齢 ---
   const row2 = document.createElement('div');
   row2.className = 'chara-header-row2';
 
-  // 性別
   const genderGroup = document.createElement('div');
   genderGroup.className = 'chara-attr-group';
   const genderLabelWrap = document.createElement('div');
@@ -3219,7 +3361,6 @@ function makeCharaBlock(idx){
   genderGroup.appendChild(genderLabelWrap);
   genderGroup.appendChild(genderRow);
 
-  // 年齢
   const ageGroup = document.createElement('div');
   ageGroup.className = 'chara-attr-group';
   const ageLabelWrap = document.createElement('div');
@@ -3258,10 +3399,8 @@ function makeCharaBlock(idx){
   row2.appendChild(genderGroup);
   row2.appendChild(ageGroup);
 
-  // --- プリセット行（キャラブロック内）---
   const charaPresetRow = document.createElement('div');
-  charaPresetRow.style.cssText = 'margin-bottom:0.4rem;';
-  // 1行: キャラN + select + 読込 + 保存
+  charaPresetRow.style.cssText = 'margin-bottom:0.4rem;display:flex;gap:0.3rem;align-items:center;flex-wrap:wrap;';
   const cpRow1 = document.createElement('div');
   cpRow1.style.cssText = 'display:flex;gap:0.3rem;align-items:center;';
   const cpNumLbl = document.createElement('span');
@@ -3285,19 +3424,21 @@ function makeCharaBlock(idx){
   charaPresetAutoBtn.title = 'Danbooru Wiki+LLMでプリセット自動生成';
   charaPresetAutoBtn.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;padding:0.28rem 0;width:2.8rem;text-align:center;border:1px solid #3a8c5c;border-radius:5px;background:white;color:#3a8c5c;cursor:pointer;';
   charaPresetAutoBtn.onclick = ()=>generateCharaPreset(idx);
-  cpRow1.appendChild(cpNumLbl);
-  cpRow1.appendChild(charaPresetSel);
-  cpRow1.appendChild(charaPresetLoadBtn);
-  cpRow1.appendChild(charaPresetSaveBtn);
-  cpRow1.appendChild(charaPresetAutoBtn);
-  charaPresetRow.appendChild(cpRow1);
+  charaPresetRow.appendChild(cpNumLbl);
+  charaPresetRow.appendChild(charaPresetSel);
+  const cpRow2 = document.createElement('div');
+  cpRow2.className = 'chara-preset-btns';
+  cpRow2.style.cssText = 'display:flex;gap:0.3rem;align-items:center;';
+  cpRow2.appendChild(charaPresetLoadBtn);
+  cpRow2.appendChild(charaPresetSaveBtn);
+  cpRow2.appendChild(charaPresetAutoBtn);
+  charaPresetRow.appendChild(cpRow2);
 
   header.appendChild(charaPresetRow);
   header.appendChild(row1);
   header.appendChild(row2);
   div.appendChild(header);
 
-  // 任意フィールド（初期非表示）
   const opt = document.createElement('div');
   opt.className = 'chara-optional';
   opt.id = 'chara_opt_'+idx;
@@ -3314,10 +3455,8 @@ function makeCharaBlock(idx){
     input.placeholder = f.ph;
     row.appendChild(label);
     row.appendChild(input);
-    //rows appended below
   });
 
-  // バスト行（女性のみ表示）
   const bustRow = document.createElement('div');
   bustRow.className = 'opt-row';
   bustRow.id = 'chara_bust_row_'+idx;
@@ -3342,7 +3481,6 @@ function makeCharaBlock(idx){
     });
     bustBtns.appendChild(btn);
   });
-  // hidden input for value collection
   const bustHidden = document.createElement('input');
   bustHidden.type = 'hidden';
   bustHidden.id = 'chara_bust_'+idx;
@@ -3351,7 +3489,6 @@ function makeCharaBlock(idx){
   bustRow.appendChild(bustBtns);
   bustRow.appendChild(bustHidden);
 
-  // 肌の色行（ボタン＋その他テキスト）
   const skinRow = document.createElement('div');
   skinRow.className = 'opt-row';
   const skinLabel = document.createElement('label');
@@ -3402,7 +3539,6 @@ function makeCharaBlock(idx){
   skinRow.appendChild(skinLabelWrap);
   skinRow.appendChild(skinWrap);
 
-  // 瞳の色行
   const eyeRow = document.createElement('div');
   eyeRow.className = 'opt-row';
   eyeRow.style.alignItems = 'start';
@@ -3417,7 +3553,6 @@ function makeCharaBlock(idx){
   const eyeWrap = document.createElement('div');
   eyeWrap.style.cssText = 'display:flex;flex-direction:column;gap:0.35rem;width:100%;';
 
-  // 通常カラーselect行
   const eyeSel = document.createElement('select');
   eyeSel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.75rem;border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.5rem;background:white;color:var(--ink);cursor:pointer;width:100%;';
   EYE_COLORS.forEach(({v,label,bg,fg})=>{
@@ -3441,14 +3576,12 @@ function makeCharaBlock(idx){
   eyeHidden.id = 'chara_eyes_'+idx;
   eyeHidden.value = '';
 
-  // オッドアイ切替ボタン
   const oddBtn = document.createElement('div');
   oddBtn.className = 'age-btn odd-eye-btn';
   oddBtn.style.cssText = 'width:2.8rem;text-align:center;flex-shrink:0;font-size:0.7rem;padding:0.28rem 0;';
   oddBtn.innerHTML = '<span class="odd-long">オッドアイ</span><span class="odd-short">odd</span>';
   oddBtn.dataset.odd = '0';
 
-  // オッドアイ選択UI（初期非表示）
   const oddWrap = document.createElement('div');
   oddWrap.style.cssText = 'display:none;gap:0.5rem;flex-wrap:wrap;align-items:center;';
   const oddLabels = ['左目','右目'];
@@ -3480,7 +3613,6 @@ function makeCharaBlock(idx){
   });
   oddSelects.forEach(g=>oddWrap.appendChild(g));
 
-  // oddBtnが詰まったらcompactクラスで短縮
   const oddResizeObs = new ResizeObserver(entries=>{
     for(const e of entries){
       oddBtn.classList.toggle('compact', e.contentRect.width < 52);
@@ -3521,7 +3653,6 @@ function makeCharaBlock(idx){
   eyeRow.appendChild(eyeLabelWrap);
   eyeRow.appendChild(eyeWrap);
 
-  // 性別変更時にバスト行の表示切替
   function updateBustVisibility(){
     const activeGender = genderRow.querySelector('.gender-btn.active')?.dataset.g || 'female';
     bustRow.style.display = (activeGender === 'male') ? 'none' : '';
@@ -3530,7 +3661,6 @@ function makeCharaBlock(idx){
     btn.addEventListener('click', ()=>setTimeout(updateBustVisibility, 0));
   });
   updateBustVisibility();
-  // 衣装行（サブカテゴリ展開式）
   const outfitRow = document.createElement('div');
   outfitRow.className = 'opt-row';
   outfitRow.style.alignItems = 'start';
@@ -3551,7 +3681,6 @@ function makeCharaBlock(idx){
   const OUTFIT_DATA = __OPT__.outfit_data;
   const OUTFIT_COLORS = __OPT__.outfit_colors;
 
-  // 上半身・下半身はそれぞれ独立した状態を持つ
   const outfitState = { top: {color:'', item:''}, bottom: {color:'', item:''} };
   let outfitActiveCat = null; // 全裸/半裸/全身/上半身/下半身/null
 
@@ -3564,10 +3693,8 @@ function makeCharaBlock(idx){
       if(outfitState.top.color) parts.push(outfitState.top.color);
       if(outfitState.top.item)  parts.push(outfitState.top.item);
     } else {
-      // 上半身
       const tc=[outfitState.top.color, outfitState.top.item].filter(Boolean);
       if(tc.length) parts.push(...tc);
-      // 下半身
       const bc=[outfitState.bottom.color, outfitState.bottom.item].filter(Boolean);
       if(bc.length) parts.push(...bc);
     }
@@ -3580,19 +3707,16 @@ function makeCharaBlock(idx){
   const outfitCatRow = document.createElement('div');
   outfitCatRow.style.cssText = 'display:flex;gap:0.2rem;flex-wrap:wrap;';
 
-  // 上半身用 色・種類行
   const outfitTopColorRow = document.createElement('div');
   outfitTopColorRow.style.cssText = 'display:none;gap:0.2rem;flex-wrap:wrap;';
   const outfitTopItemRow = document.createElement('div');
   outfitTopItemRow.style.cssText = 'display:none;gap:0.2rem;flex-wrap:wrap;';
 
-  // 下半身用 色・種類行
   const outfitBotColorRow = document.createElement('div');
   outfitBotColorRow.style.cssText = 'display:none;gap:0.2rem;flex-wrap:wrap;';
   const outfitBotItemRow = document.createElement('div');
   outfitBotItemRow.style.cssText = 'display:none;gap:0.2rem;flex-wrap:wrap;';
 
-  // 小ラベル
   function makeSubLabel(text){
     const d=document.createElement('div');
     d.style.cssText='font-family:DM Mono,monospace;font-size:0.62rem;color:var(--muted);width:100%;display:none;';
@@ -3641,7 +3765,6 @@ function makeCharaBlock(idx){
   makeColorBtns(outfitTopColorRow, 'top');
   makeColorBtns(outfitBotColorRow, 'bottom');
 
-  // 自由入力
   const outfitFree = document.createElement('input');
   outfitFree.type = 'text';
   outfitFree.id = 'chara_outfit_free_'+idx;
@@ -3673,7 +3796,6 @@ function makeCharaBlock(idx){
       makeItemBtns(outfitTopItemRow,'top',OUTFIT_DATA['全身'].items);
       topLabel.style.display=''; outfitTopColorRow.style.display='flex'; outfitTopItemRow.style.display='flex';
     } else if(cat==='上半身' || cat==='下半身'){
-      // 上半身・下半身は両方表示
       makeItemBtns(outfitTopItemRow,'top',OUTFIT_DATA['上半身'].items);
       makeItemBtns(outfitBotItemRow,'bottom',OUTFIT_DATA['下半身'].items);
       topLabel.style.display=''; outfitTopColorRow.style.display='flex'; outfitTopItemRow.style.display='flex';
@@ -3682,7 +3804,6 @@ function makeCharaBlock(idx){
     buildOutfitValue();
   }
 
-  // カテゴリボタン生成（上半身・下半身はひとつのボタン「上下」にまとめる）
   ['全裸','半裸','全身','上下'].forEach(cat=>{
     const btn=document.createElement('div');
     btn.className='age-btn';
@@ -3704,7 +3825,6 @@ function makeCharaBlock(idx){
   outfitRow.appendChild(outfitLabelWrap);
   outfitRow.appendChild(outfitWrap);
 
-  // 髪型行（選択式＋自由入力）
   const hairRow = document.createElement('div');
   hairRow.className = 'opt-row';
   hairRow.style.alignItems = 'start';
@@ -3715,6 +3835,8 @@ function makeCharaBlock(idx){
   hairStyleLabel.textContent = '① 髪型';
   hairStyleLabelWrap.appendChild(hairStyleLabel);
   hairStyleLabelWrap.appendChild(makeLMCheckbox('chara_hairstyle_lm_'+idx, true));
+  const hairRowBody = document.createElement('div');
+  hairRowBody.className = 'opt-row-body';
   const hairStyleHidden = document.createElement('input');
   hairStyleHidden.type = 'hidden';
   hairStyleHidden.id = 'chara_hairstyle_'+idx;
@@ -3723,7 +3845,6 @@ function makeCharaBlock(idx){
   hairStyleWrap.style.cssText = 'display:flex;flex-direction:column;gap:0.2rem;width:100%;';
   const hairStyleBtns = document.createElement('div');
   hairStyleBtns.style.cssText = 'display:flex;flex-direction:column;gap:0.15rem;';
-  // グループごとに単一選択
   function updateHairStyleValue(){
     const sel = [...hairStyleBtns.querySelectorAll('.age-btn.active')].map(b=>b.dataset.hs).filter(Boolean);
     hairStyleHidden.value = sel.join(',');
@@ -3738,7 +3859,6 @@ function makeCharaBlock(idx){
     row.style.cssText = 'display:flex;gap:0.2rem;flex-wrap:wrap;';
     row.dataset.hsgroup = group;
     const items = HAIRSTYLE_OPTIONS.filter(o=>o.group===group);
-    // 先頭に「－」
     const noneBtn = document.createElement('div');
     noneBtn.className = 'age-btn active';
     noneBtn.dataset.hs = '';
@@ -3782,10 +3902,10 @@ function makeCharaBlock(idx){
   hairStyleWrap.appendChild(hairStyleBtns);
   hairStyleWrap.appendChild(hairStyleFree);
   hairStyleWrap.appendChild(hairStyleHidden);
+  hairRowBody.appendChild(hairStyleWrap);
   hairRow.appendChild(hairStyleLabelWrap);
-  hairRow.appendChild(hairStyleWrap);
+  hairRow.appendChild(hairRowBody);
 
-  // 髪色行（LLM=false）
   const hairColorRow = document.createElement('div');
   hairColorRow.className = 'opt-row';
   hairColorRow.style.alignItems = 'start';
@@ -3838,7 +3958,6 @@ function makeCharaBlock(idx){
   hairColorRow.appendChild(hairColorLabelWrap);
   hairColorRow.appendChild(hairColorWrap);
 
-  // ① 体格行
   function makeLMCheckbox(fieldId, defaultChecked){
     const wrap = document.createElement('div');
     wrap.className = 'lm-check-wrap';
@@ -3908,8 +4027,6 @@ function makeCharaBlock(idx){
   const buildRow  = makeAttrRow('⑨ 体型',  BODY_BUILD,  'chara_build_'+idx,  false);
   const legsRow   = makeAttrRow('⑩ 脚',    BODY_LEGS,   'chara_legs_'+idx,   false);
 
-  // 表情行（LLMチェックOFFデフォルト）
-  // 表情行（複数選択）
   const faceRow = document.createElement('div');
   faceRow.className = 'opt-row';
   faceRow.appendChild(makeOptLabel('⑥ 表情'));
@@ -3930,7 +4047,6 @@ function makeCharaBlock(idx){
     btn.textContent = label;
     btn.addEventListener('click',function(){
       if(v===''){
-        // －を押したら全解除してこれだけ
         faceBtns.querySelectorAll('.multi-btn').forEach(b=>b.classList.remove('active'));
         this.classList.add('active');
       } else {
@@ -3950,7 +4066,6 @@ function makeCharaBlock(idx){
   faceWrap.appendChild(faceHidden);
   faceRow.appendChild(faceWrap);
 
-  // 目の状態行（複数選択）
   const eyeStateRow = document.createElement('div');
   eyeStateRow.className = 'opt-row';
   eyeStateRow.style.alignItems = 'start';
@@ -3965,7 +4080,6 @@ function makeCharaBlock(idx){
     const selected = [...eyeStateBtns.querySelectorAll('.multi-btn.active')].map(b=>b.dataset.es).filter(v=>v!=='');
     eyeStateHidden.value = selected.join(',');
   }
-  // グループごとに行を分けて生成
   const eyeGroupRows = {};
   ['open','dir','state'].forEach(g=>{
     const row = document.createElement('div');
@@ -3973,7 +4087,6 @@ function makeCharaBlock(idx){
     eyeGroupRows[g] = row;
     eyeStateBtns.appendChild(row);
   });
-  // グループラベル（dir・stateの前に小さく）
   const dirLbl = document.createElement('div');
   dirLbl.style.cssText = 'font-family:DM Mono,monospace;font-size:0.62rem;color:var(--muted);margin-top:0.1rem;width:100%;';
   dirLbl.textContent = '向き';
@@ -4000,7 +4113,6 @@ function makeCharaBlock(idx){
 
   EYE_STATE_OPTIONS.forEach(({v,label,group})=>{
     const btn = document.createElement('div');
-    // 開閉グループは単一選択（age-btn=緑）、向き・状態は複数選択（multi-btn=紫）
     btn.className = group==='open'
       ? ('age-btn'+(v===''?' active':''))
       : ('multi-btn'+(v===''?' active':''));
@@ -4009,12 +4121,10 @@ function makeCharaBlock(idx){
     if(group==='open') btn.style.minWidth = '3rem';
     btn.addEventListener('click',function(){
       if(group==='open'){
-        // 単一選択
         eyeGroupRows['open'].querySelectorAll('.age-btn').forEach(b=>b.classList.remove('active'));
         this.classList.add('active');
         refreshDirBtns();
       } else if(v===''){
-        // 向き・状態の「－」は全解除
         eyeGroupRows[group].querySelectorAll('.multi-btn').forEach(b=>b.classList.remove('active'));
         this.classList.add('active');
       } else {
@@ -4034,7 +4144,6 @@ function makeCharaBlock(idx){
   eyeStateWrap.appendChild(eyeStateHidden);
   eyeStateRow.appendChild(eyeStateWrap);
 
-  // 口の状態行（複数選択）
   const mouthRow = document.createElement('div');
   mouthRow.className = 'opt-row';
   mouthRow.style.alignItems = 'start';
@@ -4075,7 +4184,6 @@ function makeCharaBlock(idx){
   mouthWrap.appendChild(mouthHidden);
   mouthRow.appendChild(mouthWrap);
 
-  // エフェクト行（複数選択）
   const effectRow = document.createElement('div');
   effectRow.className = 'opt-row';
   effectRow.style.alignItems = 'start';
@@ -4116,7 +4224,6 @@ function makeCharaBlock(idx){
   effectWrap.appendChild(effectHidden);
   effectRow.appendChild(effectWrap);
 
-  // 付属行
   const attachRow = document.createElement('div');
   attachRow.className = 'opt-row';
   attachRow.style.alignItems = 'start';
@@ -4124,7 +4231,6 @@ function makeCharaBlock(idx){
   const attachWrap = document.createElement('div');
   attachWrap.style.cssText = 'display:flex;flex-direction:column;gap:0.4rem;width:100%;';
 
-  // 単一選択グループを作る関数
   function makeSingleGroup(groupLabel, options, hiddenId){
     const wrap = document.createElement('div');
     wrap.style.cssText = 'display:flex;flex-direction:column;gap:0.15rem;';
@@ -4155,7 +4261,6 @@ function makeCharaBlock(idx){
     return wrap;
   }
 
-  // 複数選択グループ（アクセサリー）
   function makeMultiGroup(groupLabel, options, hiddenId){
     const wrap = document.createElement('div');
     wrap.style.cssText = 'display:flex;flex-direction:column;gap:0.15rem;';
@@ -4203,7 +4308,6 @@ function makeCharaBlock(idx){
 
   attachRow.appendChild(attachWrap);
 
-  // 持ち物行（カテゴリ展開式）
   const holdingRow = document.createElement('div');
   holdingRow.className = 'opt-row';
   holdingRow.style.cssText = 'align-items:start;display:none;';
@@ -4215,10 +4319,8 @@ function makeCharaBlock(idx){
   const itemWrap = document.createElement('div');
   itemWrap.style.cssText = 'display:flex;flex-direction:column;gap:0.3rem;width:100%;';
 
-  // カテゴリタブ行
   const itemCatRow = document.createElement('div');
   itemCatRow.style.cssText = 'display:flex;gap:0.2rem;flex-wrap:wrap;';
-  // 選択肢表示エリア
   const itemBtnArea = document.createElement('div');
   itemBtnArea.style.cssText = 'display:flex;gap:0.2rem;flex-wrap:wrap;display:none;';
 
@@ -4228,7 +4330,6 @@ function makeCharaBlock(idx){
   }
   function showItemCat(cat){
     if(activeItemCat === cat){
-      // 同じカテゴリ→閉じる
       itemBtnArea.style.display = 'none';
       itemCatRow.querySelectorAll('.age-btn').forEach(b=>b.classList.remove('active'));
       activeItemCat = null;
@@ -4244,7 +4345,6 @@ function makeCharaBlock(idx){
       btn.className = 'multi-btn';
       btn.dataset.item = v;
       btn.textContent = label;
-      // 既選択を反映
       const cur = itemHidden.value.split(',');
       if(cur.includes(v)) btn.classList.add('active');
       btn.addEventListener('click',function(){
@@ -4265,7 +4365,6 @@ function makeCharaBlock(idx){
     itemCatRow.appendChild(btn);
   });
 
-  // 自由入力
   const itemFreeInput = document.createElement('input');
   itemFreeInput.type = 'text';
   itemFreeInput.id = 'chara_item_free_'+idx;
@@ -4280,7 +4379,6 @@ function makeCharaBlock(idx){
   itemWrap.appendChild(itemHidden);
   holdingRow.appendChild(itemWrap);
 
-  // --- 動作・ポーズ行（選択式＋テキスト）---
   const actionRow = document.createElement('div');
   actionRow.className = 'opt-row';
   actionRow.style.alignItems = 'start';
@@ -4292,7 +4390,6 @@ function makeCharaBlock(idx){
   const actionWrap = document.createElement('div');
   actionWrap.style.cssText = 'display:flex;flex-direction:column;gap:0.3rem;width:100%;';
 
-  // グループごとにボタン生成
   let actionCurrentGroup = null;
   let actionBtnRow = null;
   function updateActionValue(){
@@ -4316,12 +4413,10 @@ function makeCharaBlock(idx){
     btn.addEventListener('click',function(){
       this.classList.toggle('active');
       updateActionValue();
-      // 「持つ」選択時に持ち物行を自動展開
       if(v==='holding'){
         const isActive = this.classList.contains('active');
         holdingRow.style.display = isActive ? 'flex' : 'none';
         holdingRow.style.outline = isActive ? '2px solid var(--accent)' : '';
-        // カテゴリが未選択なら先頭カテゴリを自動展開
         if(isActive && !activeItemCat){
           const firstCatBtn = itemCatRow.querySelector('.age-btn');
           if(firstCatBtn) firstCatBtn.click();
@@ -4331,7 +4426,6 @@ function makeCharaBlock(idx){
     });
     actionBtnRow.appendChild(btn);
   });
-  // 自由入力
   const actionFreeInput = document.createElement('input');
   actionFreeInput.type = 'text';
   actionFreeInput.id = 'chara_action_free_'+idx;
@@ -4340,7 +4434,6 @@ function makeCharaBlock(idx){
   actionFreeInput.className = 'inp-en';
   actionFreeInput.style.cssText = 'width:100%;border-radius:5px;padding:0.35rem 0.6rem;font-family:DM Mono,monospace;font-size:0.75rem;outline:none;box-sizing:border-box;';
   actionFreeInput.addEventListener('input',function(){
-    // 自由入力があればhiddenに上書き
     if(this.value.trim()) actionHidden.value = this.value.trim();
     else updateActionValue();
   });
@@ -4349,10 +4442,8 @@ function makeCharaBlock(idx){
   actionRow.appendChild(actionLabelWrap);
   actionRow.appendChild(actionWrap);
 
-  // --- その他行をIDから取得 ---
   const miscRow = opt.querySelector('[id="chara_misc_'+idx+'"]')?.closest('.opt-row');
 
-  // --- 頭から下の順に一括追加 ---
   [hairRow, hairColorRow,   // ① 髪型・髪色
    eyeStateRow,             // ② 目の状態
    eyeRow,                  // ③ 瞳の色
@@ -4372,7 +4463,6 @@ function makeCharaBlock(idx){
 
   div.appendChild(opt);
 
-  // 詳細ボタンのトグル
   expandBtn.addEventListener('click', ()=>{
     const open = opt.style.display === 'none';
     opt.style.display = open ? 'block' : 'none';
@@ -4387,6 +4477,7 @@ function toggleExtraContent(){
   const open = el.style.display === 'none';
   el.style.display = open ? 'block' : 'none';
   document.getElementById('extraContentArrow').textContent = open ? '▼' : '▶';
+  if(open) setTimeout(initSectionToggles, 50);
 }
 
 function toggleBlock(id, arrowId){
@@ -4394,15 +4485,23 @@ function toggleBlock(id, arrowId){
   const open = el.style.display === 'none';
   el.style.display = open ? 'block' : 'none';
   document.getElementById(arrowId).textContent = open ? '▼' : '▶';
+  if(open){
+    setTimeout(()=>{ initOptRows(el); initSectionToggles(); }, 50);
+    // LoRAブロックを初めて開いた時だけ自動取得
+    if(id === 'blockLora' && _loraList.length === 0) loadLoraList();
+    if(id === 'blockLora' && _loraList.length > 0){
+      document.querySelectorAll('#loraCardGrid img[data-src]').forEach(img=>{
+        if(!img.src || img.src === window.location.href) img.src = img.dataset.src;
+      });
+    }
+  }
 }
 
 function selScene(group, el){
-  // 同じgroupのボタンだけ非アクティブにする
   document.querySelectorAll(`[data-scenegroup="${group}"]`).forEach(b=>b.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('f_'+group).value = el.dataset[group]||'';
 }
-// toggleScene: blockCに統合したため削除
 
 function updateCharaBlocks(){
   const count = Math.max(1, Math.min(6, parseInt(document.getElementById('f_charcount').value)||1));
@@ -4413,6 +4512,7 @@ function updateCharaBlocks(){
   } else {
     while(container.children.length > count) container.removeChild(container.lastChild);
   }
+  setTimeout(initOptRows, 50);
 }
 
 function collectInput(useLLM=true){
@@ -4438,23 +4538,19 @@ function collectInput(useLLM=true){
       const v = (document.getElementById(`chara_${f.id}_${i}`)||{value:''}).value.trim();
       if(v) ch[f.id] = v;
     });
-    // 動作（選択式+自由入力）
     const actionVal = (document.getElementById(`chara_action_${i}`)||{value:''}).value.trim();
     const actionFreeVal = (document.getElementById(`chara_action_free_${i}`)||{value:''}).value.trim();
     if(actionVal){
       if(useLLM && (document.getElementById(`chara_action_lm_${i}_lm`)||{checked:true}).checked) ch['action']=actionVal;
       else actionVal.split(',').forEach(tag=>{ if(tag.trim()) addDirect(tag.trim()); });
     }
-    // 動作自由入力（LLMチェックに関わらず常にdirectTags）
     if(actionFreeVal) actionFreeVal.split(',').forEach(tag=>{ if(tag.trim()) addDirect(tag.trim()); });
     function isLM(fieldId){ return useLLM && (document.getElementById(fieldId+'_lm')||{checked:false}).checked; }
-    // 性別: LLMチェックOFF→直接タグ化
     if(!isLM(`chara_gender_lm_${i}`)){
       const gTag = {female:'1girl',male:'1boy',other:''}[gender]||'';
       if(gTag) directTags.push(gTag);
       ch['gender'] = 'other';
     }
-    // 年齢: LMチェックOFF→直接タグ化
     if(!isLM(`chara_age_lm_${i}`)){
       const ageMap = AGE_TAG_MAP[gender]||AGE_TAG_MAP['other'];
       const ageTag = ageMap[age]||'';
@@ -4463,16 +4559,12 @@ function collectInput(useLLM=true){
     }
     function addDirect(tag){ if(tag) directTags.push(tag); }
 
-    // バスト
     let bustVal = (document.getElementById(`chara_bust_${i}`)||{value:''}).value.trim();
     if(bustVal){ if(isLM(`chara_bust_lm_${i}`)) ch['bust']=bustVal; else addDirect(bustVal); }
-    // 肌
     let skinVal = (document.getElementById(`chara_skin_${i}`)||{value:''}).value.trim();
     if(skinVal){ if(isLM(`chara_skin_lm_${i}`)) ch['skin']=skinVal; else addDirect(skinVal); }
-    // 瞳
     let eyeVal = (document.getElementById(`chara_eyes_${i}`)||{value:''}).value.trim();
     if(eyeVal){ if(isLM(`chara_eyes_lm_${i}`)) ch['eyes']=eyeVal; else addDirect(eyeVal); } // heterochromia等はそのまま
-    // 衣装
     let outfitVal = (document.getElementById(`chara_outfit_${i}`)||{value:''}).value.trim();
     let outfitFreeVal = (document.getElementById(`chara_outfit_free_${i}`)||{value:''}).value.trim();
     if(isLM(`chara_outfit_lm_${i}`)){
@@ -4481,7 +4573,6 @@ function collectInput(useLLM=true){
       if(outfitFreeVal) outfitFreeVal.split(',').forEach(v=>{ if(v.trim()) addDirect(v.trim()); });
       else if(outfitVal) addDirect(outfitVal);
     }
-    // 髪
     let hairColor = (document.getElementById(`chara_haircolor_${i}`)||{value:''}).value.trim();
     let hairOther = (document.getElementById(`chara_hairother_${i}`)||{value:''}).value.trim();
     let hairStyle = (document.getElementById(`chara_hairstyle_${i}`)||{value:''}).value.trim();
@@ -4495,26 +4586,21 @@ function collectInput(useLLM=true){
       if(hairStyle) hairStyle.split(',').forEach(v=>{ if(v.trim()) addDirect(v.trim()); });
       if(hairStyleFree && hairStyle) hairStyleFree.split(',').forEach(v=>{ if(v.trim()) addDirect(v.trim()); }); // 日本語自由入力もdirect
     }
-    // 体格
     let heightVal = (document.getElementById(`chara_height_${i}`)||{value:''}).value.trim();
     let buildVal  = (document.getElementById(`chara_build_${i}`)||{value:''}).value.trim();
     let legsVal   = (document.getElementById(`chara_legs_${i}`)||{value:''}).value.trim();
     if(isLM(`chara_height_${i}_lm`)||document.getElementById(`chara_height_${i}_lm`)?.checked===undefined){
-      // makeAttrRowのチェック参照
     }
-    // 持ち物（直接タグ化）
     const itemVal=(document.getElementById(`chara_item_${i}`)||{value:''}).value.trim();
     if(itemVal) itemVal.split(',').forEach(v=>{ if(v.trim()) addDirect(v.trim()); });
     const itemFreeVal=(document.getElementById(`chara_item_free_${i}`)||{value:''}).value.trim();
     if(itemFreeVal) itemFreeVal.split(',').forEach(v=>{ if(v.trim()) addDirect(v.trim()); });
-    // 画面位置
     const posvVal = (document.getElementById(`chara_posv_${i}`)||{value:''}).value.trim();
     const poshVal = (document.getElementById(`chara_posh_${i}`)||{value:''}).value.trim();
     const poscVal = (document.getElementById(`chara_posc_${i}`)||{value:''}).value.trim();
     if(posvVal) addDirect(posvVal);
     if(poshVal) addDirect(poshVal);
     if(poscVal) addDirect(poscVal);
-    // 付属
     ['ears','tail','wings'].forEach(f=>{
       const v=(document.getElementById(`chara_${f}_${i}`)||{value:''}).value.trim();
       if(v) addDirect(v);
@@ -4522,7 +4608,6 @@ function collectInput(useLLM=true){
     const accVal=(document.getElementById(`chara_acc_${i}`)||{value:''}).value.trim();
     if(accVal) accVal.split(',').forEach(v=>{ if(v.trim()) addDirect(v.trim()); });
 
-    // 表情
     let effectVal = (document.getElementById(`chara_effect_${i}`)||{value:''}).value.trim();
     if(effectVal){
       if(isLM(`chara_effect_${i}`)) ch['effect']=effectVal;
@@ -4565,7 +4650,6 @@ function collectInput(useLLM=true){
   const sceneParts = [world, outdoor, place, tod, weather, misc].filter(Boolean);
   const payload = {global_series: series, characters, gender_summary: genderSummary,
     place: sceneParts.join('、'), mood: misc};
-  // キャラごとのdirectTagsをまとめてextraに合流
   const charDirectTags = characters.flatMap(c=>{ const t=c._directTags||[]; delete c._directTags; return t; });
   const extraTagList = Array.from(extraTags);
   return {valid: !!(series || characters.some(c=>c.name)), payload, genderSummary, extraTagList, charDirectTags};
@@ -4581,12 +4665,10 @@ function initSizePresets(){
     opt.textContent = label;
     sel.appendChild(opt);
   });
-  // 最初のプリセットを適用
   if(sel.options.length > 0) applyPreset(sel.options[0].value);
 }
 
 function initSceneButtons(){
-  // 世界観
   const worldContainer = document.getElementById('world_btns');
   (__OPT__.scene_world||[]).forEach(({v,label},i)=>{
     const btn = document.createElement('div');
@@ -4597,7 +4679,6 @@ function initSceneButtons(){
     btn.addEventListener('click', ()=>selScene('world',btn));
     worldContainer.appendChild(btn);
   });
-  // 時間帯
   const todContainer = document.getElementById('tod_btns');
   (__OPT__.scene_tod||[]).forEach(({v,label},i)=>{
     const btn = document.createElement('div');
@@ -4608,7 +4689,6 @@ function initSceneButtons(){
     btn.addEventListener('click', ()=>selScene('tod',btn));
     todContainer.appendChild(btn);
   });
-  // 天気
   const weatherContainer = document.getElementById('weather_btns');
   (__OPT__.scene_weather||[]).forEach(({v,label},i)=>{
     const btn = document.createElement('div');
@@ -4619,7 +4699,6 @@ function initSceneButtons(){
     btn.addEventListener('click', ()=>selScene('weather',btn));
     weatherContainer.appendChild(btn);
   });
-  // 安全タグ
   const safetyContainer = document.getElementById('safety_btns');
   (__OPT__.safety_options||[]).forEach(({v,label})=>{
     const btn = document.createElement('div');
@@ -4631,18 +4710,37 @@ function initSceneButtons(){
   });
 }
 
-function initCharaAttrButtons(idx){
-  // 性別ボタン動的生成（makeCharaBlock呼び出し時に使用）
-}
-
-document.addEventListener('DOMContentLoaded', ()=>{ loadCharaPresets().then(()=>updateCharaBlocks()); loadSettings(); initExtraPresets(); initQualityMeta(); initQualityMetaNeg(); initNegExtraPresets(); initNegSafetyButtons(); loadNegStyleTagsFromServer(); initSceneButtons(); initSizePresets(); initGenParams(); initLoraSlots(); loadWorkflowList(); loadLastSession(); loadStyleTagsFromServer(); });
+document.addEventListener('DOMContentLoaded', ()=>{
+  fetch('/version').then(r=>r.json()).then(d=>{
+    const el = document.getElementById('versionBadge');
+    if(el) el.textContent = 'v' + d.version;
+  }).catch(()=>{});
+  loadCharaPresets().then(()=>updateCharaBlocks());
+  loadSettings();
+  initSceneButtons();
+  initSizePresets();
+  initGenParams();
+  initLoraSlots();
+  loadWorkflowList();
+  loadLastSession();
+  // 少し遅らせて実行（スマホ表示速度改善）
+  setTimeout(()=>{
+    initExtraPresets();
+    initQualityMeta();
+    initQualityMetaNeg();
+    initNegExtraPresets();
+    initNegSafetyButtons();
+    loadNegStyleTagsFromServer();
+    loadStyleTagsFromServer();
+    initSectionToggles();
+  }, 200);
+});
 
 async function generate(){
   if(running)return;
   const useLLMflag = document.getElementById('useLLM').checked;
   const {valid, payload, charDirectTags} = collectInput(useLLMflag);
   if(!valid){alert('シリーズまたはいずれかのキャラ名を入力してください');return;}
-  // 生成開始時に設定を自動保存
   await saveSettings();
   payload.extra_tags = Array.from(extraTags);
   payload.prompt_prefix = collectPromptPrefix();
@@ -4677,15 +4775,13 @@ async function generate(){
         const charTag = seriesPart ? `${namePart}_(${seriesPart})` : namePart;
         charDirectTags.unshift(charTag);
       });
-      // シーン情報をdirectTagsに追加
       const sceneVals = [
         document.getElementById('f_world')?.value,
-        document.getElementById('f_outdoor')?.value,
+        document.getElementById('f_outdoor')?.value,  // ボタン選択値（英語タグ）
         document.getElementById('f_tod')?.value,
         document.getElementById('f_weather')?.value,
-        document.getElementById('f_place')?.value,
         document.getElementById('f_misc')?.value,
-      ].filter(Boolean);
+      ].filter(v=>v && /^[a-zA-Z0-9_\-,\s()]+$/.test(v)); // 英数字のみ許可
       sceneVals.forEach(v=>{ if(v) charDirectTags.push(v); });
       setStep(steps,'s1','done','LLM: スキップ');
     }
@@ -4699,20 +4795,17 @@ async function generate(){
       lastPositivePrompt=data.positive_prompt || data.final_prompt || '';
       lastFinalPrompt=data.final_prompt||'';
       lastNegativePrompt=data.negative_prompt||'';
-      // LLM生成部
-      document.getElementById('lmLabel').style.display='block';
+      document.getElementById('lmLabel').style.display='block'; document.getElementById('lmLabel').classList.remove('collapsed');
       promptOutput.textContent=data.positive_prompt.replace(/\\n/g,'\n');
       promptOutput.classList.add('show');
-      // ComfyUI送信ポジティブプロンプト（final）
       if(data.final_prompt){
-        document.getElementById('finalLabel').style.display='block';
+        document.getElementById('finalLabel').style.display='block'; document.getElementById('finalLabel').classList.remove('collapsed');
         const finalEl = document.getElementById('promptFinal');
         finalEl.textContent = data.final_prompt;
         finalEl.style.display = 'block';
       }
-      // ComfyUI送信ネガティブプロンプト
       if(data.negative_prompt){
-        document.getElementById('negFinalLabel').style.display='block';
+        document.getElementById('negFinalLabel').style.display='block'; document.getElementById('negFinalLabel').classList.remove('collapsed');
         const negFinalEl = document.getElementById('promptNegFinal');
         negFinalEl.textContent = data.negative_prompt;
         negFinalEl.style.display = 'block';
@@ -4721,7 +4814,6 @@ async function generate(){
         const ids=(data.prompt_ids||[data.prompt_id]).join(', ');
         const n=data.prompt_ids?data.prompt_ids.length:1;
         setStep(steps,'s2','done',`ComfyUI: ${n}枚キューに追加`);
-        // ⑤ ComfyUI生成完了まで生成開始を無効化
         setStep(steps,'s3','active','ComfyUI: 生成中...');
         pollComfyUIComplete(data.prompt_ids||[data.prompt_id], steps);
         return; // running解除はpoll完了後
@@ -4750,7 +4842,6 @@ async function cancelGenerate(){
 }
 
 async function pollComfyUIComplete(promptIds, steps){
-  // Pipelineサーバー経由でComfyUI /historyを確認（CORS回避）
   const pending = new Set(promptIds);
   let tries = 0;
   const collectedPaths = [];
@@ -4762,10 +4853,8 @@ async function pollComfyUIComplete(promptIds, steps){
       const res = await fetch(`/poll_status?ids=${encodeURIComponent(ids)}`).catch(()=>null);
       if(!res) continue;
       const data = await res.json();
-      // 画像パスを収集
       if(data.image_paths){
         for(const [pid, info] of Object.entries(data.image_paths)){
-          // view_urls（ComfyUI直接）を優先、なければfile_paths経由
           const urls = info.view_urls || info;
           if(Array.isArray(urls) && urls.length) collectedPaths.push(...urls);
           else if(Array.isArray(info) && info.length) collectedPaths.push(...info);
@@ -4784,7 +4873,6 @@ async function pollComfyUIComplete(promptIds, steps){
     }catch(e){}
   }
   setStep(steps,'s3','done',`ComfyUI: 生成完了 (${promptIds.length}枚)`);
-  // ギャラリーに追加
   if(collectedPaths.length > 0){
     const posPrompt = document.getElementById('promptFinal')?.textContent||lastFinalPrompt||'';
     const negPrompt = document.getElementById('promptNegFinal')?.textContent||lastNegativePrompt||'';
@@ -4828,15 +4916,14 @@ async function regenPrompt(){
     }else{
       const promptIds = data.prompt_ids || [data.prompt_id];
       setStep(steps,'s_regen','done','ComfyUI: キューに追加 ('+promptIds.length+'枚)');
-      // 送信ポジティブ・ネガティブ表示を更新
       if(data.final_prompt){
-        document.getElementById('finalLabel').style.display='block';
+        document.getElementById('finalLabel').style.display='block'; document.getElementById('finalLabel').classList.remove('collapsed');
         const finalEl = document.getElementById('promptFinal');
         finalEl.textContent = data.final_prompt;
         finalEl.style.display = 'block';
       }
       if(data.negative_prompt){
-        document.getElementById('negFinalLabel').style.display='block';
+        document.getElementById('negFinalLabel').style.display='block'; document.getElementById('negFinalLabel').classList.remove('collapsed');
         const negFinalEl = document.getElementById('promptNegFinal');
         negFinalEl.textContent = data.negative_prompt;
         negFinalEl.style.display = 'block';
@@ -4857,7 +4944,6 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&e.ctrlKey) generate();
 });
 </script>
-<!-- フローティングナビゲーション -->
   <div id="floatNav" style="position:fixed;right:16px;top:50%;transform:translateY(-50%);z-index:500;display:flex;flex-direction:column;gap:0.3rem;background:rgba(255,255,255,0.97);border:1px solid var(--border);border-radius:10px;padding:0.5rem 0.4rem;box-shadow:0 2px 12px rgba(0,0,0,0.12);width:fit-content;">
     <div style="font-family:'DM Mono',monospace;font-size:0.55rem;color:var(--muted);text-align:center;margin-bottom:0.2rem;letter-spacing:0.05em;">NAV</div>
     <button onclick="navScrollTo('navA')" title="画像設定" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">🖼 画像</button>
@@ -4988,13 +5074,18 @@ class Handler(BaseHTTPRequestHandler):
                                         paths.append(full.replace('\\', '/'))
                                         # ComfyUI /view URLも追加
                                 if paths:
+                                    # リクエスト元のホストからComfyUIポートでアクセスできるURLに変換
+                                    comfy_port = comfy.split('//')[-1].split(':')[-1].split('/')[0] if ':' in comfy.split('//')[-1] else '8188'
+                                    req_host = self.headers.get('Host','').split(':')[0] or '127.0.0.1'
+                                    comfy_base = f'http://{req_host}:{comfy_port}'
+                                    view_urls = [f'{comfy_base}/view?filename={img["filename"]}&subfolder={img.get("subfolder","")}&type=output' for img in imgs if img.get('filename')]
                                     image_paths[pid] = {
                                         'file_paths': paths,
-                                        'view_urls': [f'{comfy}/view?filename={img["filename"]}&subfolder={img.get("subfolder","")}&type=output' for img in imgs if img.get('filename')]
+                                        'view_urls': view_urls
                                     }
                                 break
             except Exception as _pe:
-                print(f'[poll_status] history exception: {_pe}')
+                passprint(f'[poll_status] history exception: {_pe}')
             try:
                 with _ureq.urlopen(comfy+'/queue',timeout=3) as r:
                     q = json.loads(r.read())
@@ -5132,6 +5223,81 @@ class Handler(BaseHTTPRequestHandler):
             import os as _os
             _is_default = not _os.path.exists(NEG_EXTRA_TAGS_FILE)
             self.wfile.write(json.dumps({"tags":load_neg_extra_tags(),"is_default":_is_default},ensure_ascii=False).encode('utf-8'))
+        elif self.path=='/version':
+            self.send_response(200)
+            self.send_header('Content-Type','application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'version': __version__}).encode())
+
+        elif self.path.startswith('/lora_thumbnail'):
+            from urllib.parse import urlparse, parse_qs, unquote
+            qs = parse_qs(urlparse(self.path).query)
+            lora_name = unquote(qs.get('name',[''])[0])
+            # lora_rootsを取得してサムネを直接読み込む
+            cfg2 = load_config()
+            comfy = cfg2.get('comfyui_url','http://127.0.0.1:8188').rstrip('/')
+            lora_path = lora_name.replace('\\', '/').replace('\\\\', '/')
+            # サブフォルダとベース名を分解
+            if '/' in lora_path:
+                subfolder, fname = lora_path.rsplit('/', 1)
+            else:
+                subfolder, fname = '', lora_path
+            base = fname.rsplit('.',1)[0]
+            # ComfyUIのLoRAルートフォルダを取得
+            lora_roots = []
+            try:
+                import urllib.request as _ureq5
+                with _ureq5.urlopen(comfy+'/object_info/LoraLoader', timeout=5) as r:
+                    info5 = json.loads(r.read())
+                # extra_modelpath等からLoRAフォルダを推測
+                # ComfyUIのシステム情報から取得
+                with _ureq5.urlopen(comfy+'/system_stats', timeout=5) as r:
+                    sys_info = json.loads(r.read())
+                comfyui_dir = sys_info.get('system',{}).get('comfyui_version','')
+            except Exception:
+                pass
+            # lora_rootsが取れない場合はComfyUI設定のcomfyui_output_dirから推測
+            comfyui_output = cfg2.get('comfyui_output_dir','')
+            if comfyui_output:
+                # output -> ComfyUI root -> models/loras
+                import pathlib
+                p = pathlib.Path(comfyui_output)
+                for parent in [p, p.parent, p.parent.parent]:
+                    candidate = parent / 'models' / 'loras'
+                    if candidate.exists():
+                        lora_roots.append(str(candidate))
+                    candidate2 = parent / 'loras'
+                    if candidate2.exists():
+                        lora_roots.append(str(candidate2))
+            import mimetypes
+            found_data = None
+            found_mime = 'image/jpeg'
+            for root in lora_roots:
+                sub_path = os.path.join(root, subfolder) if subfolder else root
+                for sfx in ['', '.preview']:
+                    for ext in ['jpg','jpeg','png','webp']:
+                        img_path = os.path.join(sub_path, f'{base}{sfx}.{ext}')
+                        if os.path.exists(img_path):
+                            with open(img_path, 'rb') as f:
+                                found_data = f.read()
+                            found_mime = mimetypes.guess_type(img_path)[0] or 'image/jpeg'
+                            break
+                    if found_data:
+                        break
+                if found_data:
+                    break
+            if found_data:
+                self.send_response(200)
+                self.send_header('Content-Type', found_mime)
+                self.send_header('Content-Length', str(len(found_data)))
+                self.send_header('Cache-Control', 'public, max-age=3600')
+                self.end_headers()
+                self.wfile.write(found_data)
+            else:
+                self.send_response(204)
+                self.end_headers()
+            return
+
         elif self.path=='/lora_list':
             import urllib.request as _ureq
             cfg2 = load_config()
@@ -5569,7 +5735,7 @@ def check_server(name,url,path="/"):
 def main():
     cfg=load_config()
     print("="*55)
-    print("  Anima Pipeline")
+    print(f"  Anima Pipeline  v{__version__}")
     print("="*55)
     print("\n[接続確認]")
     check_server("LLM",cfg["llm_url"],"/api/v1/models")
