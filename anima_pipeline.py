@@ -13,7 +13,9 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 UI_PORT = 7860
 _base_dir     = os.path.dirname(os.path.abspath(__file__))
 _settings_dir = os.path.join(_base_dir, 'settings')
+_workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
+os.makedirs(_workflows_dir, exist_ok=True)
 
 def _sf(name): return os.path.join(_settings_dir, name)
 
@@ -410,7 +412,7 @@ def workflow_to_api(workflow_data: dict) -> dict:
     return api_prompt
 
 
-def send_to_comfyui(positive_prompt: str, cfg: dict, width: int = 1024, height: int = 1024, fmt: str = 'png', client_id: str = None, negative_prompt: str = '') -> str:
+def send_to_comfyui(positive_prompt: str, cfg: dict, width: int = 1024, height: int = 1024, fmt: str = 'png', client_id: str = None, negative_prompt: str = '', lora_slots: list = None) -> str:
     workflow_path = cfg.get("workflow_json_path", "").strip()
     if workflow_path and not os.path.isabs(workflow_path):
         workflow_path = os.path.join(_base_dir, workflow_path)
@@ -471,6 +473,27 @@ def send_to_comfyui(positive_prompt: str, cfg: dict, width: int = 1024, height: 
             node["inputs"]["sampler_name"] = sampler_val
             node["inputs"]["scheduler"] = scheduler_val
             print(f"[ComfyUI] KSampler設定: seed={node['inputs']['seed']} steps={steps_val} cfg={cfg_val} sampler={sampler_val} (node {nid})")
+
+    # LoraLoaderノードにlora_slotsを注入
+    if lora_slots:
+        active_slots = [s for s in lora_slots if s.get('name','').strip()]
+        lora_nodes = [(nid, node) for nid, node in api_prompt.items()
+                      if node.get('class_type') == 'LoraLoader']
+        lora_nodes.sort(key=lambda x: int(x[0]) if x[0].isdigit() else 0)
+        for i, (nid, node) in enumerate(lora_nodes):
+            if i < len(active_slots):
+                slot = active_slots[i]
+                lora_name = slot['name'].strip()
+                strength = float(slot.get('strength', 1.0))
+                node['inputs']['lora_name'] = lora_name
+                node['inputs']['strength_model'] = strength
+                node['inputs']['strength_clip'] = strength
+                print(f"[ComfyUI] LoRA注入: {lora_name} strength={strength} (node {nid})")
+            else:
+                # スロット余り → 強度0でパススルー
+                node['inputs']['strength_model'] = 0.0
+                node['inputs']['strength_clip'] = 0.0
+                print(f"[ComfyUI] LoRAスキップ: strength=0 (node {nid})")
 
     if client_id is None:
         client_id = str(uuid.uuid4())
@@ -750,8 +773,22 @@ HTML = r"""<!DOCTYPE html>
     <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:#c0392b;font-weight:bold;margin-bottom:0.4rem;letter-spacing:0.05em;">■ 必須</div>
     <div style="border:1.5px solid #e74c3c;border-radius:7px;padding:0.8rem;margin-bottom:0.8rem;background:#fff9f9;">
       <div class="field">
-        <label>① ワークフローJSONパス</label>
+        <label>① ワークフローJSONパス（フォールバック）</label>
         <input type="text" id="workflowInput" placeholder="C:\ComfyUI\...\image_anima_preview.json">
+      </div>
+      <div class="field">
+        <label>　 workflows/ フォルダから選択（優先）</label>
+        <div style="display:flex;flex-direction:row;gap:0.4rem;align-items:center;">
+          <select id="workflowSelect"
+            style="flex:1;background:white;border:1px solid var(--border);border-radius:6px;padding:0.4rem 0.6rem;
+            font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);outline:none;box-sizing:border-box;cursor:pointer;">
+            <option value="">— 未選択（①のパスを使用）—</option>
+          </select>
+          <button onclick="loadWorkflowList()" title="再読み込み"
+            style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:0.3rem 0.5rem;border:1px solid var(--border);
+            border-radius:5px;background:white;color:var(--muted);cursor:pointer;white-space:nowrap;flex-shrink:0;width:auto;">🔄 再読込</button>
+        </div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);margin-top:0.2rem;">anima_pipeline/workflows/ にJSONを置くと表示されます</div>
       </div>
       <div class="field-row">
         <div class="field">
@@ -968,6 +1005,7 @@ HTML = r"""<!DOCTYPE html>
       <div id="charaContainer"></div>
       <!-- シーン -->
     </div>
+  </div>
   <!-- ブロックC: シーン・雰囲気 -->
   <div id="navC" class="scene-toggle" onclick="toggleBlock('blockC','arrowC')" style="margin-bottom:0.5rem;">
     <span id="arrowC">▶</span> シーン・雰囲気（任意）
@@ -1028,6 +1066,13 @@ HTML = r"""<!DOCTYPE html>
           font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);outline:none;
           resize:vertical;box-sizing:border-box;"></textarea>
       </div>
+  <!-- ブロックLoRA -->
+  <div id="navLora" class="scene-toggle" onclick="toggleBlock('blockLora','arrowLora')" style="margin-bottom:0.5rem;">
+    <span id="arrowLora">▶</span> LoRA
+  </div>
+  <div id="blockLora" style="display:none;border:1px solid var(--border);border-radius:8px;padding:1rem;background:rgba(255,255,255,0.9);margin-bottom:1rem;">
+    <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:0.6rem;">ワークフロー内の LoraLoader ノードに順番に注入されます。空欄はスキップ。</div>
+    <div id="loraSlots"></div>
   </div>
 
   <div style="display:flex;align-items:center;justify-content:center;gap:0.5rem;margin-bottom:0.5rem;">
@@ -1241,7 +1286,7 @@ HTML = r"""<!DOCTYPE html>
       <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:0.3rem;">▸ 送信ネガティブプロンプト</div>
       <div id="modalNegative" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:#c0392b;background:#fff5f5;border-radius:6px;padding:0.6rem;white-space:pre-wrap;word-break:break-all;"></div>
     </div>
-  </div>
+</div>
 </div>
 
 <script>
@@ -1589,6 +1634,143 @@ let selectedW=1024, selectedH=1024;
 let selectedFmt='png';
 let selectedCount=1;
 let selectedSeedMode='random';
+
+// ===== LoRAスロット =====
+const LORA_SLOT_COUNT = 4;
+
+// ===== ワークフロー選択 =====
+async function loadWorkflowList(){
+  const sel = document.getElementById('workflowSelect');
+  if(!sel) return;
+  try{
+    const res = await fetch('/workflows');
+    const data = await res.json();
+    const current = sel.value;
+    // 既存オプションをクリア（デフォルトは残す）
+    while(sel.options.length > 1) sel.remove(1);
+    (data.files||[]).forEach(f=>{
+      const opt = document.createElement('option');
+      opt.value = f;
+      opt.textContent = f.replace(/\.json$/i,'');
+      sel.appendChild(opt);
+    });
+    // 以前の選択を復元
+    if(current && [...sel.options].some(o=>o.value===current)) sel.value = current;
+    console.log('[workflow] loaded:', data.files);
+  }catch(e){ console.warn('[workflow] load failed:', e); }
+}
+
+function getSelectedWorkflow(){
+  const sel = document.getElementById('workflowSelect');
+  return sel ? sel.value : '';
+}
+
+let _loraList = [];
+
+async function loadLoraList(){
+  try{
+    const res = await fetch('/lora_list');
+    const data = await res.json();
+    _loraList = data.loras || [];
+    // 既存のselectを更新
+    for(let i=0; i<LORA_SLOT_COUNT; i++){
+      const sel = document.getElementById(`lora_name_${i}`);
+      if(!sel || sel.tagName !== 'SELECT') continue;
+      const current = sel.value;
+      while(sel.options.length > 1) sel.remove(1);
+      _loraList.forEach(name=>{
+        const opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name.replace(/\\/g, '/');  // バックスラッシュをスラッシュに統一して表示
+        opt.title = name;
+        sel.appendChild(opt);
+      });
+      if(current && [...sel.options].some(o=>o.value===current)) sel.value = current;
+    }
+    console.log(`[lora] loaded ${_loraList.length} loras`);
+  }catch(e){ console.warn('[lora] load failed:', e); }
+}
+
+function initLoraSlots(){
+  const container = document.getElementById('loraSlots');
+  if(!container) return;
+  // ヘッダー行（🔄ボタン）
+  const header = document.createElement('div');
+  header.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:0.4rem;';
+  const reloadBtn = document.createElement('button');
+  reloadBtn.textContent = '🔄 LoRA一覧取得';
+  reloadBtn.onclick = loadLoraList;
+  reloadBtn.style.cssText = 'font-family:DM Mono,monospace;font-size:0.68rem;padding:0.25rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--muted);cursor:pointer;white-space:nowrap;';
+  header.appendChild(reloadBtn);
+  container.appendChild(header);
+
+  for(let i=0; i<LORA_SLOT_COUNT; i++){
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:1fr auto auto;gap:0.4rem;align-items:center;margin-bottom:0.4rem;';
+    // select（LoRA選択）
+    const sel = document.createElement('select');
+    sel.id = `lora_name_${i}`;
+    sel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.75rem;border:1px solid var(--accent-en);border-radius:5px;padding:0.3rem 0.5rem;outline:none;box-sizing:border-box;background:white;color:var(--ink);cursor:pointer;';
+    const emptyOpt = document.createElement('option');
+    emptyOpt.value = '';
+    emptyOpt.textContent = `— スロット${i+1}（未使用）—`;
+    sel.appendChild(emptyOpt);
+    // 強度ラベル
+    const strengthLabel = document.createElement('span');
+    strengthLabel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);white-space:nowrap;';
+    strengthLabel.textContent = '強度';
+    // 強度input
+    const strengthInput = document.createElement('input');
+    strengthInput.type = 'number';
+    strengthInput.id = `lora_strength_${i}`;
+    strengthInput.value = '1';
+    strengthInput.min = '0';
+    strengthInput.max = '2';
+    strengthInput.step = '0.05';
+    strengthInput.style.cssText = 'font-family:DM Mono,monospace;font-size:0.75rem;border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.4rem;outline:none;width:4.5rem;box-sizing:border-box;';
+    row.appendChild(sel);
+    row.appendChild(strengthLabel);
+    row.appendChild(strengthInput);
+    container.appendChild(row);
+  }
+  // 起動時に自動取得
+  loadLoraList();
+}
+
+function collectLoraSlots(){
+  const slots = [];
+  for(let i=0; i<LORA_SLOT_COUNT; i++){
+    const name = document.getElementById(`lora_name_${i}`)?.value.trim()||'';
+    const strength = parseFloat(document.getElementById(`lora_strength_${i}`)?.value)||1.0;
+    slots.push({name, strength});
+  }
+  return slots;
+}
+
+function applyLoraSlots(slots){
+  if(!slots) return;
+  slots.forEach((slot, i)=>{
+    if(i >= LORA_SLOT_COUNT) return;
+    const nameEl = document.getElementById(`lora_name_${i}`);
+    const strEl = document.getElementById(`lora_strength_${i}`);
+    if(nameEl){
+      // selectの場合、optionがなければ追加してから選択
+      if(nameEl.tagName === 'SELECT' && slot.name){
+        if(![...nameEl.options].some(o=>o.value===slot.name)){
+          const opt = document.createElement('option');
+          opt.value = slot.name;
+          opt.textContent = slot.name.replace(/\\/g,'/').split('/').pop();
+          opt.title = slot.name;
+          nameEl.appendChild(opt);
+        }
+        nameEl.value = slot.name;
+      } else {
+        nameEl.value = slot.name||'';
+      }
+    }
+    if(strEl) strEl.value = slot.strength !== undefined ? slot.strength : 1;
+  });
+}
 
 function initGenParams(){
   const samplerSel = document.getElementById('samplerInput');
@@ -1963,6 +2145,8 @@ function collectSessionData(){
     negFinalPrompt: document.getElementById('promptNegFinal').textContent||'',
     imgW: selectedW, imgH: selectedH, imgFmt: selectedFmt, imgCount: selectedCount,
     useLLM: document.getElementById('useLLM').checked,
+    workflowFile: getSelectedWorkflow(),
+    loraSlots: collectLoraSlots(),
     savedAt: new Date().toISOString(),
   };
 }
@@ -2371,6 +2555,11 @@ function applySession(data){
     if(data.imgFmt){ selectedFmt=data.imgFmt; document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.toggle('active',b.dataset.fmt===data.imgFmt)); }
     if(data.imgCount){ selectedCount=data.imgCount; const ce=document.getElementById('countInput'); if(ce) ce.value=data.imgCount; }
     if(data.useLLM !== undefined){ const el=document.getElementById('useLLM'); if(el) el.checked=data.useLLM; }
+    if(data.workflowFile){
+      const sel = document.getElementById('workflowSelect');
+      if(sel && [...sel.options].some(o=>o.value===data.workflowFile)) sel.value = data.workflowFile;
+    }
+    if(data.loraSlots) applyLoraSlots(data.loraSlots);
   }, 50);
 }
 
@@ -4446,7 +4635,7 @@ function initCharaAttrButtons(idx){
   // 性別ボタン動的生成（makeCharaBlock呼び出し時に使用）
 }
 
-document.addEventListener('DOMContentLoaded', ()=>{ loadCharaPresets().then(()=>updateCharaBlocks()); loadSettings(); initExtraPresets(); initQualityMeta(); initQualityMetaNeg(); initNegExtraPresets(); initNegSafetyButtons(); loadNegStyleTagsFromServer(); initSceneButtons(); initSizePresets(); initGenParams(); loadLastSession(); loadStyleTagsFromServer(); });
+document.addEventListener('DOMContentLoaded', ()=>{ loadCharaPresets().then(()=>updateCharaBlocks()); loadSettings(); initExtraPresets(); initQualityMeta(); initQualityMetaNeg(); initNegExtraPresets(); initNegSafetyButtons(); loadNegStyleTagsFromServer(); initSceneButtons(); initSizePresets(); initGenParams(); initLoraSlots(); loadWorkflowList(); loadLastSession(); loadStyleTagsFromServer(); });
 
 async function generate(){
   if(running)return;
@@ -4501,7 +4690,7 @@ async function generate(){
       setStep(steps,'s1','done','LLM: スキップ');
     }
     else { setStep(steps,'s1','active','LLM: プロンプト生成中...'); }
-    const res=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input,use_llm:document.getElementById('useLLM').checked,width:selectedW,height:selectedH,fmt:selectedFmt,count:selectedCount,extra_tags:Array.from(extraTags),char_direct_tags:charDirectTags,prompt_prefix:collectPromptPrefix(),extra_note_en:document.getElementById('extraNoteEn').value.trim(),negative_prompt:collectNegativePrompt(),gen_params:collectGenParams()})});
+    const res=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input,use_llm:document.getElementById('useLLM').checked,width:selectedW,height:selectedH,fmt:selectedFmt,count:selectedCount,extra_tags:Array.from(extraTags),char_direct_tags:charDirectTags,prompt_prefix:collectPromptPrefix(),extra_note_en:document.getElementById('extraNoteEn').value.trim(),negative_prompt:collectNegativePrompt(),gen_params:collectGenParams(),lora_slots:collectLoraSlots(),workflow_file:getSelectedWorkflow()})});
     const data=await res.json();
     if(data.error){
       setStep(steps,'s1','error','エラー: '+data.error);
@@ -4626,7 +4815,9 @@ async function regenPrompt(){
         extra_tags:regenExtraTags, extra_note_en:regenExtraEn,
         prompt_prefix:collectPromptPrefix(),
         negative_prompt:collectNegativePrompt(),
-        gen_params:collectGenParams()})});
+        gen_params:collectGenParams(),
+        lora_slots:collectLoraSlots(),
+        workflow_file:getSelectedWorkflow()})});
     const data=await res.json();
     if(data.error){
       setStep(steps,'s_regen','error','エラー: '+data.error);
@@ -4673,6 +4864,7 @@ document.addEventListener('keydown',e=>{
     <button onclick="navScrollTo('navA2')" title="生成パラメータ" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">⚙ パラメータ</button>
     <button onclick="navScrollTo('navB')" title="キャラクター" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">🎭 キャラ</button>
     <button onclick="navScrollTo('navC')" title="シーン・雰囲気" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">🌍 シーン</button>
+    <button onclick="navScrollTo('navLora')" title="LoRA" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">🎴 LoRA</button>
     <button onclick="navScrollTo('navExtra')" title="プロンプト調整" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">✨ ポジ調整</button>
     <button onclick="navScrollTo('navNeg')" title="ネガティブ調整" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:0.3rem 0.5rem;border:1px solid #e0779a;border-radius:5px;background:white;color:#c0392b;cursor:pointer;white-space:nowrap;">🚫 ネガ調整</button>
     <button onclick="navScrollTo('navStatus')" title="処理状況" style="font-family:'DM Mono',monospace;font-size:0.62rem;padding:0.3rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">📋 状況</button>
@@ -4940,6 +5132,45 @@ class Handler(BaseHTTPRequestHandler):
             import os as _os
             _is_default = not _os.path.exists(NEG_EXTRA_TAGS_FILE)
             self.wfile.write(json.dumps({"tags":load_neg_extra_tags(),"is_default":_is_default},ensure_ascii=False).encode('utf-8'))
+        elif self.path=='/lora_list':
+            import urllib.request as _ureq
+            cfg2 = load_config()
+            comfy = cfg2.get('comfyui_url','http://127.0.0.1:8188').rstrip('/')
+            loras = []
+            try:
+                with _ureq.urlopen(comfy+'/object_info/LoraLoader', timeout=5) as r:
+                    info = json.loads(r.read())
+                # ComfyUIのobject_infoのlora_nameは [[list], "default"] 形式
+                lora_name_field = info.get('LoraLoader',{}).get('input',{}).get('required',{}).get('lora_name')
+                print(f'[lora_list] lora_name_field type={type(lora_name_field)} len={len(lora_name_field) if lora_name_field else 0}')
+                if isinstance(lora_name_field, list) and len(lora_name_field) > 0:
+                    first = lora_name_field[0]
+                    if isinstance(first, list):
+                        loras = first  # [[lora1, lora2, ...], "LoraLoader"]
+                    else:
+                        loras = lora_name_field
+                print(f'[lora_list] got {len(loras)} loras')
+            except Exception as e:
+                print(f'[lora_list] error: {e}')
+            self.send_response(200)
+            self.send_header('Content-Type','application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'loras': loras}, ensure_ascii=False).encode())
+
+        elif self.path=='/workflows':
+            # workflowsフォルダ内のJSONファイル一覧を返す
+            files = []
+            try:
+                for f in sorted(os.listdir(_workflows_dir)):
+                    if f.lower().endswith('.json'):
+                        files.append(f)
+            except Exception:
+                pass
+            self.send_response(200)
+            self.send_header('Content-Type','application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps({'files': files}, ensure_ascii=False).encode())
+
         elif self.path=='/neg_style_tags':
             self.send_response(200)
             self.send_header('Content-Type','application/json')
@@ -5094,6 +5325,11 @@ class Handler(BaseHTTPRequestHandler):
                 if gen_params:
                     for k in ('seed_mode','seed_value','steps','cfg','sampler_name','scheduler'):
                         if k in gen_params: cfg[k]=gen_params[k]
+                regen_lora_slots=body.get('lora_slots',[])
+                regen_workflow_file=body.get('workflow_file','').strip()
+                if regen_workflow_file:
+                    cfg['workflow_json_path'] = os.path.join(_workflows_dir, regen_workflow_file)
+                    print(f"[ComfyUI] ワークフロー選択（再生成）: {regen_workflow_file}")
                 if not prompt:
                     raise ValueError('プロンプトが空です')
                 # Extraタグ・英語追記を適用
@@ -5132,7 +5368,7 @@ class Handler(BaseHTTPRequestHandler):
                 for i in range(count):
                     if Handler.cancel_event.is_set(): break
                     cid=str(uuid.uuid4())
-                    pid=send_to_comfyui(prompt,cfg,width,height,fmt,cid,negative_prompt=regen_negative)
+                    pid=send_to_comfyui(prompt,cfg,width,height,fmt,cid,negative_prompt=regen_negative,lora_slots=regen_lora_slots)
                     prompt_ids.append(pid)
                     print(f"[ComfyUI] 再生成キュー ({i+1}/{count}): {pid}")
                     if fmt=='webp':
@@ -5223,6 +5459,11 @@ class Handler(BaseHTTPRequestHandler):
             if gen_params:
                 for k in ('seed_mode','seed_value','steps','cfg','sampler_name','scheduler'):
                     if k in gen_params: cfg[k]=gen_params[k]
+            lora_slots=body.get('lora_slots',[])
+            workflow_file=body.get('workflow_file','').strip()
+            if workflow_file:
+                cfg['workflow_json_path'] = os.path.join(_workflows_dir, workflow_file)
+                print(f"[ComfyUI] ワークフロー選択: {workflow_file}")
             Handler.cancel_event.clear()
             result={"positive_prompt":"","comfyui_sent":False,"prompt_id":"","error":"","comfyui_error":""}
 
@@ -5285,7 +5526,7 @@ class Handler(BaseHTTPRequestHandler):
                         if Handler.cancel_event.is_set():
                             break
                         cid = str(uuid.uuid4())
-                        pid = send_to_comfyui(positive_flat, cfg, img_width, img_height, img_fmt, cid, negative_prompt=negative_prompt)
+                        pid = send_to_comfyui(positive_flat, cfg, img_width, img_height, img_fmt, cid, negative_prompt=negative_prompt, lora_slots=lora_slots)
                         prompt_ids.append(pid)
                         print(f"[ComfyUI] キューに追加 ({i+1}/{img_count}): {pid}")
                         if img_fmt == "webp":
