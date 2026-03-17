@@ -17,7 +17,7 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
-__version__ = "1.4.2"
+__version__ = "1.4.3"
 
 def _sf(name): return os.path.join(_settings_dir, name)
 
@@ -422,7 +422,14 @@ def send_to_comfyui(positive_prompt: str, cfg: dict, width: int = 1024, height: 
         raise FileNotFoundError(f"ワークフローJSONが見つかりません: {workflow_path}")
 
     workflow_data = json.load(open(workflow_path, "r", encoding="utf-8"))
-    api_prompt = workflow_to_api(workflow_data)
+    # API形式（Save (API Format)）か保存形式かを判定
+    # API形式: キーが数字文字列でclass_typeを持つ dict
+    # 保存形式: "nodes"キーを持つ dict
+    if "nodes" in workflow_data:
+        api_prompt = workflow_to_api(workflow_data)
+    else:
+        # すでにAPI形式 → そのまま使用（キーを文字列に統一）
+        api_prompt = {str(k): v for k, v in workflow_data.items()}
 
     # Positive PromptノードのテキストをLM Studio出力で書き換え
     pos_id = cfg.get("positive_node_id", "11")
@@ -930,6 +937,7 @@ HTML = r"""<!DOCTYPE html>
         <label>　 workflows/ フォルダから選択（優先）</label>
         <div style="display:flex;flex-direction:row;gap:0.4rem;align-items:center;">
           <select id="workflowSelect"
+            onchange="applyWorkflowNodeIds(this.value)"
             style="flex:1;background:white;border:1px solid var(--border);border-radius:6px;padding:0.4rem 0.6rem;
             font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);outline:none;box-sizing:border-box;cursor:pointer;">
             <option value="">— 未選択（①のパスを使用）—</option>
@@ -938,7 +946,8 @@ HTML = r"""<!DOCTYPE html>
             style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:0.3rem 0.5rem;border:1px solid var(--border);
             border-radius:5px;background:white;color:var(--muted);cursor:pointer;white-space:nowrap;flex-shrink:0;width:auto;">🔄 再読込</button>
         </div>
-        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);margin-top:0.2rem;">anima_pipeline/workflows/ にJSONを置くと表示されます</div>
+        <div id="workflowNodeNotice" style="display:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#2d7a4f;margin-top:0.2rem;"></div>
+        <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);margin-top:0.2rem;">anima_pipeline/workflows/ にJSONを置くと表示されます。選択時にNode IDを自動検出します（ControlNet等が挟まる場合は手動確認を）</div>
       </div>
       <div class="field-row">
         <div class="field">
@@ -1836,6 +1845,23 @@ async function loadWorkflowList(){
     });
     if(current && [...sel.options].some(o=>o.value===current)) sel.value = current;
   }catch(e){ console.warn('[workflow] load failed:', e); }
+}
+
+async function applyWorkflowNodeIds(filename){
+  if(!filename) return;
+  try{
+    const res = await fetch('/workflow_node_ids?file=' + encodeURIComponent(filename));
+    const d = await res.json();
+    const notify = [];
+    if(d.pos_id)      { document.getElementById('posNodeInput').value = d.pos_id;      notify.push('Pos:'+d.pos_id); }
+    if(d.neg_id)      { document.getElementById('negNodeInput').value = d.neg_id;      notify.push('Neg:'+d.neg_id); }
+    if(d.ksampler_id) { document.getElementById('ksamplerNodeInput').value = d.ksampler_id; notify.push('KSampler:'+d.ksampler_id); }
+    if(d.clip_id)     { document.getElementById('clipNodeInput').value = d.clip_id;    notify.push('CLIP:'+d.clip_id); }
+    if(notify.length){
+      const notice = document.getElementById('workflowNodeNotice');
+      if(notice){ notice.textContent = '✓ Node ID自動設定: ' + notify.join(' / '); notice.style.display='block'; setTimeout(()=>notice.style.display='none', 4000); }
+    }
+  }catch(e){}
 }
 
 function getSelectedWorkflow(){
@@ -5307,6 +5333,81 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self.send_response(204)
                 self.end_headers()
+            return
+
+        elif self.path.startswith('/workflow_node_ids'):
+            from urllib.parse import urlparse, parse_qs, unquote
+            qs = parse_qs(urlparse(self.path).query)
+            wf_file = unquote(qs.get('file',[''])[0])
+            result = {'pos_id':'','neg_id':'','ksampler_id':'','clip_id':''}
+            if wf_file:
+                wf_path = os.path.join(_workflows_dir, wf_file)
+                if not os.path.exists(wf_path):
+                    wf_path = os.path.join(_base_dir, wf_file)
+                if os.path.exists(wf_path):
+                    try:
+                        wf = json.load(open(wf_path, encoding='utf-8'))
+                        # API形式か保存形式か判定
+                        if 'nodes' not in wf:
+                            # API形式 → 保存形式に近い構造で解析
+                            # class_typeからKSampler/CLIPTextEncodeを直接探す
+                            for nid, node in wf.items():
+                                if not isinstance(node, dict): continue
+                                t = node.get('class_type','')
+                                if t in ('KSampler','KSamplerAdvanced'):
+                                    result['ksampler_id'] = str(nid)
+                                elif t == 'CLIPLoader':
+                                    result['clip_id'] = str(nid)
+                                elif t == 'CLIPTextEncode':
+                                    inp = node.get('inputs',{})
+                                    # positiveはKSamplerのpositive入力から辿る
+                                    # API形式では接続が[node_id, slot]形式
+                                    pass
+                            # KSamplerのpositive/negative入力から判別
+                            for nid, node in wf.items():
+                                if not isinstance(node, dict): continue
+                                if node.get('class_type') in ('KSampler','KSamplerAdvanced'):
+                                    inp = node.get('inputs',{})
+                                    pos_ref = inp.get('positive')
+                                    neg_ref = inp.get('negative')
+                                    if isinstance(pos_ref, list): result['pos_id'] = str(pos_ref[0])
+                                    if isinstance(neg_ref, list): result['neg_id'] = str(neg_ref[0])
+                        else:
+                            nodes = wf.get('nodes', [])
+                            links = {lnk[0]: lnk for lnk in wf.get('links', [])}
+                        for n in nodes:
+                            nid = str(n['id'])
+                            t = n.get('type','')
+                            if t == 'KSampler' or t == 'KSamplerAdvanced':
+                                result['ksampler_id'] = nid
+                            elif t == 'CLIPLoader':
+                                result['clip_id'] = nid
+                            elif t == 'CLIPTextEncode':
+                                title = n.get('title','').lower()
+                                # タイトルで判別
+                                if 'positive' in title or 'ポジ' in title:
+                                    result['pos_id'] = nid
+                                elif 'negative' in title or 'ネガ' in title:
+                                    result['neg_id'] = nid
+                                else:
+                                    # KSamplerのpositive/negative入力から判別
+                                    for other in nodes:
+                                        if other.get('type') in ('KSampler','KSamplerAdvanced'):
+                                            for inp in other.get('inputs',[]):
+                                                link_id = inp.get('link')
+                                                if link_id and link_id in links:
+                                                    src_nid = str(links[link_id][1])
+                                                    if src_nid == nid:
+                                                        if inp['name'] == 'positive':
+                                                            result['pos_id'] = nid
+                                                        elif inp['name'] == 'negative':
+                                                            result['neg_id'] = nid
+                    except Exception as e:
+                        pass
+            self.send_response(200)
+            self.send_header('Content-Type','application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(result).encode())
             return
 
         elif self.path=='/lora_list':
