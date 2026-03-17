@@ -17,7 +17,7 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
-__version__ = "1.4.3"
+__version__ = "1.4.4"
 
 def _sf(name): return os.path.join(_settings_dir, name)
 
@@ -2294,18 +2294,37 @@ async function saveSettings(){
 }
 
 function copyPrompt(elId, btn){
-  const text = document.getElementById(elId).textContent;
-  navigator.clipboard.writeText(text).then(()=>{
-    btn.textContent = '✓ コピー済';
+  const el = document.getElementById(elId);
+  const text = el ? el.textContent : '';
+  if(!text) return;
+  // iOS http環境でもコピーできるよう range選択方式を優先
+  const tryRangeCopy = ()=>{
+    try{
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand('copy');
+      sel.removeAllRanges();
+      return true;
+    }catch(e){ return false; }
+  };
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(text).then(()=>{
+      btn.textContent='✓ コピー済'; btn.classList.add('copied');
+      setTimeout(()=>{ btn.textContent='コピー'; btn.classList.remove('copied'); }, 2000);
+    }).catch(()=>{
+      tryRangeCopy();
+      btn.textContent='✓ コピー済'; btn.classList.add('copied');
+      setTimeout(()=>{ btn.textContent='コピー'; btn.classList.remove('copied'); }, 2000);
+    });
+  } else {
+    const ok = tryRangeCopy();
+    btn.textContent = ok ? '✓ コピー済' : '（長押しで選択）';
     btn.classList.add('copied');
     setTimeout(()=>{ btn.textContent='コピー'; btn.classList.remove('copied'); }, 2000);
-  }).catch(()=>{
-    const ta = document.createElement('textarea');
-    ta.value = text; document.body.appendChild(ta); ta.select();
-    document.execCommand('copy'); document.body.removeChild(ta);
-    btn.textContent = '✓ コピー済'; btn.classList.add('copied');
-    setTimeout(()=>{ btn.textContent='コピー'; btn.classList.remove('copied'); }, 2000);
-  });
+  }
 }
 
 function setStep(steps,id,state,text){
@@ -4057,12 +4076,12 @@ function makeCharaBlock(idx){
     row.appendChild(wrap);
     return row;
   }
-  const posVRow  = makeAttrRow('⑯ 画面上下', POS_VERTICAL,   'chara_posv_'+idx,  false);
-  const posHRow  = makeAttrRow('⑰ 画面左右', POS_HORIZONTAL, 'chara_posh_'+idx,  false);
-  const posCRow  = makeAttrRow('⑱ カメラ',   POS_CAMERA,     'chara_posc_'+idx,  false);
-  const heightRow = makeAttrRow('⑧ 背丈', BODY_HEIGHT, 'chara_height_'+idx, false);
-  const buildRow  = makeAttrRow('⑨ 体型',  BODY_BUILD,  'chara_build_'+idx,  false);
-  const legsRow   = makeAttrRow('⑩ 脚',    BODY_LEGS,   'chara_legs_'+idx,   false);
+  const posVRow  = makeAttrRow('⑰ 画面上下', POS_VERTICAL,   'chara_posv_'+idx,  false);
+  const posHRow  = makeAttrRow('⑱ 画面左右', POS_HORIZONTAL, 'chara_posh_'+idx,  false);
+  const posCRow  = makeAttrRow('⑲ カメラ',   POS_CAMERA,     'chara_posc_'+idx,  false);
+  const heightRow = makeAttrRow('⑩ 背丈', BODY_HEIGHT, 'chara_height_'+idx, false);
+  const buildRow  = makeAttrRow('⑪ 体型',  BODY_BUILD,  'chara_build_'+idx,  false);
+  const legsRow   = makeAttrRow('⑫ 脚',    BODY_LEGS,   'chara_legs_'+idx,   false);
 
   const faceRow = document.createElement('div');
   faceRow.className = 'opt-row';
@@ -4224,7 +4243,7 @@ function makeCharaBlock(idx){
   const effectRow = document.createElement('div');
   effectRow.className = 'opt-row';
   effectRow.style.alignItems = 'start';
-  effectRow.appendChild(makeOptLabel('⑬ エフェクト'));
+  effectRow.appendChild(makeOptLabel('⑭ エフェクト'));
   const effectBtns = document.createElement('div');
   effectBtns.style.cssText = 'display:flex;gap:0.2rem;flex-wrap:wrap;';
   const effectHidden = document.createElement('input');
@@ -4264,7 +4283,7 @@ function makeCharaBlock(idx){
   const attachRow = document.createElement('div');
   attachRow.className = 'opt-row';
   attachRow.style.alignItems = 'start';
-  attachRow.appendChild(makeOptLabel('⑫ 付属'));
+  attachRow.appendChild(makeOptLabel('⑬ 付属'));
   const attachWrap = document.createElement('div');
   attachWrap.style.cssText = 'display:flex;flex-direction:column;gap:0.4rem;width:100%;';
 
@@ -4348,7 +4367,7 @@ function makeCharaBlock(idx){
   const holdingRow = document.createElement('div');
   holdingRow.className = 'opt-row';
   holdingRow.style.cssText = 'align-items:start;display:none;';
-  holdingRow.appendChild(makeOptLabel('⑮ 持ち物'));
+  holdingRow.appendChild(makeOptLabel('⑯ 持ち物'));
   const itemHidden = document.createElement('input');
   itemHidden.type = 'hidden';
   itemHidden.id = 'chara_item_'+idx;
@@ -4419,7 +4438,7 @@ function makeCharaBlock(idx){
   const actionRow = document.createElement('div');
   actionRow.className = 'opt-row';
   actionRow.style.alignItems = 'start';
-  const actionLabelWrap = makeOptLabel('⑭ 動作・ポーズ');
+  const actionLabelWrap = makeOptLabel('⑮ 動作・ポーズ');
   const actionHidden = document.createElement('input');
   actionHidden.type = 'hidden';
   actionHidden.id = 'chara_action_'+idx;
@@ -4489,12 +4508,12 @@ function makeCharaBlock(idx){
    skinRow,                 // ⑥ 肌の色
    outfitRow,               // ⑦ 衣装・外見
    bustRow,                 // ⑧ バスト
-   heightRow, buildRow, legsRow, // ⑨⑩⑪ 背丈・体型・脚
-   attachRow,               // ⑫ 付属
-   effectRow,               // ⑬ エフェクト
-   actionRow,               // ⑭ 動作・ポーズ
-   holdingRow,              // ⑮ 持ち物（持つ選択時に展開）
-   posVRow, posHRow, posCRow, // ⑯⑰⑱ 画面位置
+   heightRow, buildRow, legsRow, // ⑩⑪⑫ 背丈・体型・脚
+   attachRow,               // ⑬ 付属
+   effectRow,               // ⑭ エフェクト
+   actionRow,               // ⑮ 動作・ポーズ
+   holdingRow,              // ⑯ 持ち物（持つ選択時に展開）
+   posVRow, posHRow, posCRow, // ⑰⑱⑲ 画面位置
    miscRow                  // その他
   ].forEach(r=>{ if(r) opt.appendChild(r); });
 
@@ -4674,7 +4693,7 @@ function collectInput(useLLM=true){
     if(buildVal){  if(bodyLM_b) bodyLMparts.push(buildVal);  else { if(buildVal) addDirect(buildVal); } }
     if(legsVal){   if(bodyLM_l) bodyLMparts.push(legsVal);   else { if(legsVal) addDirect(legsVal); } }
     if(bodyLMparts.length) ch['body'] = bodyLMparts.join('、');
-    ch['_directTags'] = directTags;
+    ch['_directTagsBlock'] = directTags;
     characters.push(ch);
   }
   const genderSummary = [boys?boys+'boy'+(boys>1?'s':''):'', girls?girls+'girl'+(girls>1?'s':''):'', others?others+'other'+(others>1?'s':''):''].filter(Boolean).join(', ');
@@ -4687,7 +4706,8 @@ function collectInput(useLLM=true){
   const sceneParts = [world, outdoor, place, tod, weather, misc].filter(Boolean);
   const payload = {global_series: series, characters, gender_summary: genderSummary,
     place: sceneParts.join('、'), mood: misc};
-  const charDirectTags = characters.flatMap(c=>{ const t=c._directTags||[]; delete c._directTags; return t; });
+  const charDirectTags = []; // LLMなし時はifブロック内で組み立て、LLMあり時はflatMapで組み立て
+  characters.forEach(c=>{ (c._directTagsBlock||[]).forEach(t=>charDirectTags.push(t)); });
   const extraTagList = Array.from(extraTags);
   return {valid: !!(series || characters.some(c=>c.name)), payload, genderSummary, extraTagList, charDirectTags};
 }
@@ -4803,22 +4823,35 @@ async function generate(){
 
   try{
     const useLLM = useLLMflag;
-    // LLM未使用時: キャラ名を name_(series) 形式のDanbooruタグに変換してdirectTagsに追加
+    // LLM未使用時: キャラブロック化（1girl/1boy, キャラ名, 属性タグの順）
     if(!useLLM){
+      // charDirectTagsを一旦クリアしてブロック順で再構築
+      charDirectTags.length = 0;
       payload.characters.forEach(ch=>{
-        if(!ch.name || ch.original) return;
-        const namePart = ch.name.toLowerCase().replace(/\s+/g,'_').replace(/[^\w]/g,'_');
-        const seriesPart = (ch.series||'').toLowerCase().replace(/\s+/g,'_').replace(/[^\w]/g,'_');
-        const charTag = seriesPart ? `${namePart}_(${seriesPart})` : namePart;
-        charDirectTags.unshift(charTag);
+        const directTags = ch._directTagsBlock || [];
+        // 性別タグ
+        const gender = ch.gender||'';
+        const genderTag = gender==='female'||gender==='girl' ? '1girl'
+                        : gender==='male'||gender==='boy'   ? '1boy' : '';
+        // キャラ名タグ
+        if(!ch.original && ch.name){
+          const namePart = ch.name.toLowerCase().replace(/\s+/g,'_').replace(/[^\w]/g,'_');
+          const seriesPart = (ch.series||'').toLowerCase().replace(/\s+/g,'_').replace(/[^\w]/g,'_');
+          const charTag = seriesPart ? `${namePart}_(${seriesPart})` : namePart;
+          if(genderTag) charDirectTags.push(genderTag);
+          charDirectTags.push(charTag);
+        } else {
+          if(genderTag) charDirectTags.push(genderTag);
+        }
+        directTags.forEach(t=>charDirectTags.push(t));
       });
       const sceneVals = [
         document.getElementById('f_world')?.value,
-        document.getElementById('f_outdoor')?.value,  // ボタン選択値（英語タグ）
+        document.getElementById('f_outdoor')?.value,
         document.getElementById('f_tod')?.value,
         document.getElementById('f_weather')?.value,
         document.getElementById('f_misc')?.value,
-      ].filter(v=>v && /^[a-zA-Z0-9_\-,\s()]+$/.test(v)); // 英数字のみ許可
+      ].filter(v=>v && /^[a-zA-Z0-9_\-,\s()]+$/.test(v));
       sceneVals.forEach(v=>{ if(v) charDirectTags.push(v); });
       setStep(steps,'s1','done','LLM: スキップ');
     }
@@ -4829,7 +4862,7 @@ async function generate(){
       setStep(steps,'s1','error','エラー: '+data.error);
     }else{
       setStep(steps,'s1','done','LLM: 完了');
-      lastPositivePrompt=data.positive_prompt || data.final_prompt || '';
+      lastPositivePrompt=data.pre_extra_prompt || data.positive_prompt || data.final_prompt || '';
       lastFinalPrompt=data.final_prompt||'';
       lastNegativePrompt=data.negative_prompt||'';
       document.getElementById('lmLabel').style.display='block'; document.getElementById('lmLabel').classList.remove('collapsed');
@@ -5613,13 +5646,14 @@ class Handler(BaseHTTPRequestHandler):
                 # Extraタグ・英語追記を適用
                 prompt_flat = prompt.replace("\\n"," ").replace("\n"," ")
                 if regen_prompt_prefix:
+                    # promptにすでにprefixが含まれている場合（LLMなし）は除去してから付け直す
+                    prefix_set = {t.strip().lower() for t in regen_prompt_prefix if t}
+                    deduped = [t for t in prompt_flat.split(',') if t.strip().lower() not in prefix_set]
+                    prompt_flat = ', '.join(t.strip() for t in deduped if t.strip())
                     prompt_flat=", ".join(str(t) for t in regen_prompt_prefix)+", "+prompt_flat
                 if regen_extra_tags:
                     extra_str=", ".join(str(t) for t in regen_extra_tags)
-                    if "masterpiece" in prompt_flat:
-                        prompt_flat=prompt_flat.replace("masterpiece", extra_str+", masterpiece",1)
-                    else:
-                        prompt_flat=prompt_flat+", "+extra_str
+                    prompt_flat=(prompt_flat+", "+extra_str).strip(", ") if prompt_flat else extra_str
                 if regen_extra_en:
                     prompt_flat=prompt_flat.rstrip(". ").rstrip(",")+", "+regen_extra_en
                 prompt=prompt_flat
@@ -5762,19 +5796,22 @@ class Handler(BaseHTTPRequestHandler):
                     positive_flat=""
                 # prefix（品質・メタ・安全・スタイル・期間）をプロンプト先頭に挿入
                 if prompt_prefix:
+                    # LLM出力からprefixと重複するタグを除去
+                    if positive_flat and prompt_prefix:
+                        prefix_set = {t.strip().lower() for t in prompt_prefix if t}
+                        deduped = [t for t in positive_flat.split(',') if t.strip().lower() not in prefix_set]
+                        positive_flat = ', '.join(t.strip() for t in deduped if t.strip())
                     positive_flat=", ".join(str(t) for t in prompt_prefix)+("", ", "+positive_flat)[bool(positive_flat)]
-                if extra_tags:
-                    extra_str=", ".join(str(t) for t in extra_tags)
-                    quality_marker="masterpiece"
-                    if quality_marker in positive_flat:
-                        positive_flat=positive_flat.replace(quality_marker, extra_str+", "+quality_marker,1)
-                    else:
-                        positive_flat=(positive_flat+", "+extra_str).strip(", ")
                 if char_direct_tags:
                     direct_str=", ".join(str(t) for t in char_direct_tags if t)
                     positive_flat=(positive_flat+", "+direct_str).strip(", ")
                 if extra_note_en:
                     positive_flat=positive_flat.rstrip(". ").rstrip(",")+", "+extra_note_en
+                # extra_tags適用前を保存（再生成時の二重防止）
+                result["pre_extra_prompt"] = positive_flat
+                if extra_tags:
+                    extra_str=", ".join(str(t) for t in extra_tags)
+                    positive_flat=(positive_flat+", "+extra_str).strip(", ") if positive_flat else extra_str
                 result["final_prompt"]=positive_flat
                 result["negative_prompt"]=negative_prompt
 
