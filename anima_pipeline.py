@@ -17,7 +17,7 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
-__version__ = "1.4.4"
+__version__ = "1.4.5"
 
 def _sf(name): return os.path.join(_settings_dir, name)
 
@@ -616,6 +616,8 @@ HTML = r"""<!DOCTYPE html>
   .step.active{color:var(--ink);}
   .step.done{color:var(--success);}
   .step.error{color:var(--accent);}
+  .progress-bar-wrap{width:100%;background:#e8e4f0;border-radius:4px;height:6px;margin-top:0.3rem;overflow:hidden;display:none;}
+  .progress-bar{height:6px;background:linear-gradient(90deg,var(--multi),var(--accent));border-radius:4px;width:0%;transition:width 0.3s ease;}
   .dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
   .spinner{width:12px;height:12px;border:1.5px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0;}
   @keyframes spin{to{transform:rotate(360deg);}}
@@ -1368,6 +1370,9 @@ HTML = r"""<!DOCTYPE html>
   <div class="status-box" id="statusBox">
     <div class="status-label">処理状況</div>
     <div id="steps"></div>
+    <div class="progress-bar-wrap" id="progressBarWrap">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
     <div class="prompt-section-label" id="lmLabel" style="display:none;" onclick="togglePromptSection('promptOutput',this)">
       <span>▸ LLM生成ポジティブプロンプト</span>
       <button class="copy-btn" onclick="event.stopPropagation();copyPrompt('promptOutput',this)">コピー</button>
@@ -1414,6 +1419,33 @@ HTML = r"""<!DOCTYPE html>
 
 <script>
 let running=false, settingsOpen=false, lastPositivePrompt=null;
+window._comfyClientId = 'anima-' + Math.random().toString(36).slice(2,10);
+window._comfyWs = null;
+window._comfyWsReady = false;
+
+window._comfyWsHandler = null; // pollComfyUICompleteがセットするハンドラ
+
+function initComfyWs(){
+  const comfyUrlRaw = (document.getElementById('comfyUrlInput')?.value||'http://127.0.0.1:8188').trim();
+  const comfyPort = new URL(comfyUrlRaw).port || '8188';
+  const reqHost = location.hostname;
+  const wsHost = (reqHost !== '127.0.0.1' && reqHost !== 'localhost')
+    ? reqHost + ':' + comfyPort
+    : new URL(comfyUrlRaw).host;
+  const wsUrl = 'ws://' + wsHost + '/ws?clientId=' + encodeURIComponent(window._comfyClientId);
+  try{
+    if(window._comfyWs){ try{ window._comfyWs.close(); }catch(_){} }
+    window._comfyWs = new WebSocket(wsUrl);
+    window._comfyWs.onopen = ()=>{
+      window._comfyWsReady = true;
+      // 再接続時に最新のハンドラを再セット
+      if(window._comfyWsHandler) window._comfyWs.onmessage = window._comfyWsHandler;
+    };
+    window._comfyWs.onerror = ()=>{ window._comfyWsReady = false; };
+    window._comfyWs.onclose = ()=>{ window._comfyWsReady = false; setTimeout(initComfyWs, 5000); };
+    window._comfyWs.onmessage = ()=>{};
+  }catch(e){}
+}
 let lastFinalPrompt='', lastNegativePrompt='';
 
 // ===== ギャラリー =====
@@ -2406,6 +2438,7 @@ function collectSessionData(){
     lmPrompt:     document.getElementById('promptOutput').textContent||'',
     finalPrompt:  document.getElementById('promptFinal').textContent||'',
     negFinalPrompt: document.getElementById('promptNegFinal').textContent||'',
+    preExtraPrompt: lastPositivePrompt||'',
     imgW: selectedW, imgH: selectedH, imgFmt: selectedFmt, imgCount: selectedCount,
     useLLM: document.getElementById('useLLM').checked,
     workflowFile: getSelectedWorkflow(),
@@ -2762,7 +2795,8 @@ function applySession(data){
       document.getElementById('statusBox').classList.add('show');
     }
     if(data.finalPrompt){
-      lastPositivePrompt = lastPositivePrompt || data.finalPrompt; // LLMなし時はfinalPromptから復元
+      // preExtraPromptがあればそちらを優先（extra_tags・extra_note_en適用前）
+      lastPositivePrompt = data.preExtraPrompt || lastPositivePrompt || data.finalPrompt;
       lastFinalPrompt = data.finalPrompt;
       document.getElementById('finalLabel').style.display='block'; document.getElementById('finalLabel').classList.remove('collapsed');
       const pf = document.getElementById('promptFinal');
@@ -4774,6 +4808,31 @@ document.addEventListener('DOMContentLoaded', ()=>{
   }).catch(()=>{});
   loadCharaPresets().then(()=>updateCharaBlocks());
   loadSettings();
+  // スマホのみページ表示と同時にWS接続開始
+  if(window.innerWidth <= 700){
+    const notice = document.createElement('div');
+    notice.id = 'wsConnNotice';
+    notice.style.cssText = 'position:fixed;bottom:70px;left:50%;transform:translateX(-50%);background:rgba(80,60,140,0.85);color:white;font-family:DM Mono,monospace;font-size:0.72rem;padding:0.4rem 1rem;border-radius:20px;z-index:9999;white-space:nowrap;';
+    notice.textContent = '🔌 ComfyUI 接続中...';
+    document.body.appendChild(notice);
+    // 接続完了まで再生成ボタンをdisable
+    const regenBtn = document.getElementById('regenBtn');
+    if(regenBtn){ regenBtn.style.opacity='0.5'; regenBtn.style.pointerEvents='none'; }
+    initComfyWs();
+    const wsWait = setInterval(()=>{
+      if(window._comfyWsReady){
+        notice.textContent = '✓ ComfyUI 接続OK';
+        if(regenBtn){ regenBtn.style.opacity=''; regenBtn.style.pointerEvents=''; }
+        setTimeout(()=>notice.remove(), 1500);
+        clearInterval(wsWait);
+      }
+    }, 200);
+    setTimeout(()=>{
+      clearInterval(wsWait);
+      if(regenBtn){ regenBtn.style.opacity=''; regenBtn.style.pointerEvents=''; }
+      notice.remove();
+    }, 8000);
+  }
   initSceneButtons();
   initSizePresets();
   initGenParams();
@@ -4795,6 +4854,15 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 async function generate(){
   if(running)return;
+  // WebSocket接続を生成開始時に確立（未接続または切断済みの場合）
+  if(!window._comfyWsReady){
+    initComfyWs();
+    // 最大3秒待機
+    for(let i=0;i<15;i++){
+      await new Promise(r=>setTimeout(r,200));
+      if(window._comfyWsReady) break;
+    }
+  }
   const useLLMflag = document.getElementById('useLLM').checked;
   const {valid, payload, charDirectTags} = collectInput(useLLMflag);
   if(!valid){alert('シリーズまたはいずれかのキャラ名を入力してください');return;}
@@ -4856,7 +4924,7 @@ async function generate(){
       setStep(steps,'s1','done','LLM: スキップ');
     }
     else { setStep(steps,'s1','active','LLM: プロンプト生成中...'); }
-    const res=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input,use_llm:document.getElementById('useLLM').checked,width:selectedW,height:selectedH,fmt:selectedFmt,count:selectedCount,extra_tags:Array.from(extraTags),char_direct_tags:charDirectTags,prompt_prefix:collectPromptPrefix(),extra_note_en:document.getElementById('extraNoteEn').value.trim(),negative_prompt:collectNegativePrompt(),gen_params:collectGenParams(),lora_slots:collectLoraSlots(),workflow_file:getSelectedWorkflow()})});
+    const res=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input,use_llm:document.getElementById('useLLM').checked,width:selectedW,height:selectedH,fmt:selectedFmt,count:selectedCount,extra_tags:Array.from(extraTags),char_direct_tags:charDirectTags,prompt_prefix:collectPromptPrefix(),extra_note_en:document.getElementById('extraNoteEn').value.trim(),negative_prompt:collectNegativePrompt(),gen_params:collectGenParams(),lora_slots:collectLoraSlots(),workflow_file:getSelectedWorkflow(),client_id:window._comfyClientId})});
     const data=await res.json();
     if(data.error){
       setStep(steps,'s1','error','エラー: '+data.error);
@@ -4911,13 +4979,44 @@ async function cancelGenerate(){
   if(lastPositivePrompt){ document.getElementById('regenBtn').classList.add('show'); }
 }
 
-async function pollComfyUIComplete(promptIds, steps){
+async function pollComfyUIComplete(promptIds, steps, stepId='s3'){
   const pending = new Set(promptIds);
-  let tries = 0;
   const collectedPaths = [];
+  const progressWrap = document.getElementById('progressBarWrap');
+  const progressBar  = document.getElementById('progressBar');
+
+  progressWrap.style.display = 'block';
+  progressBar.style.width = '0%';
+
+  // onmessageハンドラを定義してグローバルに保持（再接続時も有効）
+  const wsHandler = (event)=>{
+    try{
+      const msg = JSON.parse(event.data);
+      const type = msg.type;
+      const d = msg.data||{};
+      if(type === 'progress'){
+        const pct = d.max ? Math.round(d.value/d.max*100) : 0;
+        progressBar.style.width = pct + '%';
+        setStep(steps,stepId,'active',`ComfyUI: 生成中... ${pct}%`);
+      } else if(type === 'executing' && d.node){
+        setStep(steps,stepId,'active',`ComfyUI: 生成中... ${progressBar.style.width}`);
+      }
+    }catch(e){}
+  };
+  window._comfyWsHandler = wsHandler;
+
+  // 既存WSにすぐセット（未接続の場合はinitComfyWsのonopen内でセットされる）
+  if(window._comfyWs && window._comfyWsReady) window._comfyWs.onmessage = wsHandler;
+
+  // 完了検知はHTTPポーリングで確実に行う
+  let tries = 0;
   while(pending.size > 0 && tries < 300){
     await new Promise(r=>setTimeout(r, 2000));
     tries++;
+    // ポーリング中にWS確立されたらonmessageをセット
+    if(window._comfyWsReady && window._comfyWs && window._comfyWs.onmessage !== wsHandler){
+      window._comfyWs.onmessage = wsHandler;
+    }
     try{
       const ids = [...pending].join(',');
       const res = await fetch(`/poll_status?ids=${encodeURIComponent(ids)}`).catch(()=>null);
@@ -4931,18 +5030,24 @@ async function pollComfyUIComplete(promptIds, steps){
         }
       }
       for(const pid of (data.completed||[])) pending.delete(pid);
-      const done = promptIds.length - pending.size;
-      const q = data.queue||{};
-      let queueStr = '';
-      if(q.position != null){
-        queueStr = ` — キュー待機中 (${q.position}番目)`;
-      } else if(q.running > 0 || q.pending > 0){
-        queueStr = ` — キュー: 実行中${q.running}件 / 待機${q.pending}件`;
+      if(!window._comfyWsReady){
+        const done = promptIds.length - pending.size;
+        const q = data.queue||{};
+        let queueStr = '';
+        if(q.position != null) queueStr = ` — キュー待機中 (${q.position}番目)`;
+        else if(q.running > 0 || q.pending > 0) queueStr = ` — キュー: 実行中${q.running}件 / 待機${q.pending}件`;
+        setStep(steps,stepId,'active',`ComfyUI: 生成中 (${done}/${promptIds.length}枚完了)${queueStr}`);
       }
-      setStep(steps,'s3','active',`ComfyUI: 生成中 (${done}/${promptIds.length}枚完了)${queueStr}`);
     }catch(e){}
   }
-  setStep(steps,'s3','done',`ComfyUI: 生成完了 (${promptIds.length}枚)`);
+
+  // onmessageをデフォルトに戻す
+  window._comfyWsHandler = null;
+  if(window._comfyWs) window._comfyWs.onmessage = ()=>{};
+
+  progressWrap.style.display = 'none';
+  progressBar.style.width = '0%';
+  setStep(steps,stepId,'done',`ComfyUI: 生成完了 (${promptIds.length}枚)`);
   if(collectedPaths.length > 0){
     const posPrompt = document.getElementById('promptFinal')?.textContent||lastFinalPrompt||'';
     const negPrompt = document.getElementById('promptNegFinal')?.textContent||lastNegativePrompt||'';
@@ -4957,6 +5062,15 @@ async function pollComfyUIComplete(promptIds, steps){
 
 async function regenPrompt(){
   if(running||!lastPositivePrompt)return;
+  // WebSocket接続を生成開始時に確立（未接続または切断済みの場合）
+  if(!window._comfyWsReady){
+    initComfyWs();
+    // 最大3秒待機
+    for(let i=0;i<15;i++){
+      await new Promise(r=>setTimeout(r,200));
+      if(window._comfyWsReady) break;
+    }
+  }
   running=true;
   document.getElementById('btn').disabled=true;
   document.getElementById('regenBtn').classList.remove('show');
@@ -4975,7 +5089,8 @@ async function regenPrompt(){
         negative_prompt:collectNegativePrompt(),
         gen_params:collectGenParams(),
         lora_slots:collectLoraSlots(),
-        workflow_file:getSelectedWorkflow()})});
+        workflow_file:getSelectedWorkflow(),
+        client_id:window._comfyClientId})});
     const data=await res.json();
     if(data.error){
       setStep(steps,'s_regen','error','エラー: '+data.error);
@@ -4998,7 +5113,7 @@ async function regenPrompt(){
         negFinalEl.textContent = data.negative_prompt;
         negFinalEl.style.display = 'block';
       }
-      pollComfyUIComplete(promptIds, steps);
+      pollComfyUIComplete(promptIds, steps, 's_regen');
       return;
     }
   }catch(e){
@@ -5155,7 +5270,7 @@ class Handler(BaseHTTPRequestHandler):
                                     }
                                 break
             except Exception as _pe:
-                passprint(f'[poll_status] history exception: {_pe}')
+                pass
             try:
                 with _ureq.urlopen(comfy+'/queue',timeout=3) as r:
                     q = json.loads(r.read())
@@ -5646,15 +5761,21 @@ class Handler(BaseHTTPRequestHandler):
                 # Extraタグ・英語追記を適用
                 prompt_flat = prompt.replace("\\n"," ").replace("\n"," ")
                 if regen_prompt_prefix:
-                    # promptにすでにprefixが含まれている場合（LLMなし）は除去してから付け直す
+                    # promptにすでにprefixが含まれている場合は除去してから付け直す
                     prefix_set = {t.strip().lower() for t in regen_prompt_prefix if t}
                     deduped = [t for t in prompt_flat.split(',') if t.strip().lower() not in prefix_set]
                     prompt_flat = ', '.join(t.strip() for t in deduped if t.strip())
                     prompt_flat=", ".join(str(t) for t in regen_prompt_prefix)+", "+prompt_flat
                 if regen_extra_tags:
+                    # promptにすでにextra_tagsが含まれている場合は除去してから追加
+                    extra_set = {t.strip().lower() for t in regen_extra_tags if t}
+                    deduped_flat = [t for t in prompt_flat.split(',') if t.strip().lower() not in extra_set]
+                    prompt_flat = ', '.join(t.strip() for t in deduped_flat if t.strip())
                     extra_str=", ".join(str(t) for t in regen_extra_tags)
                     prompt_flat=(prompt_flat+", "+extra_str).strip(", ") if prompt_flat else extra_str
                 if regen_extra_en:
+                    # promptにすでにextra_note_enが含まれている場合は除去してから追加
+                    prompt_flat = prompt_flat.replace(regen_extra_en, '').rstrip(', ')
                     prompt_flat=prompt_flat.rstrip(". ").rstrip(",")+", "+regen_extra_en
                 prompt=prompt_flat
                 Handler.cancel_event.clear()
@@ -5679,7 +5800,7 @@ class Handler(BaseHTTPRequestHandler):
                 prompt_ids=[]
                 for i in range(count):
                     if Handler.cancel_event.is_set(): break
-                    cid=str(uuid.uuid4())
+                    cid=body.get('client_id', str(uuid.uuid4()))
                     pid=send_to_comfyui(prompt,cfg,width,height,fmt,cid,negative_prompt=regen_negative,lora_slots=regen_lora_slots)
                     prompt_ids.append(pid)
                     print(f"[ComfyUI] 再生成キュー ({i+1}/{count}): {pid}")
@@ -5796,7 +5917,6 @@ class Handler(BaseHTTPRequestHandler):
                     positive_flat=""
                 # prefix（品質・メタ・安全・スタイル・期間）をプロンプト先頭に挿入
                 if prompt_prefix:
-                    # LLM出力からprefixと重複するタグを除去
                     if positive_flat and prompt_prefix:
                         prefix_set = {t.strip().lower() for t in prompt_prefix if t}
                         deduped = [t for t in positive_flat.split(',') if t.strip().lower() not in prefix_set]
@@ -5804,14 +5924,22 @@ class Handler(BaseHTTPRequestHandler):
                     positive_flat=", ".join(str(t) for t in prompt_prefix)+("", ", "+positive_flat)[bool(positive_flat)]
                 if char_direct_tags:
                     direct_str=", ".join(str(t) for t in char_direct_tags if t)
-                    positive_flat=(positive_flat+", "+direct_str).strip(", ")
-                if extra_note_en:
-                    positive_flat=positive_flat.rstrip(". ").rstrip(",")+", "+extra_note_en
-                # extra_tags適用前を保存（再生成時の二重防止）
+                    # LLM出力にすでに含まれるタグは除去して重複防止
+                    if positive_flat:
+                        direct_set = {t.strip().lower() for t in char_direct_tags if t}
+                        flat_tags = {t.strip().lower() for t in positive_flat.split(',')}
+                        deduped_direct = [t for t in char_direct_tags if t and t.strip().lower() not in flat_tags]
+                        direct_str = ", ".join(str(t) for t in deduped_direct if t)
+                    if direct_str:
+                        positive_flat=(positive_flat+", "+direct_str).strip(", ")
+                # extra_tags適用前・extra_note_enなしで保存（再生成時の二重防止）
                 result["pre_extra_prompt"] = positive_flat
                 if extra_tags:
                     extra_str=", ".join(str(t) for t in extra_tags)
                     positive_flat=(positive_flat+", "+extra_str).strip(", ") if positive_flat else extra_str
+                # extra_note_enは必ず最後
+                if extra_note_en:
+                    positive_flat=positive_flat.rstrip(". ").rstrip(",")+", "+extra_note_en
                 result["final_prompt"]=positive_flat
                 result["negative_prompt"]=negative_prompt
 
@@ -5837,15 +5965,17 @@ class Handler(BaseHTTPRequestHandler):
                                 os.path.dirname(wf_path), "..", "..", "output"))
                     comfyui_url = cfg.get('comfyui_url','http://127.0.0.1:8188')
                     prompt_ids = []
+                    # JS側と同じclient_idを使用（progressイベントの受信に必要）
+                    shared_cid = body.get('client_id', str(uuid.uuid4()))
+                    result["client_id"] = shared_cid
                     for i in range(img_count):
                         if Handler.cancel_event.is_set():
                             break
-                        cid = str(uuid.uuid4())
-                        pid = send_to_comfyui(positive_flat, cfg, img_width, img_height, img_fmt, cid, negative_prompt=negative_prompt, lora_slots=lora_slots)
+                        pid = send_to_comfyui(positive_flat, cfg, img_width, img_height, img_fmt, shared_cid, negative_prompt=negative_prompt, lora_slots=lora_slots)
                         prompt_ids.append(pid)
                         print(f"[ComfyUI] キューに追加 ({i+1}/{img_count}): {pid}")
                         if img_fmt == "webp":
-                            watch_and_convert(comfyui_url, output_dir, date_folder, pid, cid)
+                            watch_and_convert(comfyui_url, output_dir, date_folder, pid, shared_cid)
                         # incrementモード: seed+1して保存
                         if cfg.get('seed_mode') == 'increment':
                             cfg['seed_value'] = int(cfg.get('seed_value', 0)) + 1
