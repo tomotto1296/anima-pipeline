@@ -1,7 +1,12 @@
 # anima_pipeline
 
 # Anima Pipeline
-ブラウザUI + LLMでAnimaワークフローを自動化！  
+
+<p align="center">
+  <img src="images/hero-ui-and-result.jpg" alt="Anima Pipeline UI + Generated Image" width="800">
+  <br>
+  <em>Enter character name → LLM auto-generates Danbooru tags → One-click to stunning Anima images!</em>
+</p>ブラウザUI + LLMでAnimaワークフローを自動化！  
 [![English README](https://img.shields.io/badge/English-README-blue?logo=github)](README_EN.md)  
 [日本語版はこちら → README.md (Japanese)](README.md)
 ---
