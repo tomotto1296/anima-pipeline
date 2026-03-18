@@ -17,7 +17,7 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
-__version__ = "1.4.5"
+__version__ = "1.4.6"
 
 def _sf(name): return os.path.join(_settings_dir, name)
 
@@ -451,11 +451,11 @@ def send_to_comfyui(positive_prompt: str, cfg: dict, width: int = 1024, height: 
             print(f"[ComfyUI] 画像サイズ設定: {width}x{height} (node {nid})")
             break
 
-    # SaveImageノードのfilename_prefixに日付フォルダを設定
+    # SaveImage系ノードのfilename_prefixに日付フォルダを設定
     import datetime, random
     date_folder = datetime.date.today().strftime("%Y-%m-%d")
     for nid, node in api_prompt.items():
-        if node.get("class_type") == "SaveImage":
+        if node.get("class_type") in ("SaveImage", "SaveImageExtended", "Image Save", "WAS_Save_Images"):
             ts = datetime.datetime.now().strftime("%H%M%S%f")[:10]
             node["inputs"]["filename_prefix"] = f"{date_folder}/{ts}_"
             print(f"[ComfyUI] 保存先: output/{date_folder}/{ts}_ (node {nid})")
@@ -1373,6 +1373,7 @@ HTML = r"""<!DOCTYPE html>
     <div class="progress-bar-wrap" id="progressBarWrap">
       <div class="progress-bar" id="progressBar"></div>
     </div>
+    <div id="wsNotice" style="display:none;font-family:'DM Mono',monospace;font-size:0.62rem;color:var(--muted);margin-top:0.2rem;">※ 起動直後は進捗%が表示されない場合があります（初回WS接続のタイミングによる）</div>
     <div class="prompt-section-label" id="lmLabel" style="display:none;" onclick="togglePromptSection('promptOutput',this)">
       <span>▸ LLM生成ポジティブプロンプト</span>
       <button class="copy-btn" onclick="event.stopPropagation();copyPrompt('promptOutput',this)">コピー</button>
@@ -4987,6 +4988,8 @@ async function pollComfyUIComplete(promptIds, steps, stepId='s3'){
 
   progressWrap.style.display = 'block';
   progressBar.style.width = '0%';
+  const wsNotice = document.getElementById('wsNotice');
+  if(wsNotice && !window._comfyWsReady) wsNotice.style.display='block';
 
   // onmessageハンドラを定義してグローバルに保持（再接続時も有効）
   const wsHandler = (event)=>{
@@ -5047,6 +5050,7 @@ async function pollComfyUIComplete(promptIds, steps, stepId='s3'){
 
   progressWrap.style.display = 'none';
   progressBar.style.width = '0%';
+  if(wsNotice) wsNotice.style.display='none';
   setStep(steps,stepId,'done',`ComfyUI: 生成完了 (${promptIds.length}枚)`);
   if(collectedPaths.length > 0){
     const posPrompt = document.getElementById('promptFinal')?.textContent||lastFinalPrompt||'';
