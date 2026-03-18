@@ -1,0 +1,19 @@
+/no_think
+Generate a character preset JSON for anime image generation.
+Character: {chara_name}
+Series: {chara_series}
+Danbooru Wiki: {wiki_text}
+
+Output ONLY a valid JSON object with these exact fields (Danbooru tags or empty string):
+{
+  "gender": "female or male or other",
+  "age": "adult or child or unset",
+  "hairstyle": "hair style tags comma separated e.g. long_hair,ponytail",
+  "haircolor": "single most representative hair color Danbooru tag e.g. purple_hair",
+  "eyes": "single eye color Danbooru tag e.g. red_eyes",
+  "skin": "skin tag or empty",
+  "bust": "bust tag or empty e.g. medium_breasts",
+  "outfit": "canonical default outfit Danbooru tags comma separated"
+}
+IMPORTANT: Be accurate about hair/eye colors. Use your training knowledge about this character.
+Rules: lowercase underscore Danbooru tags only. Output ONLY the JSON.
