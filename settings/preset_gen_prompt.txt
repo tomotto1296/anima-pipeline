@@ -1,3 +1,4 @@
+/no_think
 Generate a character preset JSON for anime image generation.
 Character: {chara_name}
 Series: {chara_series}
