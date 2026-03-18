@@ -1,4 +1,4 @@
-# anima_pipeline
+=# anima_pipeline
 
 # Anima Pipeline
 
@@ -104,6 +104,6 @@ anima_pipeline/
 
 ---
 
-## 詳細
-
-[anima_pipeline_guide.md](anima_pipeline_guide.md) を参照してください。
+## 📖 Detailed Guide (使い方完全ガイド)
+[日本語ガイド → anima_pipeline_guide.md](anima_pipeline_guide.md)  
+[English Guide → anima_pipeline_guide.md (Japanese only for now)](anima_pipeline_guide.md)
