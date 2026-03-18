@@ -10,7 +10,6 @@
 
 [![English README](https://img.shields.io/badge/English-README-blue?logo=github)](README_EN.md)  
 
-[日本語版はこちら → README.md (Japanese)](README.md)
 ---
 
 ## 必要なもの
