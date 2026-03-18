@@ -10,6 +10,9 @@
 
 [![English README](https://img.shields.io/badge/English-README-blue?logo=github)](README_EN.md)  
 
+<p align="center">
+  <img src="demo/demo-flow.gif" alt="Demo GIF" width="600">
+</p>
 ---
 
 ## 必要なもの
