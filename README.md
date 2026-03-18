@@ -7,7 +7,9 @@
   <br>
   <em>Enter character name → LLM auto-generates Danbooru tags → One-click to stunning Anima images!</em>
 </p>ブラウザUI + LLMでAnimaワークフローを自動化！  
+
 [![English README](https://img.shields.io/badge/English-README-blue?logo=github)](README_EN.md)  
+
 [日本語版はこちら → README.md (Japanese)](README.md)
 ---
 
