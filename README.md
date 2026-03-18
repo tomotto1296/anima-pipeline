@@ -3,7 +3,6 @@
 # Anima Pipeline
 ブラウザUI + LLMでAnimaワークフローを自動化！  
 **[English version → README_EN.md](README_EN.md)**
-English: https://github.com/tomotto1296/anima-pipeline/blob/main/README_EN.md
 ---
 
 ## 必要なもの
