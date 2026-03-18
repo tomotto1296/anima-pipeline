@@ -1,6 +1,8 @@
 # anima_pipeline
 
-ブラウザUIでキャラ・シーン情報を入力 → LLM（オプション）でDanbooruプロンプトを自動生成 → ComfyUI Animaワークフローへ自動送信するパイプラインツールです。
+# Anima Pipeline
+ブラウザUI + LLMでAnimaワークフローを自動化！  
+**[English version → README_EN.md](README_EN.md)**
 English: https://github.com/tomotto1296/anima-pipeline/blob/main/README_EN.md
 ---
 
