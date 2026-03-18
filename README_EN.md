@@ -106,5 +106,3 @@ anima_pipeline/
 
 Please refer to [anima_pipeline_guide.md](anima_pipeline_guide.md).
 
-
-Translated with DeepL.com (free version)
