@@ -1,7 +1,7 @@
 # anima_pipeline
 
 This is a pipeline tool that allows you to enter character and scene information via a browser UI → automatically generate Danbooru prompts using an LLM (optional) → and automatically send them to the ComfyUI Anima workflow.
-
+[Back to Japanese README → README.md](README.md)
 ---
 
 ## Requirements
