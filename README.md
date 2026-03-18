@@ -5,7 +5,7 @@
 <p align="center">
   <img src="images/hero-ui-and-result.jpg" alt="Anima Pipeline UI + Generated Image" width="800">
   <br>
-  <em>キャラクター名を入力 → LLMがDanbooruタグを自動生成 → ワンクリックで美しいアニメ画像が完成！</em>
+  <em>キャラクター名を入力 → LLMがDanbooruタグを自動生成 → ワンクリックで美しいAnima画像が完成！</em>
 </p>ブラウザUI + LLMでAnimaワークフローを自動化！  
 
 [![English README](https://img.shields.io/badge/English-README-blue?logo=github)](README_EN.md)  
