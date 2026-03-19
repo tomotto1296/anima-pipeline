@@ -111,3 +111,4 @@ anima_pipeline/
 ## 関連記事
 - note: https://note.com/rhustudio/n/nf0dc2414f852
 - Qiita: https://qiita.com/RHU/items/18095cb22281cd027bc4
+- zenn https://zenn.dev/rhu/articles/4a6c315533c4e9
