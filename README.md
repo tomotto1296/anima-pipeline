@@ -108,6 +108,6 @@ anima_pipeline/
 [日本語ガイド → anima_pipeline_guide.md](anima_pipeline_guide.md)  
 [English Guide → anima_pipeline_guide.md (Japanese only for now)](anima_pipeline_guide.md)
 
-関連記事
-note: https://note.com/rhustudio/n/nf0dc2414f852
-Qiita: https://qiita.com/RHU/items/18095cb22281cd027bc4
+## 関連記事
+- note: https://note.com/rhustudio/n/nf0dc2414f852
+- Qiita: https://qiita.com/RHU/items/18095cb22281cd027bc4
