@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Anima Pipeline
 ブラウザUI → LLM → ComfyUI 自動連携スクリプト
@@ -26,7 +26,7 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
-__version__ = "1.4.69999981"
+__version__ = "1.4.69999983"
 
 def _sf(name): return os.path.join(_settings_dir, name)
 
@@ -1055,6 +1055,36 @@ HTML = r"""<!DOCTYPE html>
       text-align:center;
     }
 
+    /* プリセット一覧（サムネイル）: モバイルでもPCと同じ文書フロー内に表示 */
+    #presetThumbToggle{
+      min-height:46px;
+      padding:0.6rem 0.3rem;
+      touch-action:manipulation;
+    }
+    #presetThumbBody{
+      position:static;
+      left:auto;
+      right:auto;
+      bottom:auto;
+      z-index:auto;
+      width:100%;
+      padding:0;
+      background:transparent;
+      border-radius:0;
+      box-shadow:none;
+      max-height:none;
+      overflow:visible;
+      display:block;
+    }
+    #presetThumbSheetTop{
+      display:none !important;
+    }
+    #presetThumbGrid{
+      max-height:280px !important;
+      overflow-y:auto !important;
+      grid-template-columns:repeat(2,1fr) !important;
+    }
+
     /* セッションボタン行 */
     .session-row{ flex-wrap:wrap; gap:0.4rem; }
 
@@ -1412,6 +1442,19 @@ HTML = r"""<!DOCTYPE html>
           <div style="font-family:'DM Mono',monospace;font-size:0.66rem;color:var(--muted);">対象プリセット: <span id="presetThumbTargetName">-</span></div>
         </div>
         <div id="presetThumbBody" style="display:none;">
+          <div id="presetThumbSheetTop" style="display:none;">
+            <button id="presetThumbCloseBtn" onclick="event.stopPropagation();togglePresetThumbPanel(false)"
+              style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:0.32rem 0.6rem;
+              border:1px solid var(--border);border-radius:8px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">
+              ✕ 閉じる
+            </button>
+            <div id="presetThumbSheetTitle" style="flex:1;text-align:center;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);font-weight:bold;">
+              プリセット一覧
+            </div>
+            <div id="presetThumbSheetTargetWrap" style="font-family:'DM Mono',monospace;font-size:0.64rem;color:var(--muted);white-space:nowrap;">
+              対象:<span id="presetThumbSheetTargetName">-</span>
+            </div>
+          </div>
           <div style="font-family:'DM Mono',monospace;font-size:0.64rem;color:var(--muted);margin-top:0.2rem;">ギャラリー画像を拡大表示してから「プリセットのサムネイル作成」を押してください</div>
           <div id="presetThumbControlRow" style="margin-top:0.35rem;display:flex;align-items:center;gap:0.4rem;">
             <div style="font-family:'DM Mono',monospace;font-size:0.64rem;color:var(--muted);white-space:nowrap;">更新先:</div>
@@ -2430,11 +2473,21 @@ function updateThumbActionState(){
 function togglePresetThumbPanel(forceOpen=null){
   if(forceOpen === null) presetThumbOpen = !presetThumbOpen;
   else presetThumbOpen = !!forceOpen;
+
   const body = document.getElementById('presetThumbBody');
   const arrow = document.getElementById('presetThumbArrow');
+
   if(body) body.style.display = presetThumbOpen ? 'block' : 'none';
+
   if(arrow) arrow.textContent = presetThumbOpen ? '▼' : '▶';
-  if(presetThumbOpen) renderPresetThumbList();
+
+  if(presetThumbOpen){
+    renderPresetThumbList();
+    setTimeout(()=>{
+      const grid = document.getElementById('presetThumbGrid');
+      if(grid) grid.scrollTop = 0;
+    }, 0);
+  }
 }
 
 function updatePresetThumbTargetSelect(){
@@ -2491,6 +2544,7 @@ function addCharaFromSelectedPreset(){
 function renderPresetThumbList(){
   const grid = document.getElementById('presetThumbGrid');
   const targetEl = document.getElementById('presetThumbTargetName');
+  const sheetTargetEl = document.getElementById('presetThumbSheetTargetName');
   if(!grid) return;
   if(presetThumbOpen) updatePresetThumbTargetSelect();
   if(targetEl){
@@ -2511,6 +2565,7 @@ function renderPresetThumbList(){
     empty.textContent = 'サムネイル未設定';
     grid.appendChild(empty);
     if(targetEl) targetEl.textContent = '-';
+    if(sheetTargetEl) sheetTargetEl.textContent = '-';
     updateThumbActionState();
     return;
   }
@@ -2520,6 +2575,7 @@ function renderPresetThumbList(){
     empty.style.cssText = 'grid-column:1/-1;font-family:DM Mono,monospace;font-size:0.68rem;color:var(--muted);padding:0.4rem;';
     empty.textContent = 'サムネイル未設定';
     grid.appendChild(empty);
+    if(sheetTargetEl) sheetTargetEl.textContent = '-';
     updateThumbActionState();
     return;
   }
@@ -2536,6 +2592,10 @@ function renderPresetThumbList(){
     imgWrap.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#ececf2;';
     const img = document.createElement('img');
     img.src = '/chara_thumb?file=' + encodeURIComponent(p._filename) + '&_ts=' + Date.now();
+    // iOS/Safari では fixed + overflow の組み合わせで lazy が効きすぎることがあるため、
+    // スマホ幅では eager に切り替える（すぐサムネが見える）
+    img.loading = (window.innerWidth <= 700) ? 'eager' : 'lazy';
+    img.decoding = 'async';
     img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
     img.onerror = ()=>{ img.remove(); };
     imgWrap.appendChild(img);
@@ -2547,7 +2607,9 @@ function renderPresetThumbList(){
     grid.appendChild(card);
   });
   const cur = charaPresets.find(p=>p._filename===selectedPresetFilename);
-  if(targetEl) targetEl.textContent = cur ? (cur.name || cur._filename) : '-';
+  const displayName = cur ? (cur.name || cur._filename) : '-';
+  if(targetEl) targetEl.textContent = displayName;
+  if(sheetTargetEl) sheetTargetEl.textContent = displayName;
   updateThumbActionState();
 }
 
@@ -2602,11 +2664,16 @@ function updateNavPosition(){
     nav.style.removeProperty('left');
     nav.style.removeProperty('top');
     nav.style.display = 'flex';
+    // floatNavの実高さに合わせて、ボトムシートの bottom を自動調整する
+    requestAnimationFrame(()=>{
+      document.documentElement.style.setProperty('--floatNavH', nav.offsetHeight+'px');
+    });
     return;
   }
   nav.style.right = '16px';
   nav.style.left = 'auto';
   nav.style.display = 'flex';
+  document.documentElement.style.removeProperty('--floatNavH');
 }
 window.addEventListener('resize', updateNavPosition);
 
