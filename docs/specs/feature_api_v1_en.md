@@ -1,3 +1,7 @@
+---
+render_with_liquid: false
+---
+
 # anima_pipeline API Reference
 
 ## Meta
