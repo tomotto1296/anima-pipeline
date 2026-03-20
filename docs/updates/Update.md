@@ -4,11 +4,11 @@
 このドキュメントは、`v1.4.6` 以降の変更内容を次の開発者へ引き継ぐための要約です。
 
 ## バージョン運用ルール
-- 細かい修正ごとに小数点以下を増分（例: `1.4.6 -> 1.4.61 -> 1.4.62`）
-- `1.4.7` へは未移行（`1.4.699x` 系で継続）
+- 細かい修正ごとに小数点以下を増分（例: `1.4.7 -> 1.4.71 -> 1.4.72`）
+- `1.4.699x` 系は `1.4.7` として正式リリース済み
 
 ## 現在バージョン
-- `1.4.69999977`
+- `1.4.7`（正式リリース）
 
 ## 実装サマリー（v1.4.6以降）
 
@@ -98,11 +98,10 @@
 - `note_article_draft_v1.4.699999.md`（追加）
 - `anima_pipeline_guide_addendum_v1.4.699999.md`（追加）
 - `LLM_candidates.md`（追加）
-- `Updfate.md`
+- `docs/updates/Update.md`
 
 ## 運用上の注意
 - `releases` は配布用テスト環境のため、今後は編集しない
-- 翻訳修正中は `1.4.7` に上げない
 - UIは見た目だけでなく、言語切替の往復（JA->EN->JA / EN->JA->EN）で確認する
 
 ## 残タスク（次開発者向け）
@@ -183,3 +182,41 @@
 ### 20) スマホUI崩れ修正（更新先セレクト）
 - `更新先` セレクトと `＋キャラ追加` の折り返し/全幅制御を追加
 - スマホでセレクトが極細表示になる崩れを修正
+
+## Recent Additions (v1.4.69999978 - v1.4.69999983)
+
+### 21) Docs Reorganization
+- Kept `README.md` / `README_EN.md` at repository root.
+- Moved supporting documents under `docs/`:
+  - `docs/guides/`
+  - `docs/release_notes/`
+  - `docs/articles/`
+  - `docs/updates/`
+  - `docs/llm/`
+
+### 22) GitHub Pages Build Fix
+- Fixed Liquid parsing error in `docs/guides/anima_pipeline_guide.md`.
+- Escaped `{%- set ... %}` sample with `raw` block.
+- `pages build and deployment` recovered to green.
+
+### 23) Mobile UI Improvements (Issue #5)
+- Added mobile wrapping and sizing adjustments for `Gender / Age` rows.
+- Reduced button overflow on narrow screens.
+- Improved STATUS long-line readability on mobile.
+
+### 24) I18N Fixes (Issue #4)
+- Fixed mixed-language connection test progress text:
+  - `LLM Connection Test (mixed text)` -> `LLM Connection Test in progress...`
+- Added English mapping for workflow-not-found error text.
+- Added English mapping for workflow helper note text.
+
+### 25) Preset Panel Order Unification (Mobile/PC)
+- Unified order across devices:
+  - `Chara Count -> Preset List -> Chara 1..6`
+- Removed mobile-only fixed bottom-sheet behavior.
+- Restored inline panel flow to match desktop behavior.
+
+### 26) Specs Folder Initialization (Local)
+- Added `docs/specs/README.md`.
+- Included spec template, naming rule, and update workflow.
+

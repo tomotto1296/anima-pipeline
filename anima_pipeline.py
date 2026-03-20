@@ -26,7 +26,7 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
-__version__ = "1.4.69999983"
+__version__ = "1.4.7"
 
 def _sf(name): return os.path.join(_settings_dir, name)
 
