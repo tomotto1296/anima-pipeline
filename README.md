@@ -1,8 +1,18 @@
-# anima_pipeline
+=# anima_pipeline
 
 # Anima Pipeline
-ブラウザUI + LLMでAnimaワークフローを自動化！  
-**[English version → README_EN.md](README_EN.md)**
+
+<p align="center">
+  <img src="images/hero-ui-and-result.jpg" alt="Anima Pipeline UI + Generated Image" width="800">
+  <br>
+  <em>キャラクター名を入力 → LLMがDanbooruタグを自動生成 → ワンクリックで美しいAnima画像が完成！</em>
+</p>ブラウザUI + LLMでAnimaワークフローを自動化！  
+
+[![English README](https://img.shields.io/badge/English-README-blue?logo=github)](README_EN.md)  
+
+<p align="center">
+  <img src="demo/demo-flow.gif" alt="Demo GIF" width="600">
+</p>
 ---
 
 ## 必要なもの
@@ -94,6 +104,11 @@ anima_pipeline/
 
 ---
 
-## 詳細
+## 📖 Detailed Guide (使い方完全ガイド)
+[日本語ガイド → anima_pipeline_guide.md](anima_pipeline_guide.md)  
+[English Guide → anima_pipeline_guide.md (Japanese only for now)](anima_pipeline_guide.md)
 
-[anima_pipeline_guide.md](anima_pipeline_guide.md) を参照してください。
+## 関連記事
+- note: https://note.com/rhustudio/n/nf0dc2414f852
+- Qiita: https://qiita.com/RHU/items/18095cb22281cd027bc4
+- zenn https://zenn.dev/rhu/articles/4a6c315533c4e9
