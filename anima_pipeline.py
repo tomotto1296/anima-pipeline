@@ -26,7 +26,7 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
-__version__ = "1.4.69999980"
+__version__ = "1.4.69999981"
 
 def _sf(name): return os.path.join(_settings_dir, name)
 
@@ -1716,6 +1716,7 @@ const BASE_I18N_MAP_EN = {
   '開く': 'Open',
   '再読み込み': 'Reload',
   '接続テスト': 'Connection Test',
+  '接続テスト中...': 'Connection Test in progress...',
   '接続確認': 'Connection Check',
   '接続中': 'Connecting',
   '接続OK': 'Connected',
@@ -3365,7 +3366,7 @@ async function testConnection(target){
   resultEl.style.display = 'block';
   resultEl.style.background = '#f5f5f5';
   resultEl.style.color = 'var(--ink)';
-  resultEl.textContent = (target==='comfyui' ? 'ComfyUI' : 'LLM') + ' 接続テスト中...';
+  resultEl.textContent = i18nReplace((target==='comfyui' ? 'ComfyUI' : 'LLM') + ' 接続テスト中...');
   try{
     const res = await fetch('/test_connection?target='+target);
     const data = await res.json();
