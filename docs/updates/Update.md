@@ -196,7 +196,7 @@
 
 ### 22) GitHub Pages Build Fix
 - Fixed Liquid parsing error in `docs/guides/anima_pipeline_guide.md`.
-- Escaped `{%- set ... %}` sample with `raw` block.
+- Escaped the `set` sample in guide docs using a `raw` block.
 - `pages build and deployment` recovered to green.
 
 ### 23) Mobile UI Improvements (Issue #5)
