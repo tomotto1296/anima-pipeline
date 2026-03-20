@@ -87,7 +87,7 @@ anima_pipeline/
   start_anima_pipeline.bat       ← For Windows startup
   requirements.txt               ← Dependency libraries
   README.md
-  docs/guides/anima_pipeline_guide.md  ← Detailed guide
+  docs/guides/anima_pipeline_guide_en.md  ← Detailed guide (English)
   workflows/                     ← Folder for workflow JSON files
     image_anima_preview.json     ← No LoRA (provide your own)
     image_anima_preview_Lora4.json ← Supports 4 LoRAs (included)
@@ -104,5 +104,5 @@ anima_pipeline/
 
 ## Details
 
-Please refer to [docs/guides/anima_pipeline_guide.md](docs/guides/anima_pipeline_guide.md).
+Please refer to [docs/guides/anima_pipeline_guide_en.md](docs/guides/anima_pipeline_guide_en.md).
 

@@ -104,7 +104,7 @@ anima_pipeline/
 
 ## 📖 Detailed Guide (使い方完全ガイド)
 [日本語ガイド → docs/guides/anima_pipeline_guide.md](docs/guides/anima_pipeline_guide.md)  
-[English Guide → README_EN.md (English overview and setup)](README_EN.md)
+[English Guide → docs/guides/anima_pipeline_guide_en.md](docs/guides/anima_pipeline_guide_en.md)
 
 ## 関連記事
 - note: https://note.com/rhustudio/n/nf0dc2414f852
