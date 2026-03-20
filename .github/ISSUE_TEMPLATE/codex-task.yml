@@ -1,0 +1,66 @@
+﻿name: "Codex Task"
+description: "スマホからCodexに依頼する作業チケット"
+title: "[Codex] "
+labels: ["codex", "task"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: 目的
+      description: 何を達成したいかを1〜3行で書いてください。
+      placeholder: 例) 設定画面で保存後に発生する500エラーを直したい
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: 対象範囲
+      description: 触ってよい場所 / 触らない場所
+      placeholder: |
+        触ってよい: settings/*, docs/*
+        触らない: anima_pipeline.py の既存処理ロジック
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 完了条件
+      description: 終わったと言える条件をチェックリストで書いてください。
+      placeholder: |
+        - [ ] 再現手順で500が出ない
+        - [ ] 既存機能に影響がない
+        - [ ] 必要ならREADMEを更新
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 再現手順 / 背景
+      description: 任意。エラー内容やログ、スクショの説明など。
+      placeholder: 例) iPhone Safariで保存ボタンを押すと /api/settings が500
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 優先度
+      options:
+        - High（今日中）
+        - Medium（今週中）
+        - Low（時間あるとき）
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: constraints
+    attributes:
+      label: 制約
+      options:
+        - label: 破壊的変更（DBスキーマ変更・大量削除など）は事前相談が必要
+          required: true
+        - label: 不明点があれば最小実装で先にPRを出してよい
+          required: false
