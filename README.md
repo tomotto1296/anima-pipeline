@@ -1,5 +1,3 @@
-=# anima_pipeline
-
 # Anima Pipeline
 
 <p align="center">
