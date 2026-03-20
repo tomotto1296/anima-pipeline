@@ -18,5 +18,9 @@
   "steps": 30,
   "cfg": 4.0,
   "sampler_name": "er_sde",
-  "scheduler": "simple"
+  "scheduler": "simple",
+  "console_lang": "ja",
+  "log_dir": "logs",
+  "log_retention_days": 30,
+  "log_level": "normal"
 }
