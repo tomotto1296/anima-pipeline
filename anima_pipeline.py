@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Anima Pipeline
 ブラウザUI → LLM → ComfyUI 自動連携スクリプト
@@ -8,6 +8,15 @@ import requests
 import json
 import uuid
 import os
+import locale
+import io
+import re
+import sys
+import zipfile
+import threading
+import datetime
+import traceback
+import builtins
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 UI_PORT = 7860
@@ -17,7 +26,7 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
-__version__ = "1.4.6"
+__version__ = "1.4.69999977"
 
 def _sf(name): return os.path.join(_settings_dir, name)
 
@@ -28,11 +37,119 @@ NEG_EXTRA_TAGS_FILE  = _sf('extra_tags_negative.json')
 NEG_STYLE_TAGS_FILE  = _sf('style_tags_negative.json')
 UI_OPTIONS_FILE      = _sf('ui_options.json')
 CHARA_PRESETS_DIR    = os.path.join(_base_dir, 'chara')
+DEFAULT_LOGS_DIR     = os.path.join(_base_dir, 'logs')
+
+_ORIG_PRINT = builtins.print
+_LOG_LOCK = threading.Lock()
+_LOG_FP = None
+_LOG_FH = None
+_LOG_LEVEL = "normal"  # normal / debug
+_LOG_DIR = DEFAULT_LOGS_DIR
+
+def _mask_sensitive(text: str) -> str:
+    s = str(text or "")
+    # key=value / key: value style masks
+    s = re.sub(r'(?i)\b(token|api[_ -]?key|authorization)\b(\s*[:=]\s*)([^\s,;]+)', r'\1\2***', s)
+    # Bearer tokens
+    s = re.sub(r'(?i)\bBearer\s+[A-Za-z0-9._\-+/=]+', 'Bearer ***', s)
+    return s
+
+def _resolve_log_dir(cfg: dict | None = None) -> str:
+    c = cfg or {}
+    raw = str(c.get("log_dir", "logs") or "logs").strip()
+    if not raw:
+        raw = "logs"
+    if os.path.isabs(raw):
+        return os.path.normpath(raw)
+    return os.path.normpath(os.path.join(_base_dir, raw))
+
+def _cleanup_old_logs(log_dir: str, retention_days: int):
+    if retention_days <= 0:
+        return
+    cutoff = datetime.datetime.now() - datetime.timedelta(days=retention_days)
+    try:
+        for fn in os.listdir(log_dir):
+            if not fn.lower().endswith(".log"):
+                continue
+            fp = os.path.join(log_dir, fn)
+            try:
+                mtime = datetime.datetime.fromtimestamp(os.path.getmtime(fp))
+                if mtime < cutoff:
+                    os.remove(fp)
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+def _log_write(level: str, message: str):
+    global _LOG_FH
+    if level == "DEBUG" and _LOG_LEVEL != "debug":
+        return
+    if not _LOG_FH:
+        return
+    line = _mask_sensitive(message).replace("\r", "")
+    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with _LOG_LOCK:
+        try:
+            _LOG_FH.write(f"[{ts}] [{level}] {line}\n")
+            _LOG_FH.flush()
+        except Exception:
+            pass
+
+def _apply_log_config(cfg: dict):
+    global _LOG_FP, _LOG_FH, _LOG_LEVEL, _LOG_DIR
+    _LOG_LEVEL = "debug" if str(cfg.get("log_level", "normal")).lower() == "debug" else "normal"
+    _LOG_DIR = _resolve_log_dir(cfg)
+    os.makedirs(_LOG_DIR, exist_ok=True)
+    try:
+        retention = int(cfg.get("log_retention_days", 30))
+    except Exception:
+        retention = 30
+    if retention < 0:
+        retention = 0
+    _cleanup_old_logs(_LOG_DIR, retention)
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    fp = os.path.join(_LOG_DIR, f"anima_{today}.log")
+    if _LOG_FP != fp or _LOG_FH is None:
+        try:
+            if _LOG_FH:
+                _LOG_FH.close()
+        except Exception:
+            pass
+        _LOG_FP = fp
+        _LOG_FH = open(_LOG_FP, "a", encoding="utf-8")
+
+def _patched_print(*args, **kwargs):
+    try:
+        _ORIG_PRINT(*args, **kwargs)
+    except Exception:
+        pass
+    sep = kwargs.get("sep", " ")
+    end = kwargs.get("end", "\n")
+    try:
+        msg = sep.join(str(a) for a in args) + ("" if end == "\n" else str(end))
+    except Exception:
+        msg = " ".join(str(a) for a in args)
+    _log_write("INFO", msg.rstrip("\n"))
+
+builtins.print = _patched_print
+
+def _install_exception_logging():
+    def _hook(exc_type, exc, tb):
+        _log_write("ERROR", "".join(traceback.format_exception(exc_type, exc, tb)))
+        sys.__excepthook__(exc_type, exc, tb)
+    sys.excepthook = _hook
+    try:
+        def _thread_hook(args):
+            _log_write("ERROR", "".join(traceback.format_exception(args.exc_type, args.exc_value, args.exc_traceback)))
+        threading.excepthook = _thread_hook
+    except Exception:
+        pass
 
 def load_neg_extra_tags():
     if os.path.exists(NEG_EXTRA_TAGS_FILE):
         try:
-            with open(NEG_EXTRA_TAGS_FILE, "r", encoding="utf-8") as f:
+            with open(NEG_EXTRA_TAGS_FILE, "r", encoding="utf-8-sig") as f:
                 return json.load(f)
         except: pass
     return ["bad anatomy","extra fingers","missing fingers","multiple limbs",
@@ -46,7 +163,7 @@ def save_neg_extra_tags(tags: list):
 def load_neg_style_tags():
     if os.path.exists(NEG_STYLE_TAGS_FILE):
         try:
-            with open(NEG_STYLE_TAGS_FILE, "r", encoding="utf-8") as f:
+            with open(NEG_STYLE_TAGS_FILE, "r", encoding="utf-8-sig") as f:
                 return json.load(f)
         except: pass
     return []
@@ -58,15 +175,43 @@ def save_neg_style_tags(tags: list):
 def load_ui_options() -> dict:
     if os.path.exists(UI_OPTIONS_FILE):
         try:
-            with open(UI_OPTIONS_FILE, encoding='utf-8') as f:
+            with open(UI_OPTIONS_FILE, encoding='utf-8-sig') as f:
                 return json.load(f)
         except Exception as e:
             print(f'[ui_options] 読み込みエラー: {e}')
     return {}
 
+def detect_os_ui_lang() -> str:
+    # Prefer native OS UI language on Windows.
+    if os.name == 'nt':
+        try:
+            import ctypes
+            lang_id = ctypes.windll.kernel32.GetUserDefaultUILanguage()
+            if lang_id:
+                try:
+                    lang_name = locale.windows_locale.get(lang_id, '')
+                    if lang_name:
+                        lang_name = lang_name.lower()
+                        return 'ja' if lang_name.startswith('ja') else 'en'
+                except Exception:
+                    pass
+        except Exception:
+            pass
+    try:
+        lang, _ = locale.getdefaultlocale()
+    except Exception:
+        lang = None
+    if not lang:
+        try:
+            lang = locale.getlocale()[0]
+        except Exception:
+            lang = None
+    lang = (lang or '').lower()
+    return 'ja' if lang.startswith('ja') else 'en'
+
 def load_style_tags():
     if os.path.exists(STYLE_TAGS_FILE):
-        with open(STYLE_TAGS_FILE, encoding='utf-8') as f:
+        with open(STYLE_TAGS_FILE, encoding='utf-8-sig') as f:
             return json.load(f).get('tags', [])
     return []
 
@@ -77,7 +222,7 @@ def save_style_tags(tags):
 def load_extra_tags():
     if os.path.exists(EXTRA_TAGS_FILE):
         try:
-            with open(EXTRA_TAGS_FILE, "r", encoding="utf-8") as f:
+            with open(EXTRA_TAGS_FILE, "r", encoding="utf-8-sig") as f:
                 return json.load(f).get("tags", [])
         except: pass
     return []
@@ -107,29 +252,57 @@ DEFAULT_CONFIG = {
     "cfg": 4.0,
     "sampler_name": "er_sde",
     "scheduler": "simple",
+    "console_lang": "ja",   # ja / en
+    "log_dir": "logs",
+    "log_retention_days": 30,
+    "log_level": "normal",  # normal / debug
 }
 
 def load_config() -> dict:
     if os.path.exists(CONFIG_FILE):
         try:
             cfg = DEFAULT_CONFIG.copy()
-            saved = json.load(open(CONFIG_FILE, "r", encoding="utf-8"))
+            saved = json.load(open(CONFIG_FILE, "r", encoding="utf-8-sig"))
             # 旧キー（lm_studio_*）からの移行フォールバック
             for old_key, new_key in [("lm_studio_url","llm_url"),("lm_studio_token","llm_token"),("lm_studio_model","llm_model")]:
                 if old_key in saved and new_key not in saved:
                     saved[new_key] = saved.pop(old_key)
             cfg.update(saved)
+            _apply_log_config(cfg)
             return cfg
         except Exception as e:
             print(f"[設定] 読み込みエラー: {e}")
-    return DEFAULT_CONFIG.copy()
+    cfg = DEFAULT_CONFIG.copy()
+    _apply_log_config(cfg)
+    return cfg
 
 def save_config(cfg: dict):
     try:
+        base = DEFAULT_CONFIG.copy()
+        base.update(cfg or {})
+        cfg = base
+        try:
+            cfg["log_retention_days"] = max(0, int(cfg.get("log_retention_days", 30)))
+        except Exception:
+            cfg["log_retention_days"] = 30
+        cfg["log_level"] = "debug" if str(cfg.get("log_level", "normal")).lower() == "debug" else "normal"
+        cfg["log_dir"] = str(cfg.get("log_dir", "logs") or "logs").strip() or "logs"
         json.dump(cfg, open(CONFIG_FILE, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+        _apply_log_config(cfg)
         print(f"[設定] 保存: {CONFIG_FILE}")
     except Exception as e:
         print(f"[設定] 保存エラー: {e}")
+
+def _console_lang(cfg: dict | None = None) -> str:
+    try:
+        c = cfg or load_config()
+        lang = str(c.get("console_lang", "ja")).lower()
+        return "en" if lang == "en" else "ja"
+    except Exception:
+        return "ja"
+
+def _ct(ja: str, en: str, cfg: dict | None = None) -> str:
+    return en if _console_lang(cfg) == "en" else ja
 
 
 SYSTEM_PROMPT_FILE = _sf('llm_system_prompt.txt')
@@ -567,6 +740,15 @@ HTML = r"""<!DOCTYPE html>
     background:linear-gradient(120deg, var(--ink) 0%, #7c4dbf 100%);
     -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
     border-bottom:1.5px solid var(--border);padding-bottom:0.8rem;}
+  .lang-switch{display:flex;justify-content:flex-end;gap:0.35rem;margin:-0.3rem 0 0.8rem 0;}
+  .lang-btn{
+    border:1px solid var(--border);background:white;color:var(--muted);
+    border-radius:999px;padding:0.2rem 0.55rem;cursor:pointer;
+    font-family:'DM Mono',monospace;font-size:0.64rem;letter-spacing:0.08em;
+    margin-top:0;width:auto;text-transform:none;box-shadow:none;
+  }
+  .lang-btn:hover{background:var(--highlight);color:var(--multi);border-color:var(--accent);transform:none;box-shadow:none;}
+  .lang-btn.active{border-color:var(--multi);color:var(--multi);background:var(--highlight);}
   label{display:block;font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;}
   input[type=text],input[type=password],textarea{width:100%;background:var(--card);border:1px solid var(--border);
     border-radius:6px;padding:0.7rem 1rem;font-family:'Zen Kaku Gothic New',sans-serif;
@@ -837,6 +1019,20 @@ HTML = r"""<!DOCTYPE html>
     .chara-header-row1 > :nth-child(2){ grid-column:1 / 3; grid-row:2; }
     .chara-header-row1 > :nth-child(3){ grid-column:1 / 3; grid-row:3; }
     .chara-header-row1 > :nth-child(4){ grid-column:2; grid-row:1; justify-self:end; }
+    #presetThumbControlRow{
+      flex-wrap:wrap !important;
+      align-items:stretch !important;
+    }
+    #presetThumbTargetSel{
+      flex:1 1 100% !important;
+      min-width:0 !important;
+      width:100% !important;
+    }
+    #presetThumbAddBtn{
+      flex:1 1 100% !important;
+      width:100% !important;
+      text-align:center;
+    }
 
     /* セッションボタン行 */
     .session-row{ flex-wrap:wrap; gap:0.4rem; }
@@ -923,6 +1119,10 @@ HTML = r"""<!DOCTYPE html>
 <body>
 <div class="container">
   <h1>Anima Pipeline <span id="versionBadge" style="font-weight:300;letter-spacing:0.2em;color:var(--muted);"></span></h1>
+  <div class="lang-switch">
+    <button id="langBtnJa" class="lang-btn" onclick="setLang('ja')" type="button">日本語</button>
+    <button id="langBtnEn" class="lang-btn" onclick="setLang('en')" type="button">English</button>
+  </div>
   <h2>キャラクター生成（プロンプト+画像）</h2>
 
   <div class="stoggle" onclick="toggleSettings()">
@@ -942,11 +1142,11 @@ HTML = r"""<!DOCTYPE html>
             onchange="applyWorkflowNodeIds(this.value)"
             style="flex:1;background:white;border:1px solid var(--border);border-radius:6px;padding:0.4rem 0.6rem;
             font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);outline:none;box-sizing:border-box;cursor:pointer;">
-            <option value="">— 未選択（①のパスを使用）—</option>
+            <option value="">— Unset (use path in ①) —</option>
           </select>
-          <button onclick="loadWorkflowList()" title="再読み込み"
+          <button onclick="loadWorkflowList()" title="Reload"
             style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:0.3rem 0.5rem;border:1px solid var(--border);
-            border-radius:5px;background:white;color:var(--muted);cursor:pointer;white-space:nowrap;flex-shrink:0;width:auto;">🔄 再読込</button>
+            border-radius:5px;background:white;color:var(--muted);cursor:pointer;white-space:nowrap;flex-shrink:0;width:auto;">🔄 Reload</button>
         </div>
         <div id="workflowNodeNotice" style="display:none;font-family:'DM Mono',monospace;font-size:0.65rem;color:#2d7a4f;margin-top:0.2rem;"></div>
         <div style="font-family:'DM Mono',monospace;font-size:0.65rem;color:var(--muted);margin-top:0.2rem;">anima_pipeline/workflows/ にJSONを置くと表示されます。選択時にNode IDを自動検出します（ControlNet等が挟まる場合は手動確認を）</div>
@@ -980,7 +1180,7 @@ HTML = r"""<!DOCTYPE html>
           <div class="period-btn active" data-plat="" onclick="selLLMPlatform(this)">なし</div>
           <div class="period-btn" data-plat="lmstudio" onclick="selLLMPlatform(this)">LM Studio</div>
           <div class="period-btn" data-plat="gemini" onclick="selLLMPlatform(this)">Gemini</div>
-          <div class="period-btn" data-plat="custom" onclick="selLLMPlatform(this)">カスタム</div>
+          <div class="period-btn" data-plat="custom" onclick="selLLMPlatform(this)">Custom</div>
         </div>
       </div>
       <div id="llmDetailFields" style="display:none;">
@@ -1018,12 +1218,33 @@ HTML = r"""<!DOCTYPE html>
         </div>
       </div>
       <div class="field">
-        <label>⑨ ComfyUI output フォルダ（WebP変換用・<strong style="color:#e74c3c">絶対パスで入力推奨</strong>）</label>
+        <label>⑨ COMFYUI OUTPUT FOLDER (for WEBP conversion, <strong style="color:#e74c3c">absolute path recommended</strong>)</label>
         <input type="text" id="outputDirInput" placeholder="例: D:\ComfyUI_Portable\ComfyUI_windows_portable\ComfyUI\output">
+      </div>
+      <div class="field">
+        <label>⑩ LOG DIRECTORY</label>
+        <input type="text" id="logDirInput" placeholder="logs">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>⑪ LOG RETENTION DAYS</label>
+          <input type="number" id="logRetentionInput" min="0" max="3650" step="1" value="30">
+        </div>
+        <div class="field">
+          <label>⑫ LOG LEVEL</label>
+          <select id="logLevelInput">
+            <option value="normal">normal</option>
+            <option value="debug">debug</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+        <button class="sl-btn" style="flex:1" onclick="openLogsFolder()">📂 Open Logs</button>
+        <button class="sl-btn" style="flex:1" onclick="downloadLogsZip()">🗜 Export Logs ZIP</button>
       </div>
     </div>
     <button class="save-btn" onclick="saveSettings()">💾 設定を保存</button>
-    <div class="save-notice" id="saveNotice">✓ pipeline_config.json に保存しました</div>
+    <div class="save-notice" id="saveNotice">✓ pipeline_config.json saved</div>
     <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
       <button class="sl-btn" style="flex:1" onclick="testConnection('comfyui')">🔌 ComfyUI 接続テスト</button>
       <button class="sl-btn" style="flex:1" onclick="testConnection('llm')">🤖 LLM 接続テスト</button>
@@ -1035,7 +1256,7 @@ HTML = r"""<!DOCTYPE html>
         <select id="presetDeleteSel" style="flex:1;min-width:0;font-family:'DM Mono',monospace;font-size:0.72rem;border:1px solid #e0779a;border-radius:5px;padding:0.3rem 0.5rem;background:white;color:var(--ink);cursor:pointer;">
           <option value="">── プリセットを選択 ──</option>
         </select>
-        <button onclick="deleteCharaPresetFromSettings()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0;width:2.8rem;text-align:center;border:1px solid #e0779a;border-radius:5px;background:white;color:#c0392b;cursor:pointer;">削除</button>
+        <button onclick="deleteCharaPresetFromSettings()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0;width:2.8rem;text-align:center;border:1px solid #e0779a;border-radius:5px;background:white;color:#c0392b;cursor:pointer;">DEL</button>
       </div>
     </div>
   </div>
@@ -1143,15 +1364,33 @@ HTML = r"""<!DOCTYPE html>
       <div class="struct-fields" style="margin-bottom:0.8rem;">
         <div class="struct-row required">
           <label class="struct-label">A. 共通作品（任意）</label>
-          <input type="text" id="f_series" class="inp-ja" placeholder="例: ウマ娘、ブルアカ（複数作品の場合はキャラごとに入力）">
+          <input type="text" id="f_series" class="inp-ja" placeholder="ウマ娘（複数作品の場合はキャラごとに入力）">
         </div>
       </div>
       <div style="margin-bottom:0.5rem;display:grid;grid-template-columns:9rem 1fr;gap:0.5rem;align-items:center;">
         <label class="struct-label" style="text-align:right;padding-right:0.5rem;font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);">B. キャラ数 *</label>
-        <input type="number" id="f_charcount" value="1" min="1" max="6" step="1"
+        <input type="number" id="f_charcount" value="1" min="0" max="6" step="1"
           style="width:80px;background:#f8f4ff;border:1px solid var(--accent);border-radius:6px;padding:0.55rem 0.6rem;
           font-family:'DM Mono',monospace;font-size:0.82rem;color:var(--ink);outline:none;"
           oninput="updateCharaBlocks()">
+      </div>
+      <div id="presetThumbPanel" style="margin-bottom:0.9rem;border:1px solid var(--border);border-radius:8px;padding:0.65rem;background:#fbfafc;">
+        <div id="presetThumbToggle" onclick="togglePresetThumbPanel()" style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;flex-wrap:wrap;cursor:pointer;">
+          <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);font-weight:bold;"><span id="presetThumbArrow">▶</span> 🖼 プリセット一覧（サムネイル）</div>
+          <div style="font-family:'DM Mono',monospace;font-size:0.66rem;color:var(--muted);">対象プリセット: <span id="presetThumbTargetName">-</span></div>
+        </div>
+        <div id="presetThumbBody" style="display:none;">
+          <div style="font-family:'DM Mono',monospace;font-size:0.64rem;color:var(--muted);margin-top:0.2rem;">ギャラリー画像を拡大表示してから「プリセットのサムネイル作成」を押してください</div>
+          <div id="presetThumbControlRow" style="margin-top:0.35rem;display:flex;align-items:center;gap:0.4rem;">
+            <div style="font-family:'DM Mono',monospace;font-size:0.64rem;color:var(--muted);white-space:nowrap;">更新先:</div>
+            <select id="presetThumbTargetSel" onclick="event.stopPropagation()" onchange="onPresetThumbTargetChange(this.value)"
+              style="flex:1 1 180px;min-width:120px;background:white;border:1px solid var(--border);border-radius:6px;padding:0.35rem 0.45rem;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--ink);outline:none;cursor:pointer;">
+              <option value="">-- Select Preset --</option>
+            </select>
+            <button id="presetThumbAddBtn" onclick="event.stopPropagation();addCharaFromSelectedPreset();" style="font-family:'DM Mono',monospace;font-size:0.68rem;padding:0.32rem 0.55rem;border:1px solid var(--accent);border-radius:6px;background:white;color:var(--accent);cursor:pointer;white-space:nowrap;">＋ キャラ追加</button>
+          </div>
+          <div id="presetThumbGrid" style="margin-top:0.5rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:0.4rem;max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:0.4rem;background:#fafaf8;"></div>
+        </div>
       </div>
       <div id="charaContainer"></div>
     </div>
@@ -1269,10 +1508,10 @@ HTML = r"""<!DOCTYPE html>
     </div>
 
     <div style="margin-bottom:0.7rem;">
-      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ⑤ スタイル（@アーティスト名）<span style="color:#c0392b;"> ※英語表記で入力（例: takeuchi naoko）</span></div>
+      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ⑤ Style (@Artist Name)<span style="color:#c0392b;"> *Input in English (e.g.: takeuchi naoko)</span></div>
       <div class="extra-presets" id="stylePresets"></div>
       <div class="style-row" style="margin-top:0.4rem;">
-        <input type="text" id="styleInput" class="inp-en" placeholder="新規追加（例: takeuchi naoko）"
+        <input type="text" id="styleInput" class="inp-en" placeholder="Add New (e.g.: takeuchi naoko)"
           style="flex:1;min-width:0;background:white;border:1px solid var(--border);padding:0.45rem 0.6rem;
           font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);outline:none;">
         <button onclick="addStyle()"
@@ -1283,7 +1522,7 @@ HTML = r"""<!DOCTYPE html>
       <div id="styleBadges" style="display:flex;flex-wrap:wrap;gap:0.3rem;margin-top:0.4rem;min-height:1rem;"></div>
     </div>
 
-    <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ⑥ Extraタグ（キャラ・シーンタグの後に追加）</div>
+    <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ⑥ Extra Tags (add after Chara/Scene tags)</div>
     <div class="extra-presets" id="extraPresets"></div>
     <div class="extra-custom" style="margin-top:0.5rem;">
       <input type="text" id="extraCustomInput" class="inp-en" placeholder="カスタムタグを入力（例: breast_grab）">
@@ -1307,7 +1546,7 @@ HTML = r"""<!DOCTYPE html>
     <div id="negContent" style="display:none;">
 
     <div style="margin-bottom:0.7rem;">
-      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ① 期間タグ（ポジティブと共通）</div>
+      <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ① Period Tags (shared with Positive)</div>
       <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#aaa;">ポジティブの期間タグ設定がネガティブにも反映されます</div>
     </div>
 
@@ -1380,7 +1619,7 @@ HTML = r"""<!DOCTYPE html>
     </div>
     <div class="prompt-output" id="promptOutput"></div>
     <div class="prompt-section-label" id="finalLabel" style="display:none;" onclick="togglePromptSection('promptFinal',this)">
-      <span>▸ ComfyUI 送信ポジティブプロンプト（生成＋追加タグ）</span>
+      <span>▸ ComfyUI Sent Positive Prompt (Generated + Added Tags)</span>
       <button class="copy-btn" onclick="event.stopPropagation();copyPrompt('promptFinal',this)">コピー</button>
     </div>
     <div class="prompt-final" id="promptFinal" style="display:none;font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--ink);"></div>
@@ -1404,13 +1643,14 @@ HTML = r"""<!DOCTYPE html>
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.8rem;flex-wrap:wrap;gap:0.4rem;">
         <div style="font-family:'DM Mono',monospace;font-size:0.8rem;color:var(--muted);" id="modalTitle">生成結果</div>
         <div class="modalBtnRow" style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+          <button id="modalThumbBtn" onclick="createPresetThumbnailFromModal()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0.7rem;border:1px solid #3a8c5c;border-radius:5px;background:white;color:#2f7a50;cursor:pointer;white-space:nowrap;">🖼 プリセットのサムネイル作成</button>
           <button id="modalReuseBtn" onclick="reusePromptFromModal()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0.7rem;border:1px solid var(--accent);border-radius:5px;background:white;color:var(--accent);cursor:pointer;white-space:nowrap;">↺ プロンプト再利用</button>
           <button id="modalFolderBtn" onclick="openFolderFromModal()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0.7rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">📁 フォルダを開く</button>
           <button onclick="document.getElementById('galleryModal').style.display='none'" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0.7rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;white-space:nowrap;">✕ 閉じる</button>
         </div>
       </div>
       <img id="modalImg" src="" style="width:100%;border-radius:8px;margin-bottom:0.8rem;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:0.3rem;">▸ 送信ポジティブプロンプト</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:0.3rem;">▸ Sent Positive Prompt</div>
       <div id="modalPositive" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--ink);background:#f8f8f8;border-radius:6px;padding:0.6rem;margin-bottom:0.6rem;white-space:pre-wrap;word-break:break-all;"></div>
       <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:0.3rem;">▸ 送信ネガティブプロンプト</div>
       <div id="modalNegative" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:#c0392b;background:#fff5f5;border-radius:6px;padding:0.6rem;white-space:pre-wrap;word-break:break-all;"></div>
@@ -1419,6 +1659,633 @@ HTML = r"""<!DOCTYPE html>
 </div>
 
 <script>
+const __LANG_STORAGE_KEY__ = 'anima_ui_lang_v2';
+const __OS_DEFAULT_LANG__ = (typeof __OS_LANG__ === 'string' && __OS_LANG__.toLowerCase().startsWith('ja')) ? 'ja' : 'en';
+let currentLang = localStorage.getItem(__LANG_STORAGE_KEY__) || __OS_DEFAULT_LANG__;
+if(currentLang !== 'ja' && currentLang !== 'en') currentLang = __OS_DEFAULT_LANG__;
+
+const BASE_I18N_MAP_EN = {
+  'キャラクター生成（プロンプト+画像）': 'Character Generation (Prompt + Image)',
+  '設定': 'Settings',
+  '必須': 'Required',
+  '必須設定': 'Required Settings',
+  'LLMを使わないなら不要': 'Not required if LLM is disabled',
+  'オプション': 'Optional',
+  '画像設定': 'Image Settings',
+  '生成パラメータ': 'Generation Params',
+  'キャラクター': 'Character',
+  'シーン・雰囲気': 'Scene / Mood',
+  'プロンプト調整・追加（再生成に反映されます）': 'Prompt Tuning / Additions (used for re-generation)',
+  'ネガティブ調整': 'Negative Prompt Tuning',
+  '処理状況': 'Status',
+  '先頭へ': 'Back to Top',
+  '設定を保存': 'Save Settings',
+  'セッション保存': 'Save Session',
+  '開く': 'Open',
+  '再読み込み': 'Reload',
+  '接続テスト': 'Connection Test',
+  '接続確認': 'Connection Check',
+  '接続中': 'Connecting',
+  '接続OK': 'Connected',
+  '接続失敗': 'Connection failed',
+  '接続エラー': 'Connection error',
+  'モデル': 'Model',
+  '保存形式': 'Output Format',
+  '生成開始': 'Generate',
+  '生成中止': 'Cancel',
+  '再画像生成': 'Re-generate Image',
+  '生成結果': 'Generated Result',
+  'プロンプト再利用': 'Reuse Prompt',
+  'フォルダを開く': 'Open Folder',
+  '閉じる': 'Close',
+  '生成履歴（このセッション）': 'Generation History (Session)',
+  'クリア': 'Clear',
+  'コピー': 'Copy',
+  'コピー済': 'Copied',
+  'ポジティブ': 'Positive',
+  'ネガティブ': 'Negative',
+  '状況': 'Status',
+  '画像': 'Image',
+  'パラメータ': 'Params',
+  'キャラ': 'Chara',
+  'シーン': 'Scene',
+  'ポジ調整': 'Prompt',
+  'ネガ調整': 'Negative',
+  '読み込みエラー': 'Load error',
+  '保存しました': 'Saved',
+  '削除しますか？': 'Delete this item?',
+  'をDelete this item?': ' to delete?',
+  '削除': 'Delete',
+  'プリセット一覧（サムネイル）': 'Preset List (Thumbnails)',
+  '対象プリセット': 'Target Preset',
+  'ギャラリー画像を拡大表示してから「プリセットのサムネイル作成」を押してください': 'Open a gallery image, then click "Create Preset Thumbnail".',
+  'プリセットのサムネイル作成': 'Create Preset Thumbnail',
+  'サムネイル未設定': 'No thumbnail',
+  'サムネ作成対象のプリセットを選択してください': 'Select a preset to assign thumbnail.',
+  'ギャラリー画像を先に開いてください': 'Open a gallery image first.',
+  'サムネイルを更新しますか？': 'Update this thumbnail?',
+  'サムネイル保存: ': 'Thumbnail saved: ',
+  'サムネイル作成失敗: ': 'Thumbnail creation failed: ',
+  '追加': 'Add',
+  'エラー': 'Error',
+  '不明なエラー': 'Unknown error',
+  '中止されました': 'Cancelled',
+  '中止': 'Cancel',
+  'ネットワークエラー': 'Network error',
+  'スキップ': 'Skipped',
+  '完了': 'Done',
+  '送信失敗': 'Send failed',
+  'キューに追加': 'Queued',
+  '生成中': 'Generating',
+  '枚完了': 'done',
+  '枚': 'images',
+  'ランダムな値を生成': 'Generate random value',
+  'キャラ名を入力してください': 'Please enter character name',
+  'シリーズまたはいずれかのキャラ名を入力してください': 'Please enter a series or at least one character name',
+  'プロンプトを再利用モードに設定しました。「↺ 再画像生成」ボタンで送信できます。': 'Prompt was set to reuse mode. Use the "Re-generate Image" button to submit.',
+  'Danbooru Wiki+LLMでプリセット自動生成': 'Auto-generate preset with Danbooru Wiki + LLM',
+  '（長押しで選択）': '(Long-press to select)',
+  '読込': 'Load',
+  '保存': 'Save',
+  '詳細': 'Details',
+  '女': 'Female',
+  '男': 'Male',
+  '不明': 'Unknown',
+  '未設定': 'Unset',
+  '大人': 'Adult',
+  '子供': 'Child',
+  '髪型': 'Hair Style',
+  '髪色': 'Hair Color',
+  '肌の色': 'Skin Tone',
+  '目の状態': 'Eye State',
+  '目の色': 'Eye Color',
+  '口の形': 'Mouth',
+  '表情': 'Expression',
+  '向き': 'Direction',
+  '状態': 'State',
+  '前': 'Front',
+  '後ろ': 'Back',
+  '日本語入力': 'Input in English',
+  'その他': 'Other',
+  '作品名': 'Series',
+  'キャラ名': 'Character Name',
+  'オリジナル': 'Original',
+  'プリセット選択': 'Preset',
+  '共通作品（任意）': 'Shared Series (Optional)',
+  'キャラ数': 'Chara Count',
+  '全裸': 'Nude',
+  '半裸': 'Half Nude',
+  '上下': 'Top/Bottom',
+  '背丈': 'Height',
+  'バスト': 'Bust',
+  '普通': 'Normal',
+  '姿勢': 'Posture',
+  '動作': 'Action',
+  '動作・ポーズ': 'Action / Pose',
+  '腕・手': 'Arms / Hands',
+  '視線': 'Gaze',
+  '時間帯': 'Time of Day',
+  '天気': 'Weather',
+  '画面TOP/BOTTOM': 'Frame Top / Bottom',
+  '画面左右': 'Frame Left / Right',
+  '場所': 'Location',
+  '世界観': 'World',
+  '体型': 'Body Build',
+  '脚': 'Legs',
+  '付属': 'Attachments',
+  '尻尾': 'Tail',
+  '翼': 'Wings',
+  '瞳の色': 'Eye Color',
+  '補足メモ（日本語）→ LLMに渡す（1回目のプロンプト生成のみ）': 'Additional Note (sent to LLM only on first generation)',
+  '送信POSITIVEプロンプト（生成＋ADDタグ）': 'Sent POSITIVE Prompt (Generated + Added Tags)',
+  '送信ポジティブプロンプト（生成＋追加タグ）': 'Sent Positive Prompt (Generated + Added Tags)',
+  'Negativeプロンプト調整': 'Negative Prompt Tuning',
+  '期間タグ（Positiveと共通）': 'Period Tags (shared with Positive)',
+  '期間タグ': 'Period Tags',
+  'ポジティブの期間タグ設定がネガティブにも反映されます': 'Positive period-tag settings are also applied to Negative.',
+  '品質タグ（人間ベース: NORMAL/LOW/WORST）': 'Quality Tags (Human base: NORMAL/LOW/WORST)',
+  '品質タグ（Pony）': 'Quality Tags (Pony)',
+  '品質タグ（人間ベース）': 'Quality Tags (Human base)',
+  'メタタグ': 'Meta Tags',
+  '安全タグ（単一選択）': 'Safety Tags (single-select)',
+  'スタイル（@アーティスト名・ネガティブ専用）': 'Style (@Artist Name, Negative only)',
+  'スタイル（@アーティスト名）': 'Style (@Artist Name)',
+  '新規Add': 'Add New',
+  '追記文（英語）→ プロンプト末尾に直接Add': 'Extra Text (English) -> append directly to prompt end',
+  'カスタムタグを入力': 'Enter custom tag',
+  '例:': 'e.g.:',
+  'ワークフローJSONパス（フォールバック）': 'Workflow JSON Path (fallback)',
+  'WORKFLOWS/ フォルダから選択（優先）': 'Select from WORKFLOWS/ folder (preferred)',
+  'LLMを使うならRequired': 'Required if using LLM',
+  '任意': 'Optional',
+  'LLMツール統合': 'LLM Tool Integrations',
+  '⑧ LLMツール統合': '⑧ LLM Tool Integrations',
+  'COMFYUI OUTPUT フォルダ（WEBP変換用・絶対パスで入力推奨）': 'COMFYUI OUTPUT Folder (for WEBP conversion, absolute path recommended)',
+  '⑨ COMFYUI OUTPUT フォルダ（WEBP変換用・絶対パス推奨）': '⑨ COMFYUI OUTPUT FOLDER (for WEBP conversion, absolute path recommended)',
+  '⑨ COMFYUI OUTPUT フォルダ（WEBP変換用、絶対パス推奨）': '⑨ COMFYUI OUTPUT FOLDER (for WEBP conversion, absolute path recommended)',
+  'WEBP変換用': 'for WEBP conversion',
+  '絶対パス推奨': 'absolute path recommended',
+  'ログ保存フォルダ': 'LOG DIRECTORY',
+  '⑩ ログ保存フォルダ': '⑩ LOG DIRECTORY',
+  'ログ保持日数': 'LOG RETENTION DAYS',
+  '⑪ ログ保持日数': '⑪ LOG RETENTION DAYS',
+  'ログレベル': 'LOG LEVEL',
+  '⑫ ログレベル': '⑫ LOG LEVEL',
+  'ログフォルダを開く': 'OPEN LOGS',
+  'ログZIPをエクスポート': 'EXPORT LOGS ZIP',
+  'プリセットを選択': 'Select a preset',
+  'CharaプリセットDelete': 'Delete Character Preset',
+  '送信枚数': 'Image Count',
+  'PNG生成': 'Generate PNG',
+  'WebP変換': 'Convert to WebP',
+  'ランダム': 'Random',
+  '固定': 'Fixed',
+  '連番': 'Increment',
+  '補足メモ（日本語）': 'Additional Note (Japanese)',
+  'ワークフロー内のLoraLoader ノードに順番に注入されます。空欄はSkipped。': 'Injected in order into LoraLoader nodes in the workflow. Empty fields are skipped.',
+  'カードをクリックでスロットに割り当て（再クリックで解除）': 'Click a card to assign it to a slot (click again to unassign).',
+  '未使用': 'Unused',
+  '強度': 'Strength',
+  'LLMを使用する': 'Use LLM',
+  '送信POSITIVEプロンプト（生成＋ADDタグ）': 'Sent POSITIVE Prompt (Generated + ADD Tags)',
+  '送信ポジティブプロンプト': 'Sent Positive Prompt',
+  '送信POSITIVEプロンプト': 'Sent POSITIVE Prompt',
+  '▸ 送信ポジティブプロンプト': '▸ Sent Positive Prompt',
+  '▸ 送信POSITIVEプロンプト': '▸ Sent POSITIVE Prompt',
+  'LLM生成POSITIVEプロンプト': 'LLM-generated POSITIVE Prompt',
+  '送信NEGATIVEプロンプト': 'Sent NEGATIVE Prompt',
+  'LLMを使うなら': 'If using LLM',
+  'フォルダから選択': 'Select from folder',
+  'フォルダ': 'Folder',
+  '絶対パスで入力推奨': 'absolute path recommended',
+  'IMAGEサイズ（ANIMA推奨）': 'Image Size (ANIMA recommended)',
+  'シード値': 'Seed',
+  'LoraLoader ノードに順番に注入されます。空欄はSkipped。': 'Injected into LoraLoader nodes in order. Empty fields are skipped.',
+  'ワークフロー内の': 'In workflow,',
+  'ノードに順番に注入されます。': 'injected into nodes in order.',
+  '空欄はSkipped。': 'Empty fields are skipped.',
+  'Period Tags (Positiveと共通)': 'Period Tags (shared with Positive)',
+  'Extraタグ（Negative専用・右クリックでDelete）': 'Extra Tags (Negative only, right-click to delete)',
+  '追記文（英語）→ Negativeプロンプト末尾に直接Add': 'Extra Text (English) -> append directly to Negative prompt end',
+  '新規Add': 'Add New',
+  'タグをAdd': 'Add tag',
+  '日本語': 'Japanese',
+  '入力推奨': 'recommended',
+  '例：': 'e.g.:',
+  '例:': 'e.g.:',
+  '（フォールバック）': '(fallback)',
+  '（優先）': '(preferred)',
+  '（任意）': '(optional)',
+  '日本語入力（例:': 'Input in English (e.g.:',
+  '日本語入力（例：': 'Input in English (e.g.:',
+  '英語タグのみ': 'English tags only',
+  'Input in English可': 'Input in English',
+  'Input in English可（例:': 'Input in English (e.g.:',
+  'Input in English可（例：': 'Input in English (e.g.:',
+  '日本語入力可': 'Input in English',
+  '日本語入力可（例:': 'Input in English (e.g.:',
+  '日本語入力可（例：': 'Input in English (e.g.:',
+  '屋外': 'Outdoor',
+  '屋内': 'Indoor',
+  '特殊': 'Special',
+  'ワークフローJSONパス（フォールバック）': 'Workflow JSON Path (fallback)',
+  'WORKFLOWS/ フォルダから選択（優先）': 'Select from WORKFLOWS/ folder (preferred)',
+  'workflows/ フォルダから選択（優先）': 'Select from workflows/ folder (preferred)',
+  '　 workflows/ フォルダから選択（優先）': 'Select from workflows/ folder (preferred)',
+  'WORKFLOWS/ フォルダから選択(PREFERRED)': 'Select from WORKFLOWS/ folder (PREFERRED)',
+  'LLMを使うなら必須': 'Required if using LLM',
+  '⑥ LLMプラットフォーム': '⑥ LLM Platform',
+  '空欄 または トークン文字列': 'Blank or token string',
+  'Seed（シード値）': 'Seed',
+  'COMFYUI OUTPUT フォルダ（CONVERT TO WEBP用・絶対パスで入力推奨）': 'COMFYUI OUTPUT Folder (for CONVERT TO WEBP, absolute path recommended)',
+  '例: 緊張感、幻想的な雰囲気': 'e.g.: tense, fantastical atmosphere',
+  '例: お姉さんが弟分を甘やかしている雰囲気、ドキドキしている': 'e.g.: caring older-sister vibe, heart-pounding mood',
+  'ワークフロー内の LoraLoader ノードに順番に注入されます。空欄はスキップ。': 'Injected in order into LoraLoader nodes in the workflow. Empty fields are skipped.',
+  '空欄はスキップ。': 'Empty fields are skipped.',
+  '▼ Negativeプロンプト調整': '▼ Negative Prompt Tuning',
+  '新規Add (e.g.: bad_artist)': 'Add New (e.g.: bad_artist)',
+  'タグをAdd (e.g.: bad anatomy)': 'Add tag (e.g.: bad anatomy)',
+  '追記文（英語）→ Negativeプロンプト末尾に直接Add': 'Extra Text (English) -> append directly to Negative prompt end',
+  '追記文（英語）→ プロンプト末尾に直接追加': 'Extra Text (English) -> append directly to prompt end',
+  '追記文（英語）→ ネガティブプロンプト末尾に直接追加': 'Extra Text (English) -> append directly to Negative prompt end',
+  'Negativeプロンプト調整': 'Negative Prompt Tuning',
+  'ネガティブプロンプト調整': 'Negative Prompt Tuning',
+  '▼ ネガティブプロンプト調整': '▼ Negative Prompt Tuning',
+  'COMFYUI 送信POSITIVEプロンプト（生成＋ADDタグ）': 'COMFYUI Sent POSITIVE Prompt (Generated + ADD Tags)',
+  'COMFYUI 送信NEGATIVEプロンプト': 'COMFYUI Sent NEGATIVE Prompt',
+  'スタイル（@アーティスト名）': 'Style (@Artist Name)',
+  'スタイル（@アーティスト名・ネガティブ専用）': 'Style (@Artist Name, Negative only)',
+  '※英語表記': '*English only',
+  '※英語表記で入力': '*Input in English',
+  '新規追加（例: bad_artist）': 'Add New (e.g.: bad_artist)',
+  'タグを追加（例: bad anatomy）': 'Add tag (e.g.: bad anatomy)',
+  '⑥ Extraタグ（Chara・Sceneタグの後にAdd）': '⑥ Extra Tags (add after Chara/Scene tags)',
+  '⑦ 追記文（英語）→ プロンプト末尾に直接Add': '⑦ Extra Text (English) -> append directly to prompt end',
+  '⑦ 追記文（英語）→ Negativeプロンプト末尾に直接Add': '⑦ Extra Text (English) -> append directly to Negative prompt end',
+  '⑦ 追記文（英語）→ ネガティブプロンプト末尾に直接追加': '⑦ Extra Text (English) -> append directly to Negative prompt end',
+  'アクセサリー': 'Accessories',
+  'エフェクト': 'Effects',
+  '衣装': 'Outfit',
+  'オッドアイ': 'Odd Eyes',
+  '左目': 'Left Eye',
+  '右目': 'Right Eye',
+  '全体': 'All',
+  '⑫ 脚': '⑫ Legs',
+  'プリセット名を入力してください': 'Please enter preset name',
+  '小': 'Small',
+  '低': 'Short',
+  '高': 'Tall',
+  '大柄': 'Large',
+  '痩': 'Thin',
+  '太': 'Heavy',
+  '開き': 'Open',
+  '半目': 'Half-Closed',
+  '閉じ': 'Closed',
+  'LORA一覧取得': 'Fetch LORA List',
+  '例: スペシャルウィーク': 'e.g.: Special Week',
+  '例: ウマ娘、ブルアカ': 'e.g.: Umamusume, Blue Archive',
+  '青肌': 'blue skin',
+  '緑肌': 'green skin',
+  '白 ドレス': 'white dress',
+  'お団子': 'hair bun',
+  'ドレッド': 'dreadlocks',
+  'グラデーション': 'gradient',
+  'メッシュ': 'mesh',
+  '日本語入力可（例: 青肌、緑肌）': 'Input in English (e.g.: blue skin, green skin)',
+  '日本語入力可（例: 白 ドレス、maid_apron）': 'Input in English (e.g.: white dress, maid_apron)',
+  '日本語入力可（例: お団子、ドレッド）': 'Input in English (e.g.: hair bun, dreadlocks)',
+  '日本語入力可（例: グラデーション、メッシュ）': 'Input in English (e.g.: gradient, mesh)',
+  '持ち物': 'Held Item',
+  '⑯ 持ち物': '⑯ Held Item',
+  '俯瞰': "Bird's-Eye",
+  '仰視': "Worm's-Eye",
+  '品質タグ（PonyV7 aestheticベース）': 'Quality Tags (PonyV7 aesthetic base)',
+  '▸ ComfyUI 送信ネガティブプロンプト': '▸ ComfyUI Sent NEGATIVE Prompt',
+  '▸ 送信ネガティブプロンプト': '▸ Sent NEGATIVE Prompt',
+  '▼ ⑥ Extraタグ（ネガティブ専用・右クリックで削除）': '▼ ⑥ Extra Tags (Negative only, right-click to delete)'
+  ,
+  '性別 *': 'Gender *',
+  '年齢': 'Age',
+  '口': 'Mouth',
+  '⑤ 口': '⑤ Mouth',
+  '耳': 'Ears',
+  '廃墟': 'Ruins',
+  'Period Tags (Positiveと共通)': 'Period Tags (shared with Positive)',
+  '① Period Tags (Positiveと共通)': '① Period Tags (shared with Positive)',
+  'Positiveと共通': 'shared with Positive',
+  '（複数作品の場合はCharaごとに入力）': '(for multiple series, set per character)',
+  '(複数作品の場合はCharaごとに入力)': '(for multiple series, set per character)',
+  '(複数作品の場合はChara': '(for multiple series, Chara',
+  '（複数作品の場合はChara': '(for multiple series, Chara',
+  '複数作品の場合はCharaごとに入力': 'for multiple series, set per character',
+  '（複数作品の場合はキャラごとに入力）': '(for multiple series, set per character)',
+  '複数作品の場合はキャラごとに入力': 'for multiple series, set per character',
+  '① Period Tags (Positiveと共通)': '① Period Tags (shared with Positive)',
+  '▼ ① Period Tags (Positiveと共通)': '▼ ① Period Tags (shared with Positive)',
+  '⑥ Extraタグ（Chara・Sceneタグの後にAdd）': '⑥ Extra Tags (add after Chara/Scene tags)',
+  '▼ ⑥ Extraタグ（Chara・Sceneタグの後にAdd）': '▼ ⑥ Extra Tags (add after Chara/Scene tags)',
+  '⑥ Extraタグ（Chara・Sceneタグの後にAdd)': '⑥ Extra Tags (add after Chara/Scene tags)',
+  '▼ ⑥ Extraタグ（Chara・Sceneタグの後にAdd)': '▼ ⑥ Extra Tags (add after Chara/Scene tags)',
+  '⑥ Extraタグ（キャラ・シーンタグの後に追加）': '⑥ Extra Tags (add after Chara/Scene tags)',
+  '▼ ⑥ Extraタグ（キャラ・シーンタグの後に追加）': '▼ ⑥ Extra Tags (add after Chara/Scene tags)',
+  'LLM生成POSITIVEプロンプト': 'LLM-generated POSITIVE Prompt',
+  '▸ LLM生成POSITIVEプロンプト': '▸ LLM-generated POSITIVE Prompt',
+  'COMFYUI 送信POSITIVEプロンプト（生成＋ADDタグ）': 'COMFYUI Sent POSITIVE Prompt (Generated + ADD Tags)',
+  'ComfyUI 送信ポジティブプロンプト（生成＋追加タグ）': 'ComfyUI Sent Positive Prompt (Generated + Added Tags)',
+  'COMFYUI 送信ポジティブプロンプト（生成＋追加タグ）': 'COMFYUI SENT POSITIVE PROMPT (GENERATED + ADDED TAGS)',
+  '▸ ComfyUI 送信ポジティブプロンプト（生成＋追加タグ）': '▸ ComfyUI Sent Positive Prompt (Generated + Added Tags)',
+  '▸ COMFYUI 送信ポジティブプロンプト（生成＋追加タグ）': '▸ COMFYUI SENT POSITIVE PROMPT (GENERATED + ADDED TAGS)',
+  '送信Positiveプロンプト': 'Sent Positive Prompt',
+  '▸ 送信Positiveプロンプト': '▸ Sent Positive Prompt',
+  'LLM生成ポジティブプロンプト': 'LLM-generated Positive Prompt',
+  '▸ LLM生成ポジティブプロンプト': '▸ LLM-generated Positive Prompt',
+  'ポジティブ': 'Positive',
+  '追加タグ': 'Added Tags',
+  'COMFYUI 送信POSITIVEプロンプト（生成+ADDタグ）': 'COMFYUI Sent POSITIVE Prompt (Generated + ADD Tags)',
+  '▸ COMFYUI 送信POSITIVEプロンプト（生成＋ADDタグ）': '▸ COMFYUI Sent POSITIVE Prompt (Generated + ADD Tags)',
+  '▸ COMFYUI 送信POSITIVEプロンプト（生成+ADDタグ）': '▸ COMFYUI Sent POSITIVE Prompt (Generated + ADD Tags)',
+  '⑰ 画面TOP/BOTTOM': '⑰ Frame Top / Bottom',
+  '▼ ⑰ 画面TOP/BOTTOM': '▼ ⑰ Frame Top / Bottom',
+  'なし': 'None',
+  '🗑️ CharaプリセットDelete': '🗑️ Delete Character Preset',
+  'IMAGEサイズ（ANIMA推奨）': 'Image Size (ANIMA Recommended)',
+  'IMAGEサイズ': 'Image Size',
+  'ANIMA推奨': 'ANIMA Recommended',
+  'プリセットDelete': 'Preset Delete',
+  'プリセット': 'Preset',
+  'サイズ': 'Size',
+  '推奨': 'Recommended',
+  '黒': 'Black',
+  '濃茶': 'Dark Brown',
+  '茶': 'Brown',
+  '薄茶': 'Light Brown',
+  '赤': 'Red',
+  '桃': 'Pink',
+  '橙': 'Orange',
+  '薄桃': 'Light Pink',
+  '黄': 'Yellow',
+  '緑': 'Green',
+  '薄緑': 'Light Green',
+  '水緑': 'Teal',
+  '青': 'Blue',
+  '水色': 'Light Blue',
+  '紺': 'Navy',
+  '灰': 'Gray',
+  '銀': 'Silver',
+  '紫': 'Purple',
+  '薄紫': 'Light Purple',
+  '白': 'White',
+  '金': 'Gold',
+  'マルチ': 'Multicolor',
+  '🔄 LORA一覧取得': '🔄 Fetch LORA List',
+  'ウマ娘': 'Umamusume',
+  '場所を自由入力（例: 競馬場、魔法学校）': 'Enter any location (e.g.: racetrack, magic academy)',
+  '画面上下': 'Frame Top / Bottom',
+  '⑰ 画面上下': '⑰ Frame Top / Bottom',
+  '貧乳': 'Flat',
+  '中': 'Medium',
+  '大': 'Large',
+  '爆': 'Huge',
+  '超爆': 'Gigantic',
+  '短い': 'Short',
+  '長い': 'Long',
+  'ローアングル': 'Low Angle',
+  'ハイアングル': 'High Angle',
+  '魚眼': 'Fisheye',
+  '獣尻尾': 'Animal',
+  '猫尻尾': 'Cat',
+  '犬尻尾': 'Dog',
+  '狐尻尾': 'Fox',
+  '龍尻尾': 'Dragon',
+  '悪魔尻尾': 'Demon',
+  '天使翼': 'Angel',
+  '悪魔翼': 'Demon',
+  '龍翼': 'Dragon',
+  '羽翼': 'Feathered',
+  '機械翼': 'Mechanical',
+  'ショート': 'Short',
+  'ミディアム': 'Medium',
+  'ロング': 'Long',
+  '超ロング': 'VLong',
+  'ボブ': 'Bob',
+  'ストレート': 'Straight',
+  'ウェーブ': 'Wavy',
+  'クセ毛': 'Curly',
+  '縦ロール': 'Drill',
+  'お団子': 'Bun',
+  'ぱっつん': 'Blunt',
+  '流し前髪': 'Swept',
+  'サイド流し': 'Side Swept'
+};
+
+function humanizeValue(v){
+  const s = String(v||'').trim();
+  if(!s) return '';
+  return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function hasAsciiWord(v){
+  return /^[a-z0-9_ -]+$/i.test(String(v||''));
+}
+
+function buildAutoLabelMapFromOptions(root){
+  const map = {};
+  const conflicts = new Set();
+  const walk = (node)=>{
+    if(Array.isArray(node)){
+      node.forEach(walk);
+      return;
+    }
+    if(node && typeof node === 'object'){
+      if(typeof node.label === 'string' && typeof node.v === 'string'){
+        const label = node.label.trim();
+        const v = node.v.trim();
+        if(label && v && hasAsciiWord(v)){
+          const hv = humanizeValue(v);
+          if(map[label] && map[label] !== hv){
+            conflicts.add(label);
+          }else if(!map[label]){
+            map[label] = hv;
+          }
+        }
+      }
+      Object.values(node).forEach(walk);
+    }
+  };
+  walk(root);
+  conflicts.forEach((k)=>{ delete map[k]; });
+  return map;
+}
+
+const AUTO_I18N_MAP_EN = buildAutoLabelMapFromOptions(typeof __OPT__ === 'object' ? __OPT__ : {});
+const I18N_MAP_EN = Object.assign({}, AUTO_I18N_MAP_EN, BASE_I18N_MAP_EN);
+
+const I18N_MAP_JA = Object.fromEntries(
+  Object.entries(I18N_MAP_EN).map(([ja, en]) => [en, ja])
+);
+
+function normalizeI18nKey(s){
+  return String(s ?? '')
+    .replace(/[（]/g, '(')
+    .replace(/[）]/g, ')')
+    .replace(/[＋]/g, '+')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function buildNormalizedExactMap(dict){
+  const out = {};
+  for(const [k,v] of Object.entries(dict)){
+    const nk = normalizeI18nKey(k);
+    if(nk && !out[nk]) out[nk] = v;
+  }
+  return out;
+}
+
+function buildReplacers(dict){
+  return Object.entries(dict)
+    .filter(([from, to]) => from && to && from !== to)
+    .sort((a, b) => b[0].length - a[0].length);
+}
+const I18N_REPLACERS_EN = buildReplacers(I18N_MAP_EN);
+const I18N_REPLACERS_JA = buildReplacers(I18N_MAP_JA);
+const I18N_EXACT_NORM_EN = buildNormalizedExactMap(I18N_MAP_EN);
+const I18N_EXACT_NORM_JA = buildNormalizedExactMap(I18N_MAP_JA);
+
+let __i18nObserver = null;
+const __hasJaLike = /[ぁ-んァ-ン一-龠々〆ヵヶ]/;
+
+function i18nReplace(text){
+  let out = String(text ?? '');
+  if(!out) return out;
+  if(currentLang === 'ja'){
+    const s = out.trim();
+    let m = s.match(/^LLM:\s*Done$/i);
+    if(m) return 'LLM: 完了';
+    m = s.match(/^LLM:\s*Skipped$/i);
+    if(m) return 'LLM: スキップ';
+    m = s.match(/^LLM:\s*Generating prompt\.\.\.$/i);
+    if(m) return 'LLM: プロンプト生成中...';
+    m = s.match(/^ComfyUI:\s*(\d+)\s*queued$/i);
+    if(m) return `ComfyUI: ${m[1]} 件キュー投入`;
+    m = s.match(/^ComfyUI:\s*Queued\s*\((\d+)\)$/i);
+    if(m) return `ComfyUI: キュー投入 (${m[1]})`;
+    m = s.match(/^ComfyUI:\s*Generating\.\.\.\s*(\d+)%$/i);
+    if(m) return `ComfyUI: 生成中... ${m[1]}%`;
+    m = s.match(/^ComfyUI:\s*Generating\.\.\.$/i);
+    if(m) return 'ComfyUI: 生成中...';
+  }
+  const dict = (currentLang === 'en') ? I18N_MAP_EN : I18N_MAP_JA;
+  if(dict[out]) return dict[out];
+  const normExact = (currentLang === 'en') ? I18N_EXACT_NORM_EN : I18N_EXACT_NORM_JA;
+  const nk = normalizeI18nKey(out);
+  if(normExact[nk]) return normExact[nk];
+  if(currentLang === 'en' && !__hasJaLike.test(out) && !out.includes('（長押しで選択）')) return out;
+  if(currentLang === 'ja' && __hasJaLike.test(out)) return out;
+  const replacers = ((currentLang === 'en') ? I18N_REPLACERS_EN : I18N_REPLACERS_JA)
+    .filter(([from]) => from.length >= 2);
+  for(const [from, to] of replacers){
+    out = out.split(from).join(to);
+  }
+  return out;
+}
+
+const _nativeAlert = window.alert.bind(window);
+const _nativeConfirm = window.confirm.bind(window);
+const _nativePrompt = window.prompt.bind(window);
+window.alert = (msg)=>_nativeAlert(i18nReplace(msg));
+window.confirm = (msg)=>_nativeConfirm(i18nReplace(msg));
+window.prompt = (msg, def='')=>_nativePrompt(i18nReplace(msg), i18nReplace(def));
+
+function applyI18nToElement(el){
+  if(!el) return;
+  if(el.nodeType === Node.TEXT_NODE){
+    if(el.parentElement && !['SCRIPT','STYLE'].includes(el.parentElement.tagName)){
+      const nextText = i18nReplace(el.nodeValue);
+      if(nextText !== el.nodeValue) el.nodeValue = nextText;
+    }
+    return;
+  }
+  if(el.nodeType !== Node.ELEMENT_NODE) return;
+  if(el.title){
+    const nextTitle = i18nReplace(el.title);
+    if(nextTitle !== el.title) el.title = nextTitle;
+  }
+  if(el.placeholder){
+    const nextPh = i18nReplace(el.placeholder);
+    if(nextPh !== el.placeholder) el.placeholder = nextPh;
+  }
+  if(el.tagName === 'INPUT' && (el.type === 'button' || el.type === 'submit') && el.value){
+    const nextValue = i18nReplace(el.value);
+    if(nextValue !== el.value) el.value = nextValue;
+  }
+  for(const c of el.childNodes) applyI18nToElement(c);
+}
+
+function refreshLangButtons(){
+  const jaBtn = document.getElementById('langBtnJa');
+  const enBtn = document.getElementById('langBtnEn');
+  if(!jaBtn || !enBtn) return;
+  jaBtn.classList.toggle('active', currentLang === 'ja');
+  enBtn.classList.toggle('active', currentLang === 'en');
+}
+
+function setLang(lang){
+  const nextLang = (lang === 'ja') ? 'ja' : 'en';
+  if(nextLang === currentLang) return;
+  currentLang = nextLang;
+  localStorage.setItem(__LANG_STORAGE_KEY__, currentLang);
+  document.documentElement.lang = currentLang === 'ja' ? 'ja' : 'en';
+  refreshLangButtons();
+  applyI18nToElement(document.body);
+  setupI18nObserver();
+}
+window.setLang = setLang;
+
+function teardownI18nObserver(){
+  if(__i18nObserver){
+    try{ __i18nObserver.disconnect(); }catch(_){}
+    __i18nObserver = null;
+  }
+}
+
+function setupI18nObserver(){
+  teardownI18nObserver();
+  __i18nObserver = new MutationObserver((muts)=>{
+    for(const m of muts){
+      if(m.type === 'characterData'){
+        applyI18nToElement(m.target);
+      }else if(m.type === 'childList'){
+        m.addedNodes.forEach(n => applyI18nToElement(n));
+      }
+    }
+  });
+  __i18nObserver.observe(document.body, {
+    subtree: true,
+    childList: true,
+    characterData: true
+  });
+}
+
+function scheduleI18nIfNeeded(){
+  const run = ()=>{
+    applyI18nToElement(document.body);
+    setupI18nObserver();
+  };
+  if('requestIdleCallback' in window){
+    window.requestIdleCallback(run, {timeout: 1200});
+  }else{
+    setTimeout(run, 0);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.documentElement.lang = currentLang === 'ja' ? 'ja' : 'en';
+  refreshLangButtons();
+  // Startup fast-path: Japanese mode skips full-DOM i18n walk.
+  scheduleI18nIfNeeded();
+});
+
 let running=false, settingsOpen=false, lastPositivePrompt=null;
 window._comfyClientId = 'anima-' + Math.random().toString(36).slice(2,10);
 window._comfyWs = null;
@@ -1453,6 +2320,9 @@ let lastFinalPrompt='', lastNegativePrompt='';
 let galleryItems = []; // {imagePaths:[], positivePrompt:'', negativePrompt:'', timestamp:''}
 let modalItemIndex = -1;
 let modalCurrentImgUrl = '';
+let selectedPresetFilename = '';
+let presetThumbOpen = false;
+let _updatingPresetThumbTargetSel = false;
 
 function addGalleryItems(imagePaths, positivePrompt, negativePrompt){
   if(!imagePaths || imagePaths.length===0) return;
@@ -1460,7 +2330,7 @@ function addGalleryItems(imagePaths, positivePrompt, negativePrompt){
     imagePaths,
     positivePrompt: positivePrompt||'',
     negativePrompt: negativePrompt||'',
-    timestamp: new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit',second:'2-digit'})
+    timestamp: new Date().toLocaleTimeString(currentLang==='ja'?'ja-JP':'en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'})
   };
   galleryItems.push(item);
   renderGalleryItem(item, galleryItems.length-1);
@@ -1496,10 +2366,178 @@ function openGalleryModal(idx, imgPath, item){
   document.getElementById('modalTitle').textContent = '生成結果 ' + item.timestamp;
   document.getElementById('modalPositive').textContent = item.positivePrompt||'（なし）';
   document.getElementById('modalNegative').textContent = item.negativePrompt||'（なし）';
+  updateThumbActionState();
 }
 
 function closeGalleryModal(event){
   document.getElementById('galleryModal').style.display='none';
+}
+
+function getPresetThumbPath(preset){
+  if(!preset || !preset._filename) return '';
+  if(preset._thumb_path) return preset._thumb_path;
+  return '';
+}
+
+function updateThumbActionState(){
+  const btn = document.getElementById('modalThumbBtn');
+  if(!btn) return;
+  const canRun = !!selectedPresetFilename && !!modalCurrentImgUrl;
+  btn.disabled = !canRun;
+  btn.style.opacity = canRun ? '1' : '0.45';
+  btn.style.cursor = canRun ? 'pointer' : 'not-allowed';
+}
+
+function togglePresetThumbPanel(forceOpen=null){
+  if(forceOpen === null) presetThumbOpen = !presetThumbOpen;
+  else presetThumbOpen = !!forceOpen;
+  const body = document.getElementById('presetThumbBody');
+  const arrow = document.getElementById('presetThumbArrow');
+  if(body) body.style.display = presetThumbOpen ? 'block' : 'none';
+  if(arrow) arrow.textContent = presetThumbOpen ? '▼' : '▶';
+  if(presetThumbOpen) renderPresetThumbList();
+}
+
+function updatePresetThumbTargetSelect(){
+  const sel = document.getElementById('presetThumbTargetSel');
+  if(!sel) return;
+  _updatingPresetThumbTargetSel = true;
+  const cur = selectedPresetFilename;
+  sel.innerHTML = '<option value="">-- Select Preset --</option>';
+  charaPresets.forEach((p)=>{
+    const opt = document.createElement('option');
+    opt.value = p._filename || '';
+    opt.textContent = p.name || p._filename || '(unnamed)';
+    sel.appendChild(opt);
+  });
+  if(cur && charaPresets.some(p=>p._filename===cur)){
+    sel.value = cur;
+  }
+  _updatingPresetThumbTargetSel = false;
+}
+
+function onPresetThumbTargetChange(filename){
+  if(_updatingPresetThumbTargetSel) return;
+  if(!filename) return;
+  if(filename === selectedPresetFilename) return;
+  selectedPresetFilename = filename;
+  renderPresetThumbList();
+}
+
+function addCharaFromSelectedPreset(){
+  if(!selectedPresetFilename){
+    alert('先に対象プリセットを選択してください');
+    return;
+  }
+  const presetIndex = charaPresets.findIndex(p => p._filename === selectedPresetFilename);
+  if(presetIndex < 0){
+    alert('対象プリセットが見つかりません');
+    return;
+  }
+  const countEl = document.getElementById('f_charcount');
+  const current = Math.max(0, Math.min(6, parseInt(countEl?.value)||0));
+  if(current >= 6){
+    alert('キャラ数は最大6です');
+    return;
+  }
+  if(countEl) countEl.value = String(current + 1);
+  updateCharaBlocks();
+  const newIdx = current;
+  const sel = document.getElementById('chara_preset_sel_' + newIdx);
+  if(sel){
+    sel.value = String(presetIndex);
+  }
+}
+
+function renderPresetThumbList(){
+  const grid = document.getElementById('presetThumbGrid');
+  const targetEl = document.getElementById('presetThumbTargetName');
+  if(!grid) return;
+  if(presetThumbOpen) updatePresetThumbTargetSelect();
+  if(targetEl){
+    const curName = charaPresets.find(p=>p._filename===selectedPresetFilename)?.name
+      || charaPresets[0]?.name
+      || '-';
+    targetEl.textContent = curName;
+  }
+  if(!presetThumbOpen) return;
+  if(!selectedPresetFilename || !charaPresets.some(p=>p._filename===selectedPresetFilename)){
+    selectedPresetFilename = charaPresets[0]?._filename || '';
+    updatePresetThumbTargetSelect();
+  }
+  grid.innerHTML = '';
+  if(charaPresets.length===0){
+    const empty = document.createElement('div');
+    empty.style.cssText = 'grid-column:1/-1;font-family:DM Mono,monospace;font-size:0.68rem;color:var(--muted);padding:0.4rem;';
+    empty.textContent = 'サムネイル未設定';
+    grid.appendChild(empty);
+    if(targetEl) targetEl.textContent = '-';
+    updateThumbActionState();
+    return;
+  }
+  const shown = charaPresets.filter(p=>!!p._thumb_path);
+  if(shown.length===0){
+    const empty = document.createElement('div');
+    empty.style.cssText = 'grid-column:1/-1;font-family:DM Mono,monospace;font-size:0.68rem;color:var(--muted);padding:0.4rem;';
+    empty.textContent = 'サムネイル未設定';
+    grid.appendChild(empty);
+    updateThumbActionState();
+    return;
+  }
+  shown.forEach((p)=>{
+    const active = p._filename===selectedPresetFilename;
+    const card = document.createElement('div');
+    card.style.cssText = 'position:relative;border:2px solid '+(active?'var(--multi)':'var(--border)')+';border-radius:8px;overflow:hidden;cursor:pointer;background:#f0f0f0;aspect-ratio:1;transition:border-color 0.15s;';
+    card.title = p.name || p._filename;
+    card.onclick = ()=>{
+      selectedPresetFilename = p._filename;
+      renderPresetThumbList();
+    };
+    const imgWrap = document.createElement('div');
+    imgWrap.style.cssText = 'width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#ececf2;';
+    const img = document.createElement('img');
+    img.src = '/chara_thumb?file=' + encodeURIComponent(p._filename) + '&_ts=' + Date.now();
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+    img.onerror = ()=>{ img.remove(); };
+    imgWrap.appendChild(img);
+    const name = document.createElement('div');
+    name.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.65);color:white;font-family:DM Mono,monospace;font-size:0.58rem;padding:0.2rem 0.3rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
+    name.textContent = (p.name || p._filename);
+    card.appendChild(imgWrap);
+    card.appendChild(name);
+    grid.appendChild(card);
+  });
+  const cur = charaPresets.find(p=>p._filename===selectedPresetFilename);
+  if(targetEl) targetEl.textContent = cur ? (cur.name || cur._filename) : '-';
+  updateThumbActionState();
+}
+
+async function createPresetThumbnailFromModal(){
+  if(!selectedPresetFilename){
+    alert('サムネ作成対象のプリセットを選択してください');
+    return;
+  }
+  if(!modalCurrentImgUrl){
+    alert('ギャラリー画像を先に開いてください');
+    return;
+  }
+  const preset = charaPresets.find(p=>p._filename===selectedPresetFilename);
+  if(!preset) return;
+  if(!confirm(`「${preset.name || preset._filename}」のサムネイルを更新しますか？`)) return;
+  try{
+    const res = await fetch('/chara_preset_thumb',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ filename:selectedPresetFilename, image_path:modalCurrentImgUrl })
+    });
+    const data = await res.json();
+    if(!res.ok || !data.ok) throw new Error(data.error || 'unknown error');
+    await loadCharaPresets();
+    renderPresetThumbList();
+    alert('サムネイル保存: ' + (data.thumb_file || 'OK'));
+  }catch(e){
+    alert('サムネイル作成失敗: ' + e.message);
+  }
 }
 
 async function openFolderFromModal(){
@@ -1632,10 +2670,13 @@ let charaPresets = [];  // キャラプリセット一覧
 // ===== キャラプリセット管理 =====
 async function loadCharaPresets(){
   try{
-    const res = await fetch('/chara_presets');
+    const res = await fetch('/chara_presets', { cache: 'no-store' });
     charaPresets = await res.json();
     updateAllPresetSelects();
-  }catch(e){ charaPresets=[]; }
+  }catch(e){
+    charaPresets=[];
+    updateAllPresetSelects();
+  }
 }
 
 async function saveCharaPresetToServer(preset, filename=null){
@@ -1716,7 +2757,7 @@ async function saveCharaPreset(idx){
     preset._filename = res.filename;
     charaPresets.push(preset);
     updateAllPresetSelects();
-    alert(`「${preset.name}」を保存しました`);
+    alert(`Saved: ${preset.name}`);
   }
 }
 
@@ -1736,6 +2777,7 @@ function updatePresetSelect(selEl){
 function updateAllPresetSelects(){
   document.querySelectorAll('[id^="chara_preset_sel_"]').forEach(sel=>updatePresetSelect(sel));
   updatePresetSelect(document.getElementById('presetDeleteSel'));
+  renderPresetThumbList();
 }
 
 async function deleteCharaPresetFromSettings(){
@@ -1745,7 +2787,7 @@ async function deleteCharaPresetFromSettings(){
   if(isNaN(i)) return;
   const preset = charaPresets[i];
   if(!preset) return;
-  if(!confirm(`「${preset.name}」を削除しますか？`)) return;
+  if(!confirm(`Delete preset "${preset.name}"?`)) return;
   await deleteCharaPresetFromServer(preset._filename);
   charaPresets.splice(i, 1);
   updateAllPresetSelects();
@@ -1993,7 +3035,7 @@ function initLoraSlots(){
   const header = document.createElement('div');
   header.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:0.5rem;';
   const reloadBtn = document.createElement('button');
-  reloadBtn.textContent = '🔄 LoRA一覧取得';
+  reloadBtn.textContent = '🔄 Fetch LORA List';
   reloadBtn.onclick = loadLoraList;
   reloadBtn.style.cssText = 'font-family:DM Mono,monospace;font-size:0.68rem;padding:0.25rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--muted);cursor:pointer;white-space:nowrap;';
   header.appendChild(reloadBtn);
@@ -2274,6 +3316,9 @@ async function loadSettings(){
     if(cfg.scheduler) { const el=document.getElementById('schedulerInput'); if(el) el.value=cfg.scheduler; }
     selectedSeedMode = cfg.seed_mode||'random';
     document.getElementById('outputDirInput').value=cfg.comfyui_output_dir||'';
+    document.getElementById('logDirInput').value=cfg.log_dir||'logs';
+    document.getElementById('logRetentionInput').value=(cfg.log_retention_days ?? 30);
+    document.getElementById('logLevelInput').value=(cfg.log_level||'normal');
   }catch(e){console.warn(e);}
 }
 
@@ -2315,15 +3360,28 @@ async function saveSettings(){
     comfyui_url:document.getElementById('comfyUrlInput').value,
     workflow_json_path:document.getElementById('workflowInput').value,
     comfyui_output_dir:document.getElementById('outputDirInput').value,
+    log_dir:document.getElementById('logDirInput').value||'logs',
+    log_retention_days:parseInt(document.getElementById('logRetentionInput').value)||30,
+    log_level:document.getElementById('logLevelInput').value||'normal',
     positive_node_id:document.getElementById('posNodeInput').value,
     negative_node_id:document.getElementById('negNodeInput').value,
     ksampler_node_id:document.getElementById('ksamplerNodeInput').value||'19',
+    console_lang: currentLang,
     ...collectGenParams(),
   };
   await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});
   const n=document.getElementById('saveNotice');
   n.style.display='block';
   setTimeout(()=>{n.style.display='none';},3000);
+}
+
+function openLogsFolder(){
+  const p = (document.getElementById('logDirInput')?.value||'logs').trim() || 'logs';
+  fetch('/open_folder?path='+encodeURIComponent(p));
+}
+
+function downloadLogsZip(){
+  window.location.href = '/logs_zip';
 }
 
 function copyPrompt(elId, btn){
@@ -2364,12 +3422,13 @@ function setStep(steps,id,state,text){
   let el=document.getElementById(id);
   if(!el){el=document.createElement('div');el.id=id;steps.appendChild(el);}
   el.className='step '+state;
-  el.innerHTML=(state==='active'?'<div class="spinner"></div>':'<div class="dot"></div>')+text;
+  const rendered = i18nReplace(text);
+  el.innerHTML=(state==='active'?'<div class="spinner"></div>':'<div class="dot"></div>')+rendered;
 }
 
 // ===== セッション保存・読み込み =====
 function collectSessionData(){
-  const count = Math.max(1, Math.min(6, parseInt(document.getElementById('f_charcount').value)||1));
+  const count = Math.max(0, Math.min(6, parseInt(document.getElementById('f_charcount').value)||0));
   const chars = [];
   for(let i=0;i<count;i++){
     const ch = {
@@ -2497,7 +3556,7 @@ async function loadSession(input){
 
 function applySession(data){
   document.getElementById('f_series').value = data.series||'';
-  const count = data.charcount||1;
+  const count = Math.max(0, Math.min(6, parseInt(data.charcount)||0));
   document.getElementById('f_charcount').value = count;
   updateCharaBlocks();
   setTimeout(()=>{
@@ -3379,7 +4438,7 @@ function makeCharaBlock(idx){
   const seriesInput = document.createElement('input');
   seriesInput.type = 'text';
   seriesInput.id = 'chara_series_'+idx;
-  seriesInput.placeholder = '例: ウマ娘、ブルアカ';
+  seriesInput.placeholder = 'Umamusume';
   seriesInput.className = 'inp-ja';
   seriesInput.style.cssText = 'flex:1;min-width:0;background:white;border:1px solid var(--border);border-radius:5px;padding:0.45rem 0.6rem;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--ink);outline:none;box-sizing:border-box;';
 
@@ -3948,10 +5007,15 @@ function makeCharaBlock(idx){
     hairStyleBtns.appendChild(sep);
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;gap:0.2rem;flex-wrap:wrap;';
+    if(group === '全体' || group === '後ろ'){
+      row.style.cssText = 'display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:0.2rem;';
+      row.classList.add('hs-grid-row');
+    }
     row.dataset.hsgroup = group;
     const items = HAIRSTYLE_OPTIONS.filter(o=>o.group===group);
     const noneBtn = document.createElement('div');
     noneBtn.className = 'age-btn active';
+    if(row.classList.contains('hs-grid-row')) noneBtn.style.flex = 'unset';
     noneBtn.dataset.hs = '';
     noneBtn.textContent = '－';
     noneBtn.addEventListener('click',function(){
@@ -3964,6 +5028,7 @@ function makeCharaBlock(idx){
     items.forEach(({v,label})=>{
       const btn = document.createElement('div');
       btn.className = 'age-btn';
+      if(row.classList.contains('hs-grid-row')) btn.style.flex = 'unset';
       btn.dataset.hs = v;
       btn.textContent = label;
       btn.addEventListener('click',function(){
@@ -4595,7 +5660,7 @@ function selScene(group, el){
 }
 
 function updateCharaBlocks(){
-  const count = Math.max(1, Math.min(6, parseInt(document.getElementById('f_charcount').value)||1));
+  const count = Math.max(0, Math.min(6, parseInt(document.getElementById('f_charcount').value)||0));
   const container = document.getElementById('charaContainer');
   const current = container.children.length;
   if(count > current){
@@ -4608,7 +5673,7 @@ function updateCharaBlocks(){
 
 function collectInput(useLLM=true){
   const series = document.getElementById('f_series').value.trim();
-  const count = Math.max(1, Math.min(6, parseInt(document.getElementById('f_charcount').value)||1));
+  const count = Math.max(0, Math.min(6, parseInt(document.getElementById('f_charcount').value)||0));
   const characters = [];
   let boys=0, girls=0, others=0;
   for(let i=0; i<count; i++){
@@ -4807,7 +5872,13 @@ document.addEventListener('DOMContentLoaded', ()=>{
     const el = document.getElementById('versionBadge');
     if(el) el.textContent = 'v' + d.version;
   }).catch(()=>{});
-  loadCharaPresets().then(()=>updateCharaBlocks());
+  updateCharaBlocks();
+  if(window.innerWidth <= 700){
+    setTimeout(()=>{ loadCharaPresets().then(()=>updateCharaBlocks()); }, 350);
+  }else{
+    loadCharaPresets().then(()=>updateCharaBlocks());
+  }
+  togglePresetThumbPanel(false);
   loadSettings();
   // スマホのみページ表示と同時にWS接続開始
   if(window.innerWidth <= 700){
@@ -4840,6 +5911,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   initLoraSlots();
   loadWorkflowList();
   loadLastSession();
+  // Ensure section toggles are ready immediately.
+  initSectionToggles();
   // 少し遅らせて実行（スマホ表示速度改善）
   setTimeout(()=>{
     initExtraPresets();
@@ -4922,15 +5995,15 @@ async function generate(){
         document.getElementById('f_misc')?.value,
       ].filter(v=>v && /^[a-zA-Z0-9_\-,\s()]+$/.test(v));
       sceneVals.forEach(v=>{ if(v) charDirectTags.push(v); });
-      setStep(steps,'s1','done','LLM: スキップ');
+      setStep(steps,'s1','done','LLM: Skipped');
     }
-    else { setStep(steps,'s1','active','LLM: プロンプト生成中...'); }
+    else { setStep(steps,'s1','active','LLM: Generating prompt...'); }
     const res=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input,use_llm:document.getElementById('useLLM').checked,width:selectedW,height:selectedH,fmt:selectedFmt,count:selectedCount,extra_tags:Array.from(extraTags),char_direct_tags:charDirectTags,prompt_prefix:collectPromptPrefix(),extra_note_en:document.getElementById('extraNoteEn').value.trim(),negative_prompt:collectNegativePrompt(),gen_params:collectGenParams(),lora_slots:collectLoraSlots(),workflow_file:getSelectedWorkflow(),client_id:window._comfyClientId})});
     const data=await res.json();
     if(data.error){
-      setStep(steps,'s1','error','エラー: '+data.error);
+      setStep(steps,'s1','error','Error: '+data.error);
     }else{
-      setStep(steps,'s1','done','LLM: 完了');
+      setStep(steps,'s1','done','LLM: Done');
       lastPositivePrompt=data.pre_extra_prompt || data.positive_prompt || data.final_prompt || '';
       lastFinalPrompt=data.final_prompt||'';
       lastNegativePrompt=data.negative_prompt||'';
@@ -4952,16 +6025,16 @@ async function generate(){
       if(data.comfyui_sent){
         const ids=(data.prompt_ids||[data.prompt_id]).join(', ');
         const n=data.prompt_ids?data.prompt_ids.length:1;
-        setStep(steps,'s2','done',`ComfyUI: ${n}枚キューに追加`);
-        setStep(steps,'s3','active','ComfyUI: 生成中...');
+        setStep(steps,'s2','done',`ComfyUI: ${n} queued`);
+        setStep(steps,'s3','active','ComfyUI: Generating...');
         pollComfyUIComplete(data.prompt_ids||[data.prompt_id], steps);
         return; // running解除はpoll完了後
       }else{
-        setStep(steps,'s2','error','ComfyUI: 送信失敗 — '+(data.comfyui_error||'不明なエラー'));
+        setStep(steps,'s2','error','ComfyUI: Send failed - '+(data.comfyui_error||'Unknown error'));
       }
     }
   }catch(e){
-    setStep(steps,'s1','error','ネットワークエラー: '+e.message);
+    setStep(steps,'s1','error','Network error: '+e.message);
     running=false;
     document.getElementById('btn').disabled=false;
     document.getElementById('cancelBtn').classList.remove('show');
@@ -4976,7 +6049,7 @@ async function cancelGenerate(){
   running=false;
   document.getElementById('btn').disabled=false;
   document.getElementById('cancelBtn').classList.remove('show');
-  setStep(document.getElementById('steps'),'s_cancel','error','■ 生成中止しました');
+  setStep(document.getElementById('steps'),'s_cancel','error','Cancelled');
   if(lastPositivePrompt){ document.getElementById('regenBtn').classList.add('show'); }
 }
 
@@ -5000,9 +6073,9 @@ async function pollComfyUIComplete(promptIds, steps, stepId='s3'){
       if(type === 'progress'){
         const pct = d.max ? Math.round(d.value/d.max*100) : 0;
         progressBar.style.width = pct + '%';
-        setStep(steps,stepId,'active',`ComfyUI: 生成中... ${pct}%`);
+        setStep(steps,stepId,'active',`ComfyUI: Generating... ${pct}%`);
       } else if(type === 'executing' && d.node){
-        setStep(steps,stepId,'active',`ComfyUI: 生成中... ${progressBar.style.width}`);
+        setStep(steps,stepId,'active',`ComfyUI: Generating... ${progressBar.style.width}`);
       }
     }catch(e){}
   };
@@ -5027,8 +6100,10 @@ async function pollComfyUIComplete(promptIds, steps, stepId='s3'){
       const data = await res.json();
       if(data.image_paths){
         for(const [pid, info] of Object.entries(data.image_paths)){
-          const urls = info.view_urls || info;
+          const files = info.file_paths || [];
+          const urls = info.view_urls || [];
           if(Array.isArray(urls) && urls.length) collectedPaths.push(...urls);
+          else if(Array.isArray(files) && files.length) collectedPaths.push(...files);
           else if(Array.isArray(info) && info.length) collectedPaths.push(...info);
         }
       }
@@ -5037,9 +6112,9 @@ async function pollComfyUIComplete(promptIds, steps, stepId='s3'){
         const done = promptIds.length - pending.size;
         const q = data.queue||{};
         let queueStr = '';
-        if(q.position != null) queueStr = ` — キュー待機中 (${q.position}番目)`;
-        else if(q.running > 0 || q.pending > 0) queueStr = ` — キュー: 実行中${q.running}件 / 待機${q.pending}件`;
-        setStep(steps,stepId,'active',`ComfyUI: 生成中 (${done}/${promptIds.length}枚完了)${queueStr}`);
+        if(q.position != null) queueStr = ` - Queue waiting (#${q.position})`;
+        else if(q.running > 0 || q.pending > 0) queueStr = ` - Queue: running ${q.running} / pending ${q.pending}`;
+        setStep(steps,stepId,'active',`ComfyUI: Generating (${done}/${promptIds.length} done)${queueStr}`);
       }
     }catch(e){}
   }
@@ -5051,7 +6126,7 @@ async function pollComfyUIComplete(promptIds, steps, stepId='s3'){
   progressWrap.style.display = 'none';
   progressBar.style.width = '0%';
   if(wsNotice) wsNotice.style.display='none';
-  setStep(steps,stepId,'done',`ComfyUI: 生成完了 (${promptIds.length}枚)`);
+  setStep(steps,stepId,'done',`ComfyUI: Done (${promptIds.length})`);
   if(collectedPaths.length > 0){
     const posPrompt = document.getElementById('promptFinal')?.textContent||lastFinalPrompt||'';
     const negPrompt = document.getElementById('promptNegFinal')?.textContent||lastNegativePrompt||'';
@@ -5083,7 +6158,7 @@ async function regenPrompt(){
   const steps=document.getElementById('steps');
   steps.innerHTML='';
   try{
-    setStep(steps,'s_regen','active','ComfyUI: 再画像生成中...');
+    setStep(steps,'s_regen','active','ComfyUI: Re-generating image...');
     const regenExtraTags = Array.from(extraTags);
     const regenExtraEn = document.getElementById('extraNoteEn').value.trim();
     const res=await fetch('/regen',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -5104,7 +6179,7 @@ async function regenPrompt(){
       document.getElementById('regenBtn').classList.add('show');
     }else{
       const promptIds = data.prompt_ids || [data.prompt_id];
-      setStep(steps,'s_regen','done','ComfyUI: キューに追加 ('+promptIds.length+'枚)');
+      setStep(steps,'s_regen','done','ComfyUI: Queued ('+promptIds.length+')');
       if(data.final_prompt){
         document.getElementById('finalLabel').style.display='block'; document.getElementById('finalLabel').classList.remove('collapsed');
         const finalEl = document.getElementById('promptFinal');
@@ -5161,9 +6236,10 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Type','text/html; charset=utf-8')
             self.end_headers()
             ui_opts = load_ui_options()
+            os_lang = detect_os_ui_lang()
             injected = HTML.replace(
                 '<script>',
-                '<script>\nconst __OPT__ = ' + json.dumps(ui_opts, ensure_ascii=False) + ';\n',
+                '<script>\nconst __OPT__ = ' + json.dumps(ui_opts, ensure_ascii=False) + ';\nconst __OS_LANG__ = ' + json.dumps(os_lang) + ';\n',
                 1  # 最初の<script>タグだけ
             )
             self.wfile.write(injected.encode('utf-8'))
@@ -5172,6 +6248,40 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Type','application/json')
             self.end_headers()
             self.wfile.write(json.dumps(load_config(),ensure_ascii=False).encode('utf-8'))
+        elif self.path=='/logs_info':
+            cfg = load_config()
+            info = {
+                'log_dir': _resolve_log_dir(cfg),
+                'log_file': _LOG_FP or '',
+                'log_level': cfg.get('log_level', 'normal'),
+                'log_retention_days': int(cfg.get('log_retention_days', 30) or 30),
+            }
+            self.send_response(200)
+            self.send_header('Content-Type','application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(info, ensure_ascii=False).encode('utf-8'))
+        elif self.path=='/logs_zip':
+            cfg = load_config()
+            log_dir = _resolve_log_dir(cfg)
+            mem = io.BytesIO()
+            with zipfile.ZipFile(mem, mode='w', compression=zipfile.ZIP_DEFLATED) as zf:
+                if os.path.isdir(log_dir):
+                    for fn in sorted(os.listdir(log_dir)):
+                        if not fn.lower().endswith('.log'):
+                            continue
+                        fp = os.path.join(log_dir, fn)
+                        if os.path.isfile(fp):
+                            try:
+                                zf.write(fp, arcname=fn)
+                            except Exception:
+                                pass
+            data = mem.getvalue()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/zip')
+            self.send_header('Content-Disposition', 'attachment; filename="anima_logs.zip"')
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
         elif self.path.startswith('/test_connection'):
             from urllib.parse import urlparse, parse_qs
             import urllib.request as _ureq
@@ -5194,7 +6304,7 @@ class Handler(BaseHTTPRequestHandler):
                 token = cfg.get('llm_token','').strip()
                 model = cfg.get('llm_model','')
                 if not url:
-                    result = {'ok': False, 'message': 'LLM URLが未設定です'}
+                    result = {'ok': False, 'message': 'LLM URL is not set'}
                 else:
                     try:
                         if platform == 'gemini':
@@ -5209,7 +6319,7 @@ class Handler(BaseHTTPRequestHandler):
                         req = _ureq.Request(test_url, headers=headers)
                         with _ureq.urlopen(req, timeout=5) as r:
                             r.read()
-                        result = {'ok': True, 'message': f'LLM 接続OK ({platform or "カスタム"}: {url})'}
+                        result = {'ok': True, 'message': f'LLM connected ({platform or "Custom"}: {url})'}
                     except Exception as e:
                         result = {'ok': False, 'message': f'LLM 接続失敗: {e}'}
             print(f"[接続テスト] {'OK' if result['ok'] else 'NG'}: {result['message']}")
@@ -5386,9 +6496,13 @@ class Handler(BaseHTTPRequestHandler):
                 for fn in sorted(os.listdir(CHARA_PRESETS_DIR)):
                     if fn.endswith('.json'):
                         try:
-                            with open(os.path.join(CHARA_PRESETS_DIR,fn),'r',encoding='utf-8') as f:
+                            with open(os.path.join(CHARA_PRESETS_DIR,fn),'r',encoding='utf-8-sig') as f:
                                 p = json.load(f)
                                 p['_filename'] = fn
+                                thumb_fn = os.path.splitext(fn)[0] + '.webp'
+                                thumb_path = os.path.join(CHARA_PRESETS_DIR, thumb_fn)
+                                if os.path.exists(thumb_path):
+                                    p['_thumb_path'] = thumb_path.replace('\\', '/')
                                 presets.append(p)
                         except: pass
             self.send_response(200)
@@ -5500,6 +6614,8 @@ class Handler(BaseHTTPRequestHandler):
                     try:
                         wf = json.load(open(wf_path, encoding='utf-8'))
                         # API形式か保存形式か判定
+                        nodes = []
+                        links = {}
                         if 'nodes' not in wf:
                             # API形式 → 保存形式に近い構造で解析
                             # class_typeからKSampler/CLIPTextEncodeを直接探す
@@ -5658,6 +6774,80 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(result, ensure_ascii=False).encode())
             return
 
+        elif self.path.startswith('/get_image'):
+            from urllib.parse import urlparse, parse_qs
+            raw_query = urlparse(self.path).query
+            qs = parse_qs(raw_query, keep_blank_values=True)
+            img_path = qs.get('path',[''])[0].strip().replace('/', os.sep)
+            if not img_path:
+                self.send_response(404)
+                self.end_headers()
+                return
+
+            cfg2 = load_config()
+            output_dir = cfg2.get('comfyui_output_dir', '').strip()
+            if not output_dir:
+                wf_path = cfg2.get('workflow_json_path', '')
+                if wf_path and not os.path.isabs(wf_path):
+                    wf_path = os.path.join(_base_dir, wf_path)
+                wf_path = wf_path.replace(os.sep, '/')
+                parts = wf_path.split('/')
+                for i, p in enumerate(parts):
+                    if p.lower() == 'comfyui':
+                        output_dir = os.path.normpath('/'.join(parts[:i+1]) + '/output')
+                        break
+                if not output_dir and wf_path:
+                    output_dir = os.path.normpath(os.path.join(os.path.dirname(wf_path), '..', '..', 'output'))
+
+            allowed_roots = [os.path.realpath(_base_dir)]
+            if output_dir:
+                allowed_roots.append(os.path.realpath(output_dir))
+
+            real_path = os.path.normcase(os.path.realpath(os.path.normpath(img_path)))
+            is_allowed = False
+            for root in allowed_roots:
+                root_norm = os.path.normcase(root)
+                if real_path == root_norm or real_path.startswith(root_norm + os.sep):
+                    is_allowed = True
+                    break
+            if not is_allowed or (not os.path.exists(real_path)):
+                self.send_response(404 if os.path.exists(real_path) is False else 403)
+                self.end_headers()
+                return
+
+            ext = os.path.splitext(real_path)[1].lower()
+            mime = {'png':'image/png','jpg':'image/jpeg','jpeg':'image/jpeg','webp':'image/webp'}.get(ext.lstrip('.'), 'image/png')
+            with open(real_path, 'rb') as f:
+                data = f.read()
+            self.send_response(200)
+            self.send_header('Content-Type', mime)
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
+
+        elif self.path.startswith('/chara_thumb'):
+            from urllib.parse import urlparse, parse_qs, unquote
+            qs = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+            fn = unquote(qs.get('file', [''])[0]).strip()
+            if (not fn) or (os.path.basename(fn) != fn) or (not fn.endswith('.json')):
+                self.send_response(404)
+                self.end_headers()
+                return
+            thumb_path = os.path.join(CHARA_PRESETS_DIR, os.path.splitext(fn)[0] + '.webp')
+            if not os.path.exists(thumb_path):
+                self.send_response(404)
+                self.end_headers()
+                return
+            with open(thumb_path, 'rb') as f:
+                data = f.read()
+            self.send_response(200)
+            self.send_header('Content-Type', 'image/webp')
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
+
         else:
             self.send_response(404)
             self.end_headers()
@@ -5708,9 +6898,103 @@ class Handler(BaseHTTPRequestHandler):
                         if os.path.exists(filepath):
                             os.remove(filepath)
                             print(f'[プリセット] 削除: {filename}')
+                        thumb_path = os.path.join(CHARA_PRESETS_DIR, os.path.splitext(filename)[0] + '.webp')
+                        if os.path.exists(thumb_path):
+                            os.remove(thumb_path)
+                            print(f'[プリセット] サムネ削除: {os.path.basename(thumb_path)}')
             except Exception as e:
                 result = {'ok': False, 'error': str(e)}
                 print(f'[プリセット] エラー: {e}')
+            self.send_response(200)
+            self.send_header('Content-Type','application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(result,ensure_ascii=False).encode('utf-8'))
+        elif self.path=='/chara_preset_thumb':
+            os.makedirs(CHARA_PRESETS_DIR, exist_ok=True)
+            result = {'ok': True}
+            try:
+                filename = str(body.get('filename','')).strip()
+                image_path_raw = str(body.get('image_path','')).strip()
+                image_path = image_path_raw
+                if (not filename) or (not filename.endswith('.json')) or (os.path.basename(filename) != filename):
+                    raise ValueError('invalid preset filename')
+                preset_path = os.path.join(CHARA_PRESETS_DIR, filename)
+                if not os.path.exists(preset_path):
+                    raise FileNotFoundError('preset not found')
+                if not image_path:
+                    raise ValueError('image path is empty')
+
+                # If ComfyUI /view URL is passed, resolve to local output file path.
+                if image_path.lower().startswith('http') and '/view?' in image_path:
+                    from urllib.parse import urlparse, parse_qs, unquote
+                    vqs = parse_qs(urlparse(image_path).query, keep_blank_values=True)
+                    vf = unquote(vqs.get('filename',[''])[0]).strip()
+                    vs = unquote(vqs.get('subfolder',[''])[0]).strip().replace('/', os.sep)
+                    if vf:
+                        cfg_tmp = load_config()
+                        out_tmp = cfg_tmp.get('comfyui_output_dir', '').strip()
+                        if not out_tmp:
+                            wf_path = cfg_tmp.get('workflow_json_path', '')
+                            if wf_path and not os.path.isabs(wf_path):
+                                wf_path = os.path.join(_base_dir, wf_path)
+                            wf_path = wf_path.replace(os.sep, '/')
+                            parts = wf_path.split('/')
+                            for i, p in enumerate(parts):
+                                if p.lower() == 'comfyui':
+                                    out_tmp = os.path.normpath('/'.join(parts[:i+1]) + '/output')
+                                    break
+                            if not out_tmp and wf_path:
+                                out_tmp = os.path.normpath(os.path.join(os.path.dirname(wf_path), '..', '..', 'output'))
+                        image_path = os.path.normpath(os.path.join(out_tmp, vs, vf) if vs else os.path.join(out_tmp, vf))
+                else:
+                    # Local path mode
+                    image_path = image_path.replace('/', os.sep)
+
+                cfg2 = load_config()
+                output_dir = cfg2.get('comfyui_output_dir', '').strip()
+                if not output_dir:
+                    wf_path = cfg2.get('workflow_json_path', '')
+                    if wf_path and not os.path.isabs(wf_path):
+                        wf_path = os.path.join(_base_dir, wf_path)
+                    wf_path = wf_path.replace(os.sep, '/')
+                    parts = wf_path.split('/')
+                    for i, p in enumerate(parts):
+                        if p.lower() == 'comfyui':
+                            output_dir = os.path.normpath('/'.join(parts[:i+1]) + '/output')
+                            break
+                    if not output_dir and wf_path:
+                        output_dir = os.path.normpath(os.path.join(os.path.dirname(wf_path), '..', '..', 'output'))
+
+                allowed_roots = [os.path.realpath(_base_dir)]
+                if output_dir:
+                    allowed_roots.append(os.path.realpath(output_dir))
+
+                real_src = os.path.normcase(os.path.realpath(os.path.normpath(image_path)))
+                is_allowed = False
+                for root in allowed_roots:
+                    root_norm = os.path.normcase(root)
+                    if real_src == root_norm or real_src.startswith(root_norm + os.sep):
+                        is_allowed = True
+                        break
+                if not is_allowed:
+                    raise PermissionError('image path not allowed')
+                if not os.path.exists(real_src):
+                    raise FileNotFoundError('source image not found')
+
+                thumb_file = os.path.splitext(filename)[0] + '.webp'
+                thumb_path = os.path.join(CHARA_PRESETS_DIR, thumb_file)
+                from PIL import Image
+                img = Image.open(real_src)
+                img.thumbnail((768, 768), Image.Resampling.LANCZOS if hasattr(Image, 'Resampling') else Image.LANCZOS)
+                if img.mode not in ('RGB', 'RGBA'):
+                    img = img.convert('RGB')
+                img.save(thumb_path, 'WEBP', quality=88, method=6)
+                result['thumb_file'] = thumb_file
+                result['thumb_path'] = thumb_path.replace('\\', '/')
+                print(f'[プリセット] サムネ保存: {thumb_file} <- {real_src}')
+            except Exception as e:
+                result = {'ok': False, 'error': str(e)}
+                print(f'[プリセット] サムネエラー: {e}')
             self.send_response(200)
             self.send_header('Content-Type','application/json')
             self.end_headers()
@@ -5830,16 +7114,75 @@ class Handler(BaseHTTPRequestHandler):
             img_path = qs.get('path',[''])[0].strip()
             # スラッシュをOSのセパレータに変換（Windows対応）
             img_path = img_path.replace('/', os.sep)
-            if not img_path or not os.path.exists(img_path):
+            if not img_path:
                 self.send_response(404)
                 self.end_headers()
                 return
-            ext = os.path.splitext(img_path)[1].lower()
+
+            cfg2 = load_config()
+            output_dir = cfg2.get('comfyui_output_dir', '').strip()
+            if not output_dir:
+                wf_path = cfg2.get('workflow_json_path', '')
+                if wf_path and not os.path.isabs(wf_path):
+                    wf_path = os.path.join(_base_dir, wf_path)
+                wf_path = wf_path.replace(os.sep, '/')
+                parts = wf_path.split('/')
+                for i, p in enumerate(parts):
+                    if p.lower() == 'comfyui':
+                        output_dir = os.path.normpath('/'.join(parts[:i+1]) + '/output')
+                        break
+                if not output_dir and wf_path:
+                    output_dir = os.path.normpath(os.path.join(os.path.dirname(wf_path), '..', '..', 'output'))
+
+            allowed_roots = [os.path.realpath(_base_dir)]
+            if output_dir:
+                allowed_roots.append(os.path.realpath(output_dir))
+
+            real_path = os.path.normcase(os.path.realpath(os.path.normpath(img_path)))
+            is_allowed = False
+            for root in allowed_roots:
+                root_norm = os.path.normcase(root)
+                if real_path == root_norm or real_path.startswith(root_norm + os.sep):
+                    is_allowed = True
+                    break
+            if not is_allowed:
+                self.send_response(403)
+                self.end_headers()
+                return
+
+            if not os.path.exists(real_path):
+                self.send_response(404)
+                self.end_headers()
+                return
+
+            ext = os.path.splitext(real_path)[1].lower()
             mime = {'png':'image/png','jpg':'image/jpeg','jpeg':'image/jpeg','webp':'image/webp'}.get(ext.lstrip('.'), 'image/png')
-            with open(img_path, 'rb') as f:
+            with open(real_path, 'rb') as f:
                 data = f.read()
             self.send_response(200)
             self.send_header('Content-Type', mime)
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
+
+        elif self.path.startswith('/chara_thumb'):
+            from urllib.parse import urlparse, parse_qs, unquote
+            qs = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+            fn = unquote(qs.get('file', [''])[0]).strip()
+            if (not fn) or (os.path.basename(fn) != fn) or (not fn.endswith('.json')):
+                self.send_response(404)
+                self.end_headers()
+                return
+            thumb_path = os.path.join(CHARA_PRESETS_DIR, os.path.splitext(fn)[0] + '.webp')
+            if not os.path.exists(thumb_path):
+                self.send_response(404)
+                self.end_headers()
+                return
+            with open(thumb_path, 'rb') as f:
+                data = f.read()
+            self.send_response(200)
+            self.send_header('Content-Type', 'image/webp')
             self.send_header('Content-Length', str(len(data)))
             self.end_headers()
             self.wfile.write(data)
@@ -5910,7 +7253,11 @@ class Handler(BaseHTTPRequestHandler):
                     raw=call_llm(user_input,cfg)
                     positive=extract_positive_prompt(raw)
                     if Handler.cancel_event.is_set():
-                        result["error"]="中止されました"
+                        result["error"]="cancelled"
+                        self.send_response(200)
+                        self.send_header('Content-Type','application/json')
+                        self.end_headers()
+                        self.wfile.write(json.dumps(result,ensure_ascii=False).encode('utf-8'))
                         return
                     print(f"[LLM] 完了: {positive}")
                     result["positive_prompt"]=positive
@@ -6008,35 +7355,39 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(result,ensure_ascii=False).encode('utf-8'))
 
 
-def check_server(name,url,path="/"):
+def check_server(name,url,path="/", cfg=None):
     try:
         requests.get(url+path,timeout=3)
-        print(f"  ✓ {name}: 接続OK ({url})")
+        print(f"  ✓ {name}: {_ct('接続OK', 'Connected', cfg)} ({url})")
     except Exception as e:
-        print(f"  ✗ {name}: 接続失敗 ({url}) → {e}")
+        print(f"  ✗ {name}: {_ct('接続失敗', 'Connection failed', cfg)} ({url}) -> {e}")
 
 def main():
+    _install_exception_logging()
     cfg=load_config()
+    # Console block from "[接続確認]" downward should follow OS language.
+    _os_lang = detect_os_ui_lang()
+    _os_cfg = {"console_lang": _os_lang}
     print("="*55)
     print(f"  Anima Pipeline  v{__version__}")
     print("="*55)
-    print("\n[接続確認]")
-    check_server("LLM",cfg["llm_url"],"/api/v1/models")
-    check_server("ComfyUI  ",cfg["comfyui_url"],"/system_stats")
+    print(f"\n[{_ct('接続確認', 'Connection Check', _os_cfg)}]")
+    check_server("LLM",cfg["llm_url"],"/api/v1/models", _os_cfg)
+    check_server("ComfyUI  ",cfg["comfyui_url"],"/system_stats", _os_cfg)
     print()
     print(f"  UI:           http://localhost:{UI_PORT}")
     print(f"  LM Studio:    {cfg['llm_url']}")
-    print(f"  モデル:       {cfg['llm_model']}")
+    print(f"  {_ct('モデル', 'Model', _os_cfg)}:       {cfg['llm_model']}")
     print(f"  ComfyUI:      {cfg['comfyui_url']}")
-    print(f"  ワークフロー: {cfg.get('workflow_json_path','未設定')}")
-    print(f"  設定ファイル: {CONFIG_FILE}")
+    print(f"  {_ct('ワークフロー', 'Workflow', _os_cfg)}: {cfg.get('workflow_json_path', _ct('未設定','Unset', _os_cfg))}")
+    print(f"  {_ct('設定ファイル', 'Config File', _os_cfg)}: {CONFIG_FILE}")
     print("="*55)
-    print("\nCtrl+C で停止\n")
+    print(f"\n{_ct('Ctrl+C で停止', 'Press Ctrl+C to stop', _os_cfg)}\n")
     server=HTTPServer(('0.0.0.0',UI_PORT),Handler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\n停止しました。")
+        print(f"\n{_ct('停止しました。', 'Stopped.', _os_cfg)}")
 
 if __name__=='__main__':
     main()
