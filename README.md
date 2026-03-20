@@ -89,7 +89,7 @@ anima_pipeline/
   start_anima_pipeline.bat       ← Windows起動用
   requirements.txt               ← 依存ライブラリ
   README.md
-  anima_pipeline_guide.md        ← 詳細ガイド
+  docs/guides/anima_pipeline_guide.md  ← 詳細ガイド
   workflows/                     ← ワークフローJSONを置くフォルダ
     image_anima_preview.json     ← LoRAなし（自分で用意）
     image_anima_preview_Lora4.json ← LoRA×4対応（同梱）
@@ -105,8 +105,8 @@ anima_pipeline/
 ---
 
 ## 📖 Detailed Guide (使い方完全ガイド)
-[日本語ガイド → anima_pipeline_guide.md](anima_pipeline_guide.md)  
-[English Guide → anima_pipeline_guide.md (Japanese only for now)](anima_pipeline_guide.md)
+[日本語ガイド → docs/guides/anima_pipeline_guide.md](docs/guides/anima_pipeline_guide.md)  
+[English Guide → docs/guides/anima_pipeline_guide.md (Japanese only for now)](docs/guides/anima_pipeline_guide.md)
 
 ## 関連記事
 - note: https://note.com/rhustudio/n/nf0dc2414f852
