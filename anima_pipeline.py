@@ -26,7 +26,7 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
-__version__ = "1.4.69999977"
+__version__ = "1.4.69999980"
 
 def _sf(name): return os.path.join(_settings_dir, name)
 
@@ -980,8 +980,8 @@ HTML = r"""<!DOCTYPE html>
 
   /* ===== モバイル対応 ===== */
   @media (max-width: 700px){
-    body{ padding:0.5rem; padding-bottom:5rem; }
-    .container{ padding:1.2rem 1rem; border-radius:8px; }
+    body{ padding:0.5rem; padding-bottom:5rem; overflow-x:hidden; }
+    .container{ padding:1.2rem 1rem; border-radius:8px; overflow-x:clip; }
     h1{ font-size:0.72rem; letter-spacing:0.2em; }
     h2{ font-size:1.2rem; margin-bottom:1.2rem; }
 
@@ -1019,6 +1019,27 @@ HTML = r"""<!DOCTYPE html>
     .chara-header-row1 > :nth-child(2){ grid-column:1 / 3; grid-row:2; }
     .chara-header-row1 > :nth-child(3){ grid-column:1 / 3; grid-row:3; }
     .chara-header-row1 > :nth-child(4){ grid-column:2; grid-row:1; justify-self:end; }
+    .chara-header-row2{
+      grid-template-columns:1fr !important;
+      gap:0.45rem;
+    }
+    .chara-attr-group{min-width:0;}
+    .chara-attr-btns{
+      flex-wrap:wrap;
+      gap:0.22rem;
+    }
+    .chara-attr-btns .gender-btn,
+    .chara-attr-btns .age-btn{
+      flex:1 1 calc(50% - 0.22rem);
+      min-width:4.7rem;
+      padding:0.42rem 0.24rem;
+      font-size:0.66rem;
+      letter-spacing:0;
+    }
+    .chara-attr-label{
+      font-size:0.62rem;
+      letter-spacing:0.03em;
+    }
     #presetThumbControlRow{
       flex-wrap:wrap !important;
       align-items:stretch !important;
@@ -1079,6 +1100,17 @@ HTML = r"""<!DOCTYPE html>
       text-overflow:ellipsis;
     }
     #floatNav > div:first-child{ display:none; } /* NAVラベル非表示 */
+
+    /* STATUSの長文がスマホで極端に崩れないよう調整 */
+    .step{
+      gap:0.42rem;
+      font-size:0.69rem;
+      line-height:1.35;
+      align-items:flex-start;
+      overflow-wrap:anywhere;
+      word-break:break-word;
+    }
+    .status-label{font-size:0.64rem;}
 
 
     /* LoRAグリッドをモバイルで3列固定 */
@@ -1815,6 +1847,8 @@ const BASE_I18N_MAP_EN = {
   'カスタムタグを入力': 'Enter custom tag',
   '例:': 'e.g.:',
   'ワークフローJSONパス（フォールバック）': 'Workflow JSON Path (fallback)',
+  'ワークフローJSONが見つかりません:': 'Workflow JSON not found:',
+  'ワークフローJSONが見つかりません': 'Workflow JSON not found',
   'WORKFLOWS/ フォルダから選択（優先）': 'Select from WORKFLOWS/ folder (preferred)',
   'LLMを使うならRequired': 'Required if using LLM',
   '任意': 'Optional',
@@ -1890,6 +1924,10 @@ const BASE_I18N_MAP_EN = {
   '特殊': 'Special',
   'ワークフローJSONパス（フォールバック）': 'Workflow JSON Path (fallback)',
   'WORKFLOWS/ フォルダから選択（優先）': 'Select from WORKFLOWS/ folder (preferred)',
+  'anima_pipeline/workflows/ にJSONを置くと表示されます。選択時にNode IDを自動検出します（ControlNet等が挟まる場合は手動確認を）': 'Files appear when JSON is placed in `anima_pipeline/workflows/`. Node IDs are auto-detected on selection (verify manually if ControlNet or other nodes are inserted).',
+  'にJSONを置くと表示されます。': 'appears when JSON is placed there.',
+  '選択時にNode IDを自動検出します': 'Node IDs are auto-detected on selection',
+  'ControlNet等が挟まる場合は手動確認を': 'verify manually if ControlNet or similar nodes are inserted',
   'workflows/ フォルダから選択（優先）': 'Select from workflows/ folder (preferred)',
   '　 workflows/ フォルダから選択（優先）': 'Select from workflows/ folder (preferred)',
   'WORKFLOWS/ フォルダから選択(PREFERRED)': 'Select from WORKFLOWS/ folder (PREFERRED)',
