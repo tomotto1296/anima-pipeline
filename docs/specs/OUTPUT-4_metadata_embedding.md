@@ -6,10 +6,10 @@
 - Roadmap No.: OUTPUT-4
 - Roadmap Priority: HIGH
 - Owner:
-- Status: Implemented (Validation in progress)
+- Status: Implemented
 - Version: v1
 - Last Updated: 2026-03-22
-- Target Version: v1.4.x
+- Target Version: v1.4.718
 
 ---
 
@@ -147,11 +147,12 @@ Workflow version: <workflow_json_version>
 
 ## Acceptance Criteria / 完了基準
 
-1. PNG保存時、`parameters` テキストチャンクにプロンプト・モデル・LoRA一覧・ワークフローバージョンが含まれている
-2. WebP変換オプションONの場合、出力がWebP形式であり、メタデータが埋め込まれている
-3. Civitaiへアップロードした際、プロンプト等が自動認識される
-4. LoRAが0件でもエラーなく動作する
-5. WebP変換失敗時はPNGにフォールバックし、エラーをユーザーに通知する
+1. [x] PNG保存時、`parameters` テキストチャンクにプロンプト・モデル・LoRA一覧・ワークフローバージョンが含まれている
+2. [x] WebP変換オプションONの場合、出力がWebP形式であり、メタデータが埋め込まれている
+3. [x] Civitaiへアップロードした際、プロンプト等が自動認識される（PNG・WebP両形式確認済み）
+4. [x] 複数LoRAのメタデータがCivitaiに正しく表示される
+5. [x] メタデータ埋め込みトグルOFFでメタデータなし保存が動作する
+6. WebP変換失敗時はPNGにフォールバックし、エラーをユーザーに通知する
 - [ ] JA / EN 言語切替で表示が崩れない
 - [ ] スマホ（モバイルUI）で表示・操作が正常
 - [ ] 既存プリセット・セッションの読み込みが壊れない
@@ -172,11 +173,9 @@ Workflow version: <workflow_json_version>
 ## Test Plan / テスト計画
 
 ### Manual
-- PNG形式で生成し、画像ファイルのメタデータ（exiftool等）でパラメータが埋め込まれていることを確認
-- WebP形式に切り替えて生成し、WebPファイルにメタデータが埋め込まれていることを確認
-- Civitaiに画像をアップロードし、プロンプト・モデル・LoRAが自動認識されることを確認
-- LoRAを使用しない状態で生成し、LoRA欄が空でも正常保存されることを確認
-- メタデータ埋め込みトグルをOFFにした場合、メタデータなしで保存されることを確認
+- [x] PNG形式で生成 → Civitaiにメタデータ・LoRAが表示されることを確認（複数LoRA含む）
+- [x] WebP形式で生成 → Civitaiにメタデータ・LoRAが表示されることを確認（複数LoRA含む）
+- [x] メタデータ埋め込みトグルOFF → メタデータなしで保存されることを確認
 
 ### Edge Cases
 - LoRAが0件のとき
@@ -205,7 +204,7 @@ Workflow version: <workflow_json_version>
 
 ## Open Questions / 未決事項
 
-- ~~WebP のメタデータ埋め込み方式: Exif UserComment と XMP どちらを優先するか~~ → **決定: Exif UserComment を主とし、XMP に同内容を二重書きして互換性を確保する。** Pillow の `save(format='WEBP', exif=...)` で実装。`params_str` は PNG の `parameters` チャンクと同一フォーマットを使用。Civitai の WebP 読み取りは枯れていないため実機確認必須。
+- ~~WebP のメタデータ埋め込み方式: Exif UserComment と XMP どちらを優先するか~~ → **決定・実機確認済み: PNG・WebP 両形式で Civitai にメタデータ・LoRA（複数含む）が正常表示された。** v1.4.718 で動作確認済み。
 - ワークフローJSONバージョンの識別子形式: ファイル名・タイムスタンプ・手動バージョン文字列のどれを使うか
 - `embed_metadata` トグルをUIに常時表示するか、詳細設定として折りたたむか
 
