@@ -1,0 +1,42 @@
+name: Codex Mention Trigger
+
+on:
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+
+jobs:
+  handle-codex-mention:
+    if: |
+      contains(github.event.comment.body, '@codex') &&
+      github.event.comment.user.login != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Acknowledge mention
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.comment.body;
+            const isPR = !!context.payload.pull_request ||
+                         context.eventName === 'pull_request_review_comment';
+
+            const reactionTarget = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: 'eyes'
+            };
+
+            // PRレビューコメントとIssueコメントで API が異なる
+            if (context.eventName === 'pull_request_review_comment') {
+              await github.rest.reactions.createForPullRequestReviewComment(reactionTarget);
+            } else {
+              await github.rest.reactions.createForIssueComment(reactionTarget);
+            }
+
+            console.log(`@codex mention detected:\n${body}`);
