@@ -220,3 +220,13 @@
 - Added `docs/specs/README.md`.
 - Included spec template, naming rule, and update workflow.
 
+### 27) OUTPUT-4 メタデータ埋め込み強化 (Issue #8) — v1.4.718
+- 生成画像にプロンプト・ネガティブプロンプト・モデル名・LoRA一覧・ワークフローJSONバージョン・生成パラメータをメタデータとして埋め込む
+- PNG: `tEXt` チャンク（`parameters` キー）へ格納（A1111/Civitai互換フォーマット）
+- WebP: Exif UserComment を主とし XMP に同内容を二重書き
+- 複数LoRA対応を確認済み
+- 保存形式セレクタ（PNG / WebP）をUIに追加
+- メタデータ埋め込みトグル追加（OFF時はメタデータなしで保存）
+- `pipeline_config.json` に `output_format`・`embed_metadata` キーを追加（デフォルト: `"png"` / `true`）
+- Civitai へのアップロードで PNG・WebP 両形式のメタデータ・LoRA自動認識を実機確認済み
+
