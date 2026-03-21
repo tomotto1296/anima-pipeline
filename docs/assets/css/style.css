@@ -615,7 +615,7 @@ a:hover { text-decoration: underline; }
   .setup-grid { grid-template-columns: 1fr; }
   .gallery-grid { grid-template-columns: 1fr 1fr; }
   .req-grid { grid-template-columns: 1fr; }
-  .nav-links li:not(:last-child) { display: none; }
+  .nav-links li:not(:nth-last-child(-n+2)) { display: none; }
   .cta-btns { width: 100%; }
   .btn-primary, .btn-secondary { width: 100%; text-align: center; }
 }
