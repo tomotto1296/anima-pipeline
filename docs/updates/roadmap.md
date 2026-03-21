@@ -2,7 +2,7 @@
 
 最終更新: 2026-03-21
 
-> 実装済み機能の一覧は [features.md](./features.md) を参照してください。
+> 実装済み機能の一覧は [features.md](../specs/features.md) を参照してください。
 
 ---
 
