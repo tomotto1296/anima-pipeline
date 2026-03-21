@@ -4,7 +4,7 @@
 
 - Issue: #14
 - Roadmap No.: INPUT-4
-- Roadmap Priority: HIGH（★★☆）
+- Roadmap Priority: MUST（★★☆）
 - Owner:
 - Status: Draft
 - Version: v1
@@ -33,6 +33,7 @@
   - LoRA の検索・お気に入り・推奨weight（INPUT-6 で対応）
   - ネガティブプリセットの種別分離（INPUT-5 で対応）
   - 完成プリセットへの LLM 自動タグ付け
+  - キャラプリセット JSON への `name_en` / `series_en` フィールド追加（INPUT-12 で対応予定）
 
 ---
 
@@ -159,7 +160,7 @@ DELETE /presets/<category>/<name>
 
 ### 既存エンドポイントへの変更
 
-- `/chara_list`・`/chara_load`・`/chara_save`・`/chara_delete` は引き続き動作させ、内部で `GET/POST/DELETE /presets/chara/<name>` へリダイレクトまたは共通関数に統合する（後方互換）。
+- `/chara_list`・`/chara_load`・`/chara_save`・`/chara_delete` は引き続き動作させる（後方互換）。実装方針: **共通関数に統合してラッパーとして残す**。旧エンドポイントは内部で `preset_load('chara', name)` 等の共通関数を呼び出す薄いラッパーとする。これにより将来的にラッパーだけ削除すれば移行が完結する。
 
 ---
 
@@ -178,19 +179,22 @@ DELETE /presets/<category>/<name>
 #### camera プリセット
 ```json
 {
+  "posv": "",
+  "posh": "",
   "pos_camera": "",
   "camera_free": ""
 }
 ```
+> `posv`（画面上下）・`posh`（画面左右）は `ui_options.json` の `pos_vertical` / `pos_horizontal` に対応。`pos_camera`（カメラアングル）と合わせて3フィールドが実際のUIに存在する（`anima_pipeline.py` 内 `chara_posv_*` / `chara_posh_*` 参照）。
 
 #### quality プリセット
 ```json
 {
-  "quality_preset_key": "quality_human",
   "quality_tags": ["best quality"],
   "quality_neg_tags": ["normal quality", "low quality", "worst quality"]
 }
 ```
+> 方針: `quality_preset_key`（`quality_human` / `quality_pony` 等）は保存しない。タグ選択肢は `ui_options.json` から動的に取得するが、**保存するのはタグ文字列の配列のみ**とする。これにより `ui_options.json` のキー構造が変わっても保存データが壊れない。
 
 #### lora プリセット
 ```json
@@ -337,7 +341,7 @@ DELETE /presets/<category>/<name>
 - 完成プリセットの読込時、スナップショット展開とプリセット名参照のどちらを優先するか（→ 現状はスナップショット優先を推奨）
 - `style_tags.json` / `extra_tags.json` を将来的に scene/quality プリセットへ統合するか（→ 別 Issue で検討）
 - LoRA構成プリセットと ComfyUI ワークフロー内の LoRA ノードとのマッピング方法（ワークフロー依存のため要調査）
-- quality プリセットの `quality_preset_key`（`quality_human` / `quality_pony` 等）は `ui_options.json` に依存するが、動的に選択肢を生成するか静的にハードコードするか
+- キャラプリセット JSON への `name_en` / `series_en` 追加（INPUT-12）は本機能と実装タイミングが重なる可能性がある。INPUT-12 実装時にスキーマを拡張すること（本 Issue の範囲外）。
 
 ---
 
