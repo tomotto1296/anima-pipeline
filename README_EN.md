@@ -128,13 +128,24 @@ See [docs/roadmap.md](docs/roadmap.md) for the full list.
 
 - Preset hierarchy (character / scene / camera / quality / LoRA composition)
 - Per-preset negative-tag save and auto-switch
-- Named session saves with multiple slots
 - Generation history DB + re-edit support
+- Named session saves with multiple slots
+- Self-diagnosis UI on failures (error cause hints / missing-node warnings)
+- LoRA management improvements (search, favorites, recommended weight, auto-suggestions)
+- Batch generation mode (CSV / txt -> sequential generation)
+- Generation queue (add / reorder / cancel / rerun)
+- Random character preset generation
+- Preset sharing (zip Export / Import)
+- Prompt diff viewer (vs previous run)
 
 ### Under Consideration
 
+- First-run tutorial wizard
 - Prompt recovery from image metadata (PNG / WebP)
-- Batch generation mode (list input -> sequential generation)
-- Generation queue (add / reorder / cancel / rerun)
-- LoRA management improvements (search, favorites, recommended weight, auto-suggestions)
+- "Continue with the same character" generation button
+- Comparison generation mode (fixed seed for prompt / LoRA / CFG comparisons)
+- Workflow reconstruction assistance (semi-automatic mapping)
+- LLM-based generated-image scoring and auto-routing
+- Auto Danbooru-tag generation from generated images
+- Preset sharing via URL code
 
