@@ -19,6 +19,8 @@
   "cfg": 4.0,
   "sampler_name": "er_sde",
   "scheduler": "simple",
+  "output_format": "png",
+  "embed_metadata": true,
   "console_lang": "ja",
   "log_dir": "logs",
   "log_retention_days": 30,

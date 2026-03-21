@@ -124,6 +124,13 @@ Please refer to [docs/guides/anima_pipeline_guide_en.md](docs/guides/anima_pipel
 
 See [docs/updates/roadmap.md](docs/updates/roadmap.md) for the full list.
 
+### Version Summary
+
+- `v1.4.8`: Foundation phase (metadata, history DB, preset structure, self-diagnosis UI)
+- `v1.4.9`: Daily-use improvements (LoRA management, random presets, sharing)
+- `v1.5.0`: Production highlights (batch generation, queue, comparison mode, image-to-prompt recovery)
+- `v1.5.x`: Advanced phase (evaluation, auto-tagging, workflow reconstruction assist)
+
 ### Coming Soon
 
 - Preset hierarchy (character / scene / camera / quality / LoRA composition)

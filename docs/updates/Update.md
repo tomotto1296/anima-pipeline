@@ -8,7 +8,7 @@
 - `1.4.699x` 系は `1.4.7` として正式リリース済み
 
 ## 現在バージョン
-- `1.4.7`（正式リリース）
+- `1.4.718`
 
 ## 実装サマリー（v1.4.6以降）
 
@@ -220,13 +220,46 @@
 - Added `docs/specs/README.md`.
 - Included spec template, naming rule, and update workflow.
 
-### 27) OUTPUT-4 メタデータ埋め込み強化 (Issue #8) — v1.4.718
-- 生成画像にプロンプト・ネガティブプロンプト・モデル名・LoRA一覧・ワークフローJSONバージョン・生成パラメータをメタデータとして埋め込む
-- PNG: `tEXt` チャンク（`parameters` キー）へ格納（A1111/Civitai互換フォーマット）
-- WebP: Exif UserComment を主とし XMP に同内容を二重書き
-- 複数LoRA対応を確認済み
-- 保存形式セレクタ（PNG / WebP）をUIに追加
-- メタデータ埋め込みトグル追加（OFF時はメタデータなしで保存）
-- `pipeline_config.json` に `output_format`・`embed_metadata` キーを追加（デフォルト: `"png"` / `true`）
-- Civitai へのアップロードで PNG・WebP 両形式のメタデータ・LoRA自動認識を実機確認済み
+
+## 直近追記（v1.4.71 ～ v1.4.718）
+
+### 27) OUTPUT-4: メタデータ埋め込み基盤を実装
+- `output_format`（`png`/`webp`）と `embed_metadata` を設定に追加。
+- 起動時移行処理を追加し、既存 `pipeline_config.json` に不足キーがある場合は自動補完。
+- 画像設定UIに `メタデータを埋め込む` トグルを追加（設定保存/復元、セッション復元対応）。
+
+### 28) PNG / WebP のメタデータ書き込みを実装
+- PNG:
+  - `parameters` を `tEXt` へ保存。
+  - 追加で `prompt` / `workflow` も保存（ComfyUI復元用途）。
+- WebP:
+  - Exif `UserComment` と XMP の両方へ保存。
+  - WebP変換失敗時はPNGへフォールバックし、処理継続。
+
+### 29) Civitai互換フォーマット調整（段階的）
+- `Model hash` / `Lora hashes` を埋め込み。
+- LoRAタグ `<lora:name:weight>` をメタデータ側プロンプトへ付与。
+- `parameters` をA1111最小互換の3行構成へ整理:
+  - Positive prompt
+  - Negative prompt
+  - `Steps, Sampler, CFG, Seed, Size, Model hash, Model, Lora hashes, Version`
+- ハッシュはAutoV2互換（10桁・大文字）を優先して出力。
+
+### 30) モデル/LoRAハッシュ解決の強化
+- `comfyui_output_dir` / `workflow_json_path` からComfyUIルート候補を推定。
+- `models/checkpoints` / `models/unet` / `models/diffusion_models` / `models/loras` を再帰探索。
+- basename一致フォールバックと簡易キャッシュを追加。
+
+### 31) 運用上の結論（実機検証結果）
+- Civitai `Resources`:
+  - PNG: 検出OK
+  - WebP: 検出OK
+- `embed_metadata = OFF`: 正常
+- 複数LoRA: 正常
+- ComfyUI再読込:
+  - PNGはworkflow復元OK
+  - WebPはworkflow復元なし（現状仕様/互換差として扱う）
+
+### 32) 版上げ履歴（細修正）
+- `1.4.71` → `1.4.711` → `1.4.712` → `1.4.713` → `1.4.714` → `1.4.715` → `1.4.716` → `1.4.717` → `1.4.718`
 
