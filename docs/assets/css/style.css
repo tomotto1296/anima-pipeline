@@ -136,7 +136,7 @@ a:hover { text-decoration: underline; }
   margin-bottom: 16px;
   letter-spacing: -0.02em;
 }
-.hero-title em { font-style: normal; color: var(--p600); }
+.hero-title em { font-style: normal; color: var(--p600); display: block; }
 .hero-sub {
   font-size: 15px;
   color: var(--txt2);
