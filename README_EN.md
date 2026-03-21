@@ -67,18 +67,27 @@ If accessing from a smartphone or using LoRA thumbnail display, add the followin
 
 ---
 
-## Main Features
+## Features
 
-- Automatically generate Danbooru tags from character names and work titles using an LLM
-- Fine-tune details such as hairstyle, hair color, eyes, mouth, expressions, outfits, and poses via the UI
-- LoRA injection (card grid UI, thumbnail display, up to 4 slots)
-- Workflow switching (select from the `workflows/` folder)
-- Preset management for quality tags and style tags in positive/negative prompts
-- Simultaneous configuration of multiple characters
-- Automatic session saving and restoration
-- Gallery and generated image preview
-- WebP conversion of generated images (optional)
-- Support for smartphones and tablets (on the same Wi-Fi network)
+| Status | Feature |
+|---|---|
+| ☑ | Auto-generate Danbooru tags from character/work names with an LLM |
+| ☑ | Fine-grained UI controls for hairstyle, hair color, eyes, mouth, expression, outfits, and poses |
+| ☑ | Configure up to 6 characters at once |
+| ☑ | Character preset save / load / delete |
+| ☑ | Preset thumbnail gallery view (v1.4.7) |
+| ☑ | Auto-create thumbnails from gallery images (v1.4.7) |
+| ☑ | Auto-generate presets from Danbooru Wiki + LLM |
+| ☑ | LoRA injection (card-grid UI, thumbnail view, up to 4 slots) |
+| ☑ | Workflow switching (select from `workflows/`, auto-detect Node IDs) |
+| ☑ | Live generation progress % display (WebSocket) |
+| ☑ | Preset management for positive / negative style tags |
+| ☑ | Automatic session save and restore |
+| ☑ | Gallery, generated-image preview, and prompt reuse |
+| ☑ | WebP conversion for generated images (optional) |
+| ☑ | Smartphone / tablet support (same Wi-Fi network) |
+| ☑ | UI language switching (Japanese / English) (v1.4.7) |
+| ☑ | Logging features (save, mask sensitive data, ZIP export) (v1.4.7) |
 
 ---
 
@@ -108,4 +117,24 @@ anima_pipeline/
 ## Details
 
 Please refer to [docs/guides/anima_pipeline_guide_en.md](docs/guides/anima_pipeline_guide_en.md).
+
+---
+
+## 🗺️ Roadmap
+
+See [docs/roadmap.md](docs/roadmap.md) for the full list.
+
+### Coming Soon
+
+- Preset hierarchy (character / scene / camera / quality / LoRA composition)
+- Per-preset negative-tag save and auto-switch
+- Named session saves with multiple slots
+- Generation history DB + re-edit support
+
+### Under Consideration
+
+- Prompt recovery from image metadata (PNG / WebP)
+- Batch generation mode (list input -> sequential generation)
+- Generation queue (add / reorder / cancel / rerun)
+- LoRA management improvements (search, favorites, recommended weight, auto-suggestions)
 
