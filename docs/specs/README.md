@@ -24,6 +24,16 @@ This folder is for managing feature specification documents.
 
 ---
 
+## Operational Docs / Roadmap & Features
+
+- Manage implemented features in `docs/specs/features.md`.
+- Manage planned features in `docs/updates/roadmap.md`.
+- Keep `features.md` for implemented items only.
+- Keep `roadmap.md` for planned items only.
+- Keep links in both files so users can move between them quickly.
+
+---
+
 ## File Naming / ファイル命名規則
 
 形式 / Format: `feature_<short_name>_v<major>.md`
