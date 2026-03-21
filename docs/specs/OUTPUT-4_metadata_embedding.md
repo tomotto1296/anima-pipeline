@@ -1,4 +1,4 @@
-# Feature Spec: OUTPUT-4 メタデータ埋め込み強化（LoRA・ワークフローJSONバージョンも記録）
+﻿# Feature Spec: OUTPUT-4 メタデータ埋め込み強化（LoRA・ワークフローJSONバージョンも記録）
 
 ## Meta
 
@@ -6,9 +6,9 @@
 - Roadmap No.: OUTPUT-4
 - Roadmap Priority: HIGH
 - Owner:
-- Status: Draft
+- Status: Implemented (Validation in progress)
 - Version: v1
-- Last Updated: 2026-03-21
+- Last Updated: 2026-03-22
 - Target Version: v1.4.x
 
 ---
@@ -157,6 +157,16 @@ Workflow version: <workflow_json_version>
 - [ ] 既存プリセット・セッションの読み込みが壊れない
 - [ ] ログに秘匿情報が出力されない
 
+### 実測結果（2026-03-22）
+- [x] PNGでCivitai `Resources` 検出
+- [x] WebPでCivitai `Resources` 検出
+- [x] メタデータ埋め込みOFF時の保存
+- [x] 複数LoRA時の保存
+- [x] PNGをComfyUIへ再読込した際にworkflow復元
+- [ ] WebP変換失敗時PNGフォールバック通知（未実機）
+- [ ] JA/EN往復表示（未実機）
+- [ ] モバイル表示（未実機）
+- [ ] 既存プリセット/セッション回帰（未実機）
 ---
 
 ## Test Plan / テスト計画
@@ -211,3 +221,4 @@ Workflow version: <workflow_json_version>
 | `settings/ui_options.json` | UIボタン選択肢の定義 |
 | `docs/specs/feature_api_v1.md` | 既存APIリファレンス |
 | `docs/updates/Update.md` | 実装後の変更ログ |
+

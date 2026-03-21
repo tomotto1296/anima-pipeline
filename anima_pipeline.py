@@ -26,7 +26,7 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
-__version__ = "1.4.7"
+__version__ = "1.4.718"
 
 def _sf(name): return os.path.join(_settings_dir, name)
 
@@ -45,6 +45,8 @@ _LOG_FP = None
 _LOG_FH = None
 _LOG_LEVEL = "normal"  # normal / debug
 _LOG_DIR = DEFAULT_LOGS_DIR
+_FILE_HASH_CACHE = {}
+_BASENAME_PATH_CACHE = {}
 
 def _mask_sensitive(text: str) -> str:
     s = str(text or "")
@@ -252,6 +254,8 @@ DEFAULT_CONFIG = {
     "cfg": 4.0,
     "sampler_name": "er_sde",
     "scheduler": "simple",
+    "output_format": "png",  # png / webp
+    "embed_metadata": True,
     "console_lang": "ja",   # ja / en
     "log_dir": "logs",
     "log_retention_days": 30,
@@ -263,11 +267,26 @@ def load_config() -> dict:
         try:
             cfg = DEFAULT_CONFIG.copy()
             saved = json.load(open(CONFIG_FILE, "r", encoding="utf-8-sig"))
+            migrated = False
             # 旧キー（lm_studio_*）からの移行フォールバック
             for old_key, new_key in [("lm_studio_url","llm_url"),("lm_studio_token","llm_token"),("lm_studio_model","llm_model")]:
                 if old_key in saved and new_key not in saved:
                     saved[new_key] = saved.pop(old_key)
+                    migrated = True
+            # OUTPUT-4: 新規キーの補完
+            for k in ("output_format", "embed_metadata"):
+                if k not in saved:
+                    saved[k] = DEFAULT_CONFIG[k]
+                    migrated = True
             cfg.update(saved)
+            if str(cfg.get("output_format", "png")).lower() not in ("png", "webp"):
+                cfg["output_format"] = "png"
+                migrated = True
+            else:
+                cfg["output_format"] = str(cfg.get("output_format", "png")).lower()
+            cfg["embed_metadata"] = bool(cfg.get("embed_metadata", True))
+            if migrated:
+                json.dump(cfg, open(CONFIG_FILE, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
             _apply_log_config(cfg)
             return cfg
         except Exception as e:
@@ -285,6 +304,10 @@ def save_config(cfg: dict):
             cfg["log_retention_days"] = max(0, int(cfg.get("log_retention_days", 30)))
         except Exception:
             cfg["log_retention_days"] = 30
+        cfg["output_format"] = str(cfg.get("output_format", "png")).lower()
+        if cfg["output_format"] not in ("png", "webp"):
+            cfg["output_format"] = "png"
+        cfg["embed_metadata"] = bool(cfg.get("embed_metadata", True))
         cfg["log_level"] = "debug" if str(cfg.get("log_level", "normal")).lower() == "debug" else "normal"
         cfg["log_dir"] = str(cfg.get("log_dir", "logs") or "logs").strip() or "logs"
         json.dump(cfg, open(CONFIG_FILE, "w", encoding="utf-8"), ensure_ascii=False, indent=2)
@@ -413,43 +436,349 @@ def call_llm(user_input: str, cfg: dict) -> str:
     return ""
 
 
-def convert_png_to_webp(png_path: str, quality: int = 90):
-    """PNGファイルをWebPに変換してPNGを削除"""
+def _workflow_version_label(workflow_path: str) -> str:
+    if not workflow_path:
+        return "unknown"
+    return os.path.basename(workflow_path.replace("\\", "/")) or "unknown"
+
+
+def _extract_checkpoint_name(api_prompt: dict) -> str:
+    keys = ("ckpt_name", "model_name", "unet_name", "checkpoint", "name")
+    for _, node in api_prompt.items():
+        if not isinstance(node, dict):
+            continue
+        inputs = node.get("inputs", {}) or {}
+        for k in keys:
+            v = inputs.get(k)
+            if isinstance(v, str) and v.strip():
+                return v.strip()
+    return "unknown"
+
+
+def _infer_comfy_root_candidates(cfg: dict, workflow_path: str = "") -> list[str]:
+    roots = []
+    out_dir = str(cfg.get("comfyui_output_dir", "") or "").strip()
+    if out_dir:
+        roots.extend([
+            os.path.abspath(out_dir),
+            os.path.abspath(os.path.join(out_dir, "..")),
+            os.path.abspath(os.path.join(out_dir, "..", "..")),
+        ])
+    wf_path = workflow_path or str(cfg.get("workflow_json_path", "") or "").strip()
+    if wf_path:
+        if not os.path.isabs(wf_path):
+            wf_path = os.path.join(_base_dir, wf_path)
+        wf_abs = os.path.abspath(wf_path)
+        roots.extend([
+            os.path.abspath(os.path.join(os.path.dirname(wf_abs), "..", "..")),
+            os.path.abspath(os.path.join(os.path.dirname(wf_abs), "..")),
+        ])
+    uniq = []
+    seen = set()
+    for p in roots:
+        p2 = os.path.normpath(p)
+        if p2 in seen:
+            continue
+        seen.add(p2)
+        uniq.append(p2)
+    return uniq
+
+
+def _sha256_hex(fp: str) -> str:
+    import hashlib
+    fp = os.path.abspath(fp)
+    try:
+        mtime = os.path.getmtime(fp)
+        size = os.path.getsize(fp)
+        key = (fp, mtime, size)
+        cached = _FILE_HASH_CACHE.get(key)
+        if cached:
+            return cached
+    except Exception:
+        key = None
+    h = hashlib.sha256()
+    with open(fp, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    digest = h.hexdigest()
+    if key:
+        _FILE_HASH_CACHE[key] = digest
+    return digest
+
+
+def _resolve_model_file(model_name: str, roots: list[str]) -> str:
+    if not model_name or model_name == "unknown":
+        return ""
+    rel = model_name.replace("\\", "/").lstrip("/")
+    cands = []
+    for r in roots:
+        cands.extend([
+            os.path.join(r, "models", "checkpoints", rel),
+            os.path.join(r, "models", "unet", rel),
+            os.path.join(r, "checkpoints", rel),
+            os.path.join(r, rel),
+        ])
+    for p in cands:
+        if os.path.isfile(p):
+            return p
+    # フォールバック: basename一致で探索（extra_model_paths.yaml等の分散配置対策）
+    base = os.path.basename(rel).lower()
+    search_dirs = []
+    for r in roots:
+        search_dirs.extend([
+            os.path.join(r, "models", "checkpoints"),
+            os.path.join(r, "models", "unet"),
+            os.path.join(r, "models", "diffusion_models"),
+            r,
+        ])
+    for d in search_dirs:
+        if not os.path.isdir(d):
+            continue
+        key = (os.path.abspath(d), base)
+        cached = _BASENAME_PATH_CACHE.get(key)
+        if cached and os.path.isfile(cached):
+            return cached
+        for root, _dirs, files in os.walk(d):
+            for fn in files:
+                if fn.lower() == base:
+                    fp = os.path.join(root, fn)
+                    _BASENAME_PATH_CACHE[key] = fp
+                    return fp
+    return ""
+
+
+def _resolve_lora_file(lora_name: str, roots: list[str]) -> str:
+    if not lora_name:
+        return ""
+    rel = lora_name.replace("\\", "/").lstrip("/")
+    cands = []
+    for r in roots:
+        cands.extend([
+            os.path.join(r, "models", "loras", rel),
+            os.path.join(r, "loras", rel),
+            os.path.join(r, rel),
+        ])
+    for p in cands:
+        if os.path.isfile(p):
+            return p
+    base = os.path.basename(rel).lower()
+    for r in roots:
+        for d in (os.path.join(r, "models", "loras"), os.path.join(r, "loras"), r):
+            if not os.path.isdir(d):
+                continue
+            key = (os.path.abspath(d), base)
+            cached = _BASENAME_PATH_CACHE.get(key)
+            if cached and os.path.isfile(cached):
+                return cached
+            for root, _dirs, files in os.walk(d):
+                for fn in files:
+                    if fn.lower() == base:
+                        fp = os.path.join(root, fn)
+                        _BASENAME_PATH_CACHE[key] = fp
+                        return fp
+    return ""
+
+
+def _build_parameters_text(meta: dict) -> str:
+    def _autov2(h: str) -> str:
+        return str(h or "")[:10].upper()
+
+    positive_prompt = str(meta.get("positive_prompt", "") or "")
+    loras = meta.get("lora", []) or []
+    for name, strength in loras:
+        base = os.path.basename(str(name).replace("\\", "/"))
+        stem = base.rsplit(".", 1)[0] if "." in base else base
+        tag = f"<lora:{stem}:{float(strength):g}>"
+        if tag.lower() not in positive_prompt.lower():
+            positive_prompt = (positive_prompt + ", " + tag).strip(", ")
+
+    model_hash_full = str(meta.get("model_hash", "") or "")
+    model_hash_short = _autov2(model_hash_full) if model_hash_full else ""
+    lora_auto_pairs = []
+    for name, h in meta.get("lora_hashes", []) or []:
+        if not h:
+            continue
+        base = os.path.basename(str(name).replace("\\", "/"))
+        stem = base.rsplit(".", 1)[0] if "." in base else base
+        lora_auto_pairs.append(f"{stem}: {_autov2(h)}")
+
+    params = (
+        f"Steps: {meta.get('steps', 30)}, "
+        f"Sampler: {meta.get('sampler', 'er_sde')}, "
+        f"CFG scale: {meta.get('cfg', 4.0)}, "
+        f"Seed: {meta.get('seed', 0)}, "
+        f"Size: {meta.get('width', 1024)}x{meta.get('height', 1024)}"
+    )
+    if model_hash_short:
+        params += f", Model hash: {model_hash_short}"
+    params += f", Model: {meta.get('model', 'unknown')}"
+    if lora_auto_pairs:
+        params += f", Lora hashes: \"{', '.join(lora_auto_pairs)}\""
+    params += f", Version: Anima Pipeline {__version__}"
+
+    return (
+        f"{positive_prompt}\n"
+        f"Negative prompt: {meta.get('negative_prompt', '')}\n"
+        f"{params}"
+    )
+
+
+def _cdata_escape(text: str) -> str:
+    return str(text or "").replace("]]>", "]]]]><![CDATA[>")
+
+
+def _build_webp_xmp(parameters_text: str, prompt_json: str = "", workflow_json: str = "") -> bytes:
+    xmp = (
+        '<?xpacket begin="" id="W5M0MpCehiHzreSzNTczkc9d"?>'
+        '<x:xmpmeta xmlns:x="adobe:ns:meta/">'
+        '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
+        '<rdf:Description xmlns:anima="https://anima-pipeline/metadata/1.0/">'
+        f'<anima:parameters><![CDATA[{_cdata_escape(parameters_text)}]]></anima:parameters>'
+        f'<anima:prompt><![CDATA[{_cdata_escape(prompt_json)}]]></anima:prompt>'
+        f'<anima:workflow><![CDATA[{_cdata_escape(workflow_json)}]]></anima:workflow>'
+        '</rdf:Description>'
+        '</rdf:RDF>'
+        '</x:xmpmeta>'
+        '<?xpacket end="w"?>'
+    )
+    return xmp.encode("utf-8")
+
+
+def _embed_png_metadata(png_path: str, parameters_text: str, prompt_json: str = "", workflow_json: str = ""):
+    from PIL import Image, PngImagePlugin
+    with Image.open(png_path) as img:
+        pnginfo = PngImagePlugin.PngInfo()
+        for k, v in (img.info or {}).items():
+            if isinstance(v, str) and k not in ("parameters", "prompt", "workflow"):
+                pnginfo.add_text(k, v)
+        pnginfo.add_text("parameters", parameters_text)
+        if prompt_json:
+            pnginfo.add_text("prompt", prompt_json)
+        if workflow_json:
+            pnginfo.add_text("workflow", workflow_json)
+        img.save(png_path, format="PNG", pnginfo=pnginfo)
+
+
+def _embed_webp_metadata(webp_path: str, parameters_text: str, quality: int = 90, xmp_blob: bytes = b""):
+    from PIL import Image
+    with Image.open(webp_path) as img:
+        exif = img.getexif()
+        exif[0x9286] = b"ASCII\x00\x00\x00" + parameters_text.encode("utf-8", errors="ignore")
+        img.save(
+            webp_path,
+            format="WEBP",
+            quality=quality,
+            exif=exif.tobytes(),
+            xmp=(xmp_blob or _build_webp_xmp(parameters_text)),
+        )
+
+
+def convert_png_to_webp(
+    png_path: str,
+    quality: int = 90,
+    parameters_text: str = "",
+    xmp_blob: bytes = b"",
+) -> tuple[bool, str]:
+    """PNGをWebPに変換。成功時はPNGを削除、失敗時はPNGを維持。"""
     try:
         from PIL import Image
-        webp_path = png_path.replace(".png", ".webp")
-        img = Image.open(png_path)
-        img.save(webp_path, "WEBP", quality=quality)
+        webp_path = os.path.splitext(png_path)[0] + ".webp"
+        with Image.open(png_path) as img:
+            save_kwargs = {"format": "WEBP", "quality": quality}
+            if parameters_text:
+                exif = img.getexif()
+                exif[0x9286] = b"ASCII\x00\x00\x00" + parameters_text.encode("utf-8", errors="ignore")
+                save_kwargs["exif"] = exif.tobytes()
+                save_kwargs["xmp"] = xmp_blob or _build_webp_xmp(parameters_text)
+            img.save(webp_path, **save_kwargs)
         os.remove(png_path)
         print(f"[WebP] 変換完了: {webp_path}")
+        return True, webp_path
     except Exception as e:
-        print(f"[WebP] 変換エラー: {e}")
+        print(f"[OUTPUT-4] WebP conversion error: {e}")
+        return False, png_path
 
 
-def watch_and_convert(comfyui_url: str, output_dir: str, date_folder: str, prompt_id: str, client_id: str = None, quality: int = 90):
-    """ComfyUI WebSocketでジョブ完了を検知し、生成されたPNGをWebPに変換"""
-    import threading, json as _json, urllib.request, urllib.parse
+def _postprocess_generated_files(
+    comfyui_url: str,
+    output_dir: str,
+    date_folder: str,
+    prompt_id: str,
+    output_format: str = "png",
+    embed_metadata: bool = True,
+    parameters_text: str = "",
+    prompt_json: str = "",
+    workflow_json: str = "",
+    quality: int = 90,
+):
+    import json as _json, urllib.request
     target_dir = os.path.join(output_dir, date_folder)
-    print(f"[WebP] 監視開始: prompt_id={prompt_id}")
+    hist_url = comfyui_url.rstrip("/") + f"/history/{prompt_id}"
+    with urllib.request.urlopen(hist_url) as r:
+        hist = _json.loads(r.read())
+    outputs = hist.get(prompt_id, {}).get("outputs", {})
+    for node_out in outputs.values():
+        for img in node_out.get("images", []):
+            fname = img.get("filename", "")
+            subfolder = img.get("subfolder", "")
+            fpath = os.path.join(output_dir, subfolder, fname) if subfolder else os.path.join(target_dir, fname)
+            if not os.path.exists(fpath):
+                continue
+            ext = os.path.splitext(fpath)[1].lower()
+            try:
+                if output_format == "webp":
+                    if ext == ".png":
+                        if embed_metadata and parameters_text:
+                            _embed_png_metadata(fpath, parameters_text, prompt_json=prompt_json, workflow_json=workflow_json)
+                        ok, _ = convert_png_to_webp(
+                            fpath,
+                            quality=quality,
+                            parameters_text=(parameters_text if embed_metadata else ""),
+                            xmp_blob=_build_webp_xmp(parameters_text, prompt_json=prompt_json, workflow_json=workflow_json) if embed_metadata else b"",
+                        )
+                        if not ok:
+                            print("WebP変換に失敗しました。PNGで保存します。")
+                    elif ext == ".webp" and embed_metadata and parameters_text:
+                        _embed_webp_metadata(
+                            fpath, parameters_text, quality=quality,
+                            xmp_blob=_build_webp_xmp(parameters_text, prompt_json=prompt_json, workflow_json=workflow_json),
+                        )
+                else:
+                    if ext == ".png" and embed_metadata and parameters_text:
+                        _embed_png_metadata(fpath, parameters_text, prompt_json=prompt_json, workflow_json=workflow_json)
+            except Exception as e:
+                print(f"[OUTPUT-4] Metadata embed error: {e}")
 
-    # client_idを_watch呼び出し前に確定させてクロージャ問題を回避
-    import uuid as _uuid_outer
-    _client_id = client_id if client_id is not None else str(_uuid_outer.uuid4())
+
+def watch_and_postprocess(
+    comfyui_url: str,
+    output_dir: str,
+    date_folder: str,
+    prompt_id: str,
+    client_id: str = None,
+    output_format: str = "png",
+    embed_metadata: bool = True,
+    parameters_text: str = "",
+    prompt_json: str = "",
+    workflow_json: str = "",
+    quality: int = 90,
+):
+    """ComfyUI WebSocketで完了検知し、履歴API経由で保存画像を後処理する。"""
+    import threading, json as _json, urllib.parse
+    print(f"[OUTPUT-4] 監視開始: prompt_id={prompt_id}")
+    _client_id = client_id if client_id is not None else str(uuid.uuid4())
 
     def _watch():
-        import time, socket, struct, hashlib, base64, ssl as _ssl
+        import time, socket, struct, base64, ssl as _ssl
         ws_url = comfyui_url.replace("http://", "ws://").replace("https://", "wss://") + f"/ws?clientId={_client_id}"
         parsed = urllib.parse.urlparse(ws_url)
         host = parsed.hostname
         port = parsed.port or (443 if parsed.scheme == "wss" else 80)
         path = (parsed.path or "/ws") + ("?" + parsed.query if parsed.query else "")
-
         try:
             sock = socket.create_connection((host, port), timeout=300)
             if parsed.scheme == "wss":
                 sock = _ssl.wrap_socket(sock, server_hostname=host)
-
-            # WebSocketハンドシェイク
             key = base64.b64encode(os.urandom(16)).decode()
             CRLF = "\r\n"
             handshake = (
@@ -461,12 +790,9 @@ def watch_and_convert(comfyui_url: str, output_dir: str, date_folder: str, promp
                 f"Sec-WebSocket-Version: 13{CRLF}{CRLF}"
             )
             sock.sendall(handshake.encode())
-            # ハンドシェイク応答を読む
             resp = b""
             while b"\r\n\r\n" not in resp:
                 resp += sock.recv(1024)
-            print(f"[WebP] WebSocket接続OK")
-
             deadline = time.time() + 300
             buf = b""
             while time.time() < deadline:
@@ -476,60 +802,62 @@ def watch_and_convert(comfyui_url: str, output_dir: str, date_folder: str, promp
                     if not chunk:
                         break
                     buf += chunk
-                    # WebSocketフレームのパース（テキストフレームのみ）
                     while len(buf) >= 2:
-                        fin_op = buf[0]
-                        opcode = fin_op & 0x0f
+                        opcode = buf[0] & 0x0F
                         masked = (buf[1] & 0x80) != 0
-                        plen = buf[1] & 0x7f
+                        plen = buf[1] & 0x7F
                         offset = 2
                         if plen == 126:
-                            if len(buf) < 4: break
-                            plen = struct.unpack(">H", buf[2:4])[0]; offset = 4
+                            if len(buf) < 4:
+                                break
+                            plen = struct.unpack(">H", buf[2:4])[0]
+                            offset = 4
                         elif plen == 127:
-                            if len(buf) < 10: break
-                            plen = struct.unpack(">Q", buf[2:10])[0]; offset = 10
-                        if masked: offset += 4
-                        if len(buf) < offset + plen: break
-                        payload = buf[offset:offset+plen]
-                        buf = buf[offset+plen:]
-                        if opcode == 1:  # テキストフレーム
-                            try:
-                                data = _json.loads(payload.decode("utf-8"))
-                                print(f"[WebP] WS受信: type={data.get('type')} node={data.get('data',{}).get('node','?')} pid={data.get('data',{}).get('prompt_id','?')[:8] if data.get('data',{}).get('prompt_id') else '?'}")
-                                if (data.get("type") == "executing" and
-                                    data.get("data", {}).get("prompt_id") == prompt_id and
-                                    data.get("data", {}).get("node") is None):
-                                    print(f"[WebP] 生成完了検知: {prompt_id}")
-                                    sock.close()
-                                    time.sleep(1)
-                                    hist_url = comfyui_url.rstrip("/") + f"/history/{prompt_id}"
-                                    with urllib.request.urlopen(hist_url) as r:
-                                        hist = _json.loads(r.read())
-                                    outputs = hist.get(prompt_id, {}).get("outputs", {})
-                                    for node_out in outputs.values():
-                                        for img in node_out.get("images", []):
-                                            fname = img.get("filename","")
-                                            subfolder = img.get("subfolder","")
-                                            if fname.endswith(".png"):
-                                                fpath = os.path.join(output_dir, subfolder, fname) if subfolder else os.path.join(target_dir, fname)
-                                                if os.path.exists(fpath):
-                                                    print(f"[WebP] 変換対象: {fpath}")
-                                                    convert_png_to_webp(fpath, quality)
-                                                else:
-                                                    print(f"[WebP] ファイル未検出: {fpath}")
-                                    return
-                            except Exception:
-                                pass
+                            if len(buf) < 10:
+                                break
+                            plen = struct.unpack(">Q", buf[2:10])[0]
+                            offset = 10
+                        if masked:
+                            offset += 4
+                        if len(buf) < offset + plen:
+                            break
+                        payload = buf[offset:offset + plen]
+                        buf = buf[offset + plen:]
+                        if opcode != 1:
+                            continue
+                        try:
+                            data = _json.loads(payload.decode("utf-8"))
+                            if (
+                                data.get("type") == "executing"
+                                and data.get("data", {}).get("prompt_id") == prompt_id
+                                and data.get("data", {}).get("node") is None
+                            ):
+                                sock.close()
+                                time.sleep(1)
+                                _postprocess_generated_files(
+                                    comfyui_url=comfyui_url,
+                                    output_dir=output_dir,
+                                    date_folder=date_folder,
+                                    prompt_id=prompt_id,
+                                    output_format=output_format,
+                                    embed_metadata=embed_metadata,
+                                    parameters_text=parameters_text,
+                                    prompt_json=prompt_json,
+                                    workflow_json=workflow_json,
+                                    quality=quality,
+                                )
+                                return
+                        except Exception:
+                            pass
                 except socket.timeout:
                     continue
                 except Exception as e:
-                    print(f"[WebP] 受信エラー: {e}")
+                    print(f"[OUTPUT-4] WebSocket受信エラー: {e}")
                     break
-            print("[WebP] タイムアウト")
+            print("[OUTPUT-4] 完了監視タイムアウト")
             sock.close()
         except Exception as e:
-            print(f"[WebP] 接続エラー: {e}")
+            print(f"[OUTPUT-4] WebSocket接続エラー: {e}")
 
     t = threading.Thread(target=_watch, daemon=True)
     t.start()
@@ -587,7 +915,16 @@ def workflow_to_api(workflow_data: dict) -> dict:
     return api_prompt
 
 
-def send_to_comfyui(positive_prompt: str, cfg: dict, width: int = 1024, height: int = 1024, fmt: str = 'png', client_id: str = None, negative_prompt: str = '', lora_slots: list = None) -> str:
+def send_to_comfyui(
+    positive_prompt: str,
+    cfg: dict,
+    width: int = 1024,
+    height: int = 1024,
+    fmt: str = 'png',
+    client_id: str = None,
+    negative_prompt: str = '',
+    lora_slots: list = None,
+):
     workflow_path = cfg.get("workflow_json_path", "").strip()
     if workflow_path and not os.path.isabs(workflow_path):
         workflow_path = os.path.join(_base_dir, workflow_path)
@@ -641,6 +978,7 @@ def send_to_comfyui(positive_prompt: str, cfg: dict, width: int = 1024, height: 
     sampler_val = cfg.get('sampler_name', 'er_sde')
     scheduler_val = cfg.get('scheduler', 'simple')
     ksampler_id = cfg.get('ksampler_node_id', '')
+    effective_seed = 0
     for nid, node in api_prompt.items():
         if node.get("class_type") == "KSampler" and (not ksampler_id or nid == ksampler_id):
             if seed_mode == 'fixed':
@@ -654,11 +992,14 @@ def send_to_comfyui(positive_prompt: str, cfg: dict, width: int = 1024, height: 
             node["inputs"]["cfg"] = cfg_val
             node["inputs"]["sampler_name"] = sampler_val
             node["inputs"]["scheduler"] = scheduler_val
+            effective_seed = int(node["inputs"]["seed"])
             print(f"[ComfyUI] KSampler設定: seed={node['inputs']['seed']} steps={steps_val} cfg={cfg_val} sampler={sampler_val} (node {nid})")
 
     # LoraLoaderノードにlora_slotsを注入
+    active_lora_pairs = []
     if lora_slots:
         active_slots = [s for s in lora_slots if s.get('name','').strip()]
+        active_lora_pairs = [(s.get("name", "").strip(), float(s.get("strength", 1.0))) for s in active_slots]
         lora_nodes = [(nid, node) for nid, node in api_prompt.items()
                       if node.get('class_type') == 'LoraLoader']
         lora_nodes.sort(key=lambda x: int(x[0]) if x[0].isdigit() else 0)
@@ -697,7 +1038,46 @@ def send_to_comfyui(positive_prompt: str, cfg: dict, width: int = 1024, height: 
     data = resp.json()
     if "error" in data:
         raise RuntimeError(f"ComfyUI error: {data['error']}")
-    return data.get("prompt_id", "unknown")
+    model_name = _extract_checkpoint_name(api_prompt)
+    root_candidates = _infer_comfy_root_candidates(cfg, workflow_path=workflow_path)
+    model_hash = ""
+    try:
+        model_fp = _resolve_model_file(model_name, root_candidates)
+        if model_fp:
+            model_hash = _sha256_hex(model_fp)
+        else:
+            print(f"[OUTPUT-4] Model file not found for hash: {model_name}")
+    except Exception as e:
+        print(f"[OUTPUT-4] Model hash compute error: {e}")
+    lora_hashes = []
+    for lora_name, _strength in active_lora_pairs:
+        h = ""
+        try:
+            lora_fp = _resolve_lora_file(lora_name, root_candidates)
+            if lora_fp:
+                h = _sha256_hex(lora_fp)
+        except Exception as e:
+            print(f"[OUTPUT-4] LoRA hash compute error: {e}")
+        lora_hashes.append((lora_name, h))
+    meta = {
+        "positive_prompt": positive_prompt,
+        "negative_prompt": negative_prompt,
+        "steps": steps_val,
+        "cfg": cfg_val,
+        "sampler": sampler_val,
+        "scheduler": scheduler_val,
+        "seed": effective_seed,
+        "width": width,
+        "height": height,
+        "model": model_name,
+        "model_hash": model_hash,
+        "lora": active_lora_pairs,
+        "lora_hashes": lora_hashes,
+        "workflow_version": _workflow_version_label(workflow_path),
+        "prompt_json": json.dumps(api_prompt, ensure_ascii=False),
+        "workflow_json": json.dumps(workflow_data, ensure_ascii=False),
+    }
+    return data.get("prompt_id", "unknown"), meta
 
 
 HTML = r"""<!DOCTYPE html>
@@ -1354,6 +1734,10 @@ HTML = r"""<!DOCTYPE html>
           <div class="fmt-btn active" data-fmt="png" onclick="selectFmt(this)">PNG生成</div>
           <div class="fmt-btn" data-fmt="webp" onclick="selectFmt(this)">WebP変換</div>
         </div>
+        <label style="display:flex;gap:0.35rem;align-items:center;margin-top:0.55rem;letter-spacing:0.02em;text-transform:none;">
+          <input type="checkbox" id="embedMetadataToggle" checked onchange="embedMetadata=this.checked">
+          メタデータを埋め込む
+        </label>
       </div>
       <div>
         <label>送信枚数</label>
@@ -1767,6 +2151,7 @@ const BASE_I18N_MAP_EN = {
   '接続エラー': 'Connection error',
   'モデル': 'Model',
   '保存形式': 'Output Format',
+  'メタデータを埋め込む': 'Embed Metadata',
   '生成開始': 'Generate',
   '生成中止': 'Cancel',
   '再画像生成': 'Re-generate Image',
@@ -3005,6 +3390,7 @@ let selectedW=1024, selectedH=1024;
 let selectedFmt='png';
 let selectedCount=1;
 let selectedSeedMode='random';
+let embedMetadata=true;
 
 // ===== LoRAスロット =====
 const LORA_SLOT_COUNT = 4;
@@ -3421,6 +3807,10 @@ async function loadSettings(){
     if(cfg.sampler_name) { const el=document.getElementById('samplerInput'); if(el) el.value=cfg.sampler_name; }
     if(cfg.scheduler) { const el=document.getElementById('schedulerInput'); if(el) el.value=cfg.scheduler; }
     selectedSeedMode = cfg.seed_mode||'random';
+    selectedFmt = (cfg.output_format||'png').toLowerCase()==='webp' ? 'webp' : 'png';
+    document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.toggle('active', b.dataset.fmt===selectedFmt));
+    embedMetadata = cfg.embed_metadata !== false;
+    const mdEl=document.getElementById('embedMetadataToggle'); if(mdEl) mdEl.checked = embedMetadata;
     document.getElementById('outputDirInput').value=cfg.comfyui_output_dir||'';
     document.getElementById('logDirInput').value=cfg.log_dir||'logs';
     document.getElementById('logRetentionInput').value=(cfg.log_retention_days ?? 30);
@@ -3472,6 +3862,8 @@ async function saveSettings(){
     positive_node_id:document.getElementById('posNodeInput').value,
     negative_node_id:document.getElementById('negNodeInput').value,
     ksampler_node_id:document.getElementById('ksamplerNodeInput').value||'19',
+    output_format:selectedFmt,
+    embed_metadata:(document.getElementById('embedMetadataToggle')?.checked ?? true),
     console_lang: currentLang,
     ...collectGenParams(),
   };
@@ -3606,6 +3998,7 @@ function collectSessionData(){
     negFinalPrompt: document.getElementById('promptNegFinal').textContent||'',
     preExtraPrompt: lastPositivePrompt||'',
     imgW: selectedW, imgH: selectedH, imgFmt: selectedFmt, imgCount: selectedCount,
+    embedMetadata: embedMetadata,
     useLLM: document.getElementById('useLLM').checked,
     workflowFile: getSelectedWorkflow(),
     loraSlots: collectLoraSlots(),
@@ -3981,6 +4374,11 @@ function applySession(data){
     if(data.imgW){ selectedW=data.imgW; document.getElementById('widthInput').value=data.imgW; }
     if(data.imgH){ selectedH=data.imgH; document.getElementById('heightInput').value=data.imgH; }
     if(data.imgFmt){ selectedFmt=data.imgFmt; document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.toggle('active',b.dataset.fmt===data.imgFmt)); }
+    if(data.embedMetadata !== undefined){
+      embedMetadata = !!data.embedMetadata;
+      const mdEl = document.getElementById('embedMetadataToggle');
+      if(mdEl) mdEl.checked = embedMetadata;
+    }
     if(data.imgCount){ selectedCount=data.imgCount; const ce=document.getElementById('countInput'); if(ce) ce.value=data.imgCount; }
     if(data.useLLM !== undefined){ const el=document.getElementById('useLLM'); if(el) el.checked=data.useLLM; }
     if(data.workflowFile){
@@ -6104,7 +6502,7 @@ async function generate(){
       setStep(steps,'s1','done','LLM: Skipped');
     }
     else { setStep(steps,'s1','active','LLM: Generating prompt...'); }
-    const res=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input,use_llm:document.getElementById('useLLM').checked,width:selectedW,height:selectedH,fmt:selectedFmt,count:selectedCount,extra_tags:Array.from(extraTags),char_direct_tags:charDirectTags,prompt_prefix:collectPromptPrefix(),extra_note_en:document.getElementById('extraNoteEn').value.trim(),negative_prompt:collectNegativePrompt(),gen_params:collectGenParams(),lora_slots:collectLoraSlots(),workflow_file:getSelectedWorkflow(),client_id:window._comfyClientId})});
+    const res=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input,use_llm:document.getElementById('useLLM').checked,width:selectedW,height:selectedH,fmt:selectedFmt,embed_metadata:embedMetadata,count:selectedCount,extra_tags:Array.from(extraTags),char_direct_tags:charDirectTags,prompt_prefix:collectPromptPrefix(),extra_note_en:document.getElementById('extraNoteEn').value.trim(),negative_prompt:collectNegativePrompt(),gen_params:collectGenParams(),lora_slots:collectLoraSlots(),workflow_file:getSelectedWorkflow(),client_id:window._comfyClientId})});
     const data=await res.json();
     if(data.error){
       setStep(steps,'s1','error','Error: '+data.error);
@@ -6268,7 +6666,7 @@ async function regenPrompt(){
     const regenExtraTags = Array.from(extraTags);
     const regenExtraEn = document.getElementById('extraNoteEn').value.trim();
     const res=await fetch('/regen',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({prompt:lastPositivePrompt,width:selectedW,height:selectedH,fmt:selectedFmt,count:selectedCount,
+      body:JSON.stringify({prompt:lastPositivePrompt,width:selectedW,height:selectedH,fmt:selectedFmt,embed_metadata:embedMetadata,count:selectedCount,
         extra_tags:regenExtraTags, extra_note_en:regenExtraEn,
         prompt_prefix:collectPromptPrefix(),
         negative_prompt:collectNegativePrompt(),
@@ -7140,7 +7538,8 @@ class Handler(BaseHTTPRequestHandler):
                 regen_negative=body.get('negative_prompt','').strip()
                 width=body.get('width',1024)
                 height=body.get('height',1024)
-                fmt=body.get('fmt','png')
+                fmt=body.get('fmt', cfg.get('output_format', 'png'))
+                embed_metadata = bool(body.get('embed_metadata', cfg.get('embed_metadata', True)))
                 gen_params=body.get('gen_params',{})
                 if gen_params:
                     for k in ('seed_mode','seed_value','steps','cfg','sampler_name','scheduler'):
@@ -7195,12 +7594,30 @@ class Handler(BaseHTTPRequestHandler):
                 for i in range(count):
                     if Handler.cancel_event.is_set(): break
                     cid=body.get('client_id', str(uuid.uuid4()))
-                    pid=send_to_comfyui(prompt,cfg,width,height,fmt,cid,negative_prompt=regen_negative,lora_slots=regen_lora_slots)
+                    pid, meta = send_to_comfyui(
+                        prompt, cfg, width, height, fmt, cid,
+                        negative_prompt=regen_negative, lora_slots=regen_lora_slots
+                    )
                     prompt_ids.append(pid)
                     print(f"[ComfyUI] 再生成キュー ({i+1}/{count}): {pid}")
-                    if fmt=='webp':
-                        watch_and_convert(comfyui_url,output_dir,date_folder,pid,cid)
-                result={'prompt_ids':prompt_ids,'prompt_id':prompt_ids[0] if prompt_ids else '','final_prompt':prompt,'negative_prompt':regen_negative}
+                    watch_and_postprocess(
+                        comfyui_url=comfyui_url,
+                        output_dir=output_dir,
+                        date_folder=date_folder,
+                        prompt_id=pid,
+                        client_id=cid,
+                        output_format=fmt,
+                        embed_metadata=embed_metadata,
+                        parameters_text=_build_parameters_text(meta) if embed_metadata else "",
+                        prompt_json=meta.get("prompt_json", "") if embed_metadata else "",
+                        workflow_json=meta.get("workflow_json", "") if embed_metadata else "",
+                    )
+                result={
+                    'prompt_ids':prompt_ids,
+                    'prompt_id':prompt_ids[0] if prompt_ids else '',
+                    'final_prompt':prompt,
+                    'negative_prompt':regen_negative
+                }
                 self.send_response(200)
                 self.send_header('Content-Type','application/json')
                 self.end_headers()
@@ -7336,10 +7753,11 @@ class Handler(BaseHTTPRequestHandler):
             negative_prompt=body.get('negative_prompt','').strip()
             img_width=body.get('width',1024)
             img_height=body.get('height',1024)
-            img_fmt=body.get('fmt','png')
-            img_count=max(1,int(body.get('count',1)))
-            print(f"[DEBUG] 受信: fmt={img_fmt} width={body.get('width')} height={body.get('height')} count={img_count}")
             cfg=load_config()
+            img_fmt=body.get('fmt', cfg.get('output_format', 'png'))
+            img_count=max(1,int(body.get('count',1)))
+            embed_metadata = bool(body.get('embed_metadata', cfg.get('embed_metadata', True)))
+            print(f"[DEBUG] 受信: fmt={img_fmt} width={body.get('width')} height={body.get('height')} count={img_count}")
             # gen_paramsでcfgを上書き
             gen_params=body.get('gen_params',{})
             if gen_params:
@@ -7428,11 +7846,24 @@ class Handler(BaseHTTPRequestHandler):
                     for i in range(img_count):
                         if Handler.cancel_event.is_set():
                             break
-                        pid = send_to_comfyui(positive_flat, cfg, img_width, img_height, img_fmt, shared_cid, negative_prompt=negative_prompt, lora_slots=lora_slots)
+                        pid, meta = send_to_comfyui(
+                            positive_flat, cfg, img_width, img_height, img_fmt, shared_cid,
+                            negative_prompt=negative_prompt, lora_slots=lora_slots
+                        )
                         prompt_ids.append(pid)
                         print(f"[ComfyUI] キューに追加 ({i+1}/{img_count}): {pid}")
-                        if img_fmt == "webp":
-                            watch_and_convert(comfyui_url, output_dir, date_folder, pid, shared_cid)
+                        watch_and_postprocess(
+                            comfyui_url=comfyui_url,
+                            output_dir=output_dir,
+                            date_folder=date_folder,
+                            prompt_id=pid,
+                            client_id=shared_cid,
+                            output_format=img_fmt,
+                            embed_metadata=embed_metadata,
+                            parameters_text=_build_parameters_text(meta) if embed_metadata else "",
+                            prompt_json=meta.get("prompt_json", "") if embed_metadata else "",
+                            workflow_json=meta.get("workflow_json", "") if embed_metadata else "",
+                        )
                         # incrementモード: seed+1して保存
                         if cfg.get('seed_mode') == 'increment':
                             cfg['seed_value'] = int(cfg.get('seed_value', 0)) + 1
