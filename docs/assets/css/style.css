@@ -108,6 +108,15 @@ a:hover { text-decoration: underline; }
   font-weight: 700;
 }
 .nav-gh-btn:hover { background: var(--p800); }
+.nav-lang-btn {
+  border: 1px solid var(--bdr2);
+  border-radius: var(--r);
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--p600) !important;
+}
+.nav-lang-btn:hover { background: var(--p50); text-decoration: none; }
 
 /* -- HERO -- */
 .hero {

@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anima Pipeline | Automate Anima Workflows with Browser UI</title>
+<meta name="description" content="Just type a character name - the LLM auto-generates Danbooru tags and sends them to your ComfyUI Anima workflow. One Python script, runs on Windows.">
+<!-- Google Analytics (GA4): configured -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JPMJG9G12Q"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-JPMJG9G12Q');
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="site-logo">
+      <div class="logo-dot"></div>
+      Anima Pipeline
+    </div>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="#howto">How it works</a></li>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#setup">Setup</a></li>
+        <li><a href="#gallery">Gallery</a></li>
+        <li><a href="index.html" class="nav-lang-btn">日本語</a></li>
+        <li><a href="https://github.com/tomotto1296/anima-pipeline" target="_blank" class="nav-gh-btn">GitHub</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="inner">
+    <div class="hero-badge">
+      <div class="badge-dot"></div>
+      v1.4.7
+    </div>
+    <h1 class="hero-title">Just type a character name.<em>Anima images, auto-generated.</em></h1>
+    <p class="hero-sub">One Python script. Runs on Windows right away. Works from iPhone and iPad on the same Wi-Fi. No LLM required.</p>
+    <div class="flow-row">
+      <div class="flow-chip">Enter character</div>
+      <div class="flow-arr">遶翫・/div>
+      <div class="flow-chip">LLM generates tags</div>
+      <div class="flow-arr">遶翫・/div>
+      <div class="flow-chip">Sent to ComfyUI</div>
+      <div class="flow-arr">遶翫・/div>
+      <div class="flow-chip">Image done</div>
+    </div>
+    <div class="hero-actions">
+      <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" class="btn-primary">Download on GitHub</a>
+      <a href="guides/anima_pipeline_guide_en.md" class="btn-secondary">User Guide</a>
+    </div>
+  </div>
+  <div class="hero-img-wrap">
+    <img src="images/hero-ui-and-result.jpg" alt="Anima Pipeline browser UI and generated images">
+    <div class="hero-caption">Browser UI (left) and generated Anima images (right)</div>
+  </div>
+</section>
+
+<section class="sec sec-bg2" id="howto">
+  <div class="inner">
+    <div class="sec-label">Flow</div>
+    <h2 class="sec-title">4 steps to generate</h2>
+    <p class="sec-sub">Automates the handoff between your browser UI and ComfyUI. Minimal setup to get started.</p>
+    <div class="flow-cards">
+      <div class="flow-card">
+        <div class="fc-num">1</div>
+        <div class="fc-title">Enter character &amp; scene</div>
+        <div class="fc-desc">Type character details, mood, and style into the UI. Japanese input supported.</div>
+        <div class="fc-tag">Browser UI</div>
+      </div>
+      <div class="flow-card">
+        <div class="fc-num">2</div>
+        <div class="fc-title">LLM generates tags</div>
+        <div class="fc-desc">Danbooru-style tags are auto-generated from the character name. Manual editing also available.</div>
+        <div class="fc-tag fc-tag-opt">Optional</div>
+      </div>
+      <div class="flow-card">
+        <div class="fc-num">3</div>
+        <div class="fc-title">Auto-sent to ComfyUI</div>
+        <div class="fc-desc">The prompt is posted to the ComfyUI API, triggering your workflow automatically.</div>
+        <div class="fc-tag">Automated</div>
+      </div>
+      <div class="flow-card">
+        <div class="fc-num">4</div>
+        <div class="fc-title">Image ready in browser</div>
+        <div class="fc-desc">Results appear in the in-browser gallery. Save or regenerate with one click.</div>
+        <div class="fc-tag">Gallery</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="features">
+  <div class="inner">
+    <div class="sec-label">Features</div>
+    <h2 class="sec-title">Key features</h2>
+    <p class="sec-sub">Built for Windows, with mobile access and extensibility in mind.</p>
+    <div class="feat-grid">
+      <div class="feat-card">
+        <div class="feat-icon">AI</div>
+        <div class="feat-title">LLM tag auto-generation</div>
+        <div class="feat-body">Supports Gemini API, LM Studio, and any OpenAI-compatible API. Tags generated naturally from character names.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">L4</div>
+        <div class="feat-title">LoRA up to 4 slots</div>
+        <div class="feat-body">Card UI with thumbnail previews for LoRA selection. Synced with your workflow JSON automatically.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">CH</div>
+        <div class="feat-title">Multi-character management</div>
+        <div class="feat-body">Save and switch between character presets. Up to 6 characters configurable at once.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">NET</div>
+        <div class="feat-title">Mobile &amp; tablet support</div>
+        <div class="feat-body">Operate from iPhone / iPad on the same Wi-Fi. ComfyUI requires <code>--listen</code> flag.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">UI</div>
+        <div class="feat-title">JA / EN UI toggle <span class="tag-new">v1.4.7</span></div>
+        <div class="feat-body">Auto-detects OS language on first launch. Toggle between Japanese and English anytime.</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-icon">LOG</div>
+        <div class="feat-title">Log masking <span class="tag-new">v1.4.7</span></div>
+        <div class="feat-body">API keys and sensitive data are masked in logs. Export a ZIP safely for sharing or debugging.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec sec-bg2" id="setup">
+  <div class="inner">
+    <div class="sec-label">Setup</div>
+    <h2 class="sec-title">Up and running in 5 minutes</h2>
+    <p class="sec-sub">On Windows, just double-click <code>start_anima_pipeline.bat</code>.</p>
+    <div class="setup-grid">
+      <div class="steps">
+        <div class="step-row">
+          <div class="step-num">1</div>
+          <div>
+            <div class="step-head">Export workflow JSON from ComfyUI</div>
+            <div class="step-body">Browse Templates 遶翫・Anima 遶翫・Save (API Format), then place the file in <code>workflows/</code>.</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">2</div>
+          <div>
+            <div class="step-head">Run the batch file</div>
+            <div class="step-body">Double-click <code>start_anima_pipeline.bat</code>. Dependencies are installed automatically on first run.</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">3</div>
+          <div>
+            <div class="step-head">Open localhost:7860</div>
+            <div class="step-body">Open the UI in your browser, set the ComfyUI URL and LLM settings, then save.</div>
+          </div>
+        </div>
+        <div class="step-row">
+          <div class="step-num">4</div>
+          <div>
+            <div class="step-head">Enter a character and generate</div>
+            <div class="step-body">Press Ctrl+Enter to generate. Results appear in the UI immediately.</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="mock-win">
+          <div class="mock-titlebar">
+            <div class="mock-tb-left">
+              <div class="mock-favicon"><div class="mock-favicon-dot"></div></div>
+              <div class="mock-urlbar">localhost:7860</div>
+            </div>
+            <div class="mock-winbtns">
+              <div class="mock-winbtn">
+                <svg viewBox="0 0 10 1"><rect width="10" height="1" fill="#555"></rect></svg>
+              </div>
+              <div class="mock-winbtn">
+                <svg viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="#555" stroke-width="1"></rect></svg>
+              </div>
+              <div class="mock-winbtn">
+                <svg viewBox="0 0 10 10">
+                  <line x1="1" y1="1" x2="9" y2="9" stroke="#555" stroke-width="1.3"></line>
+                  <line x1="9" y1="1" x2="1" y2="9" stroke="#555" stroke-width="1.3"></line>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="mock-body">
+            <div class="mock-lbl">Character name (example input)</div>
+            <div class="mock-field mock-field-blue">
+              <span>Reimu Hakurei, relaxing at shrine</span>
+              <span class="llm-badge">LLM</span>
+            </div>
+            <div class="mock-lbl">Generated tags (example)</div>
+            <div class="mock-field mock-field-green">
+              <div class="mock-tags">
+                <span class="mock-tag">1girl</span>
+                <span class="mock-tag">hakurei reimu</span>
+                <span class="mock-tag">red bow</span>
+                <span class="mock-tag">shrine</span>
+                <span class="mock-tag">relaxed</span>
+              </div>
+            </div>
+            <div class="mock-gen-btn">Generate (Ctrl+Enter)</div>
+            <div class="mock-prog-wrap"><div class="mock-prog"></div></div>
+            <div class="mock-hint">ComfyUI running... 62%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="gallery">
+  <div class="inner">
+    <div class="sec-label">Gallery</div>
+    <h2 class="sec-title">Example outputs</h2>
+    <p class="sec-sub">Generated with Anima Pipeline using the characters and scenes below.</p>
+    <div class="gallery-grid">
+      <div class="gal-card">
+        <img src="images/reimu-shrine-relax.png" alt="Hakurei Reimu - relaxing at shrine">
+        <div class="gal-meta">
+          <div class="gal-name">Hakurei Reimu</div>
+          <div class="gal-scene">Touhou / Relaxing at the shrine</div>
+        </div>
+      </div>
+      <div class="gal-card">
+        <img src="images/sample_zundamon.png" alt="Zundamon - relaxing at cafe">
+        <div class="gal-meta">
+          <div class="gal-name">Zundamon</div>
+          <div class="gal-scene">VOICEVOX / Relaxing at a caf・・ｽｩ</div>
+        </div>
+      </div>
+      <div class="gal-card">
+        <div class="gal-placeholder">
+          <div class="gal-plus">+</div>
+          <div class="gal-placeholder-text">Your generated image here</div>
+        </div>
+        <div class="gal-meta">
+          <div class="gal-name" style="color: var(--txt3);">Submissions welcome</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="sec sec-bg2">
+  <div class="inner">
+    <div class="sec-label">Requirements</div>
+    <h2 class="sec-title">What you need</h2>
+    <p class="sec-sub">Minimum setup is Python and ComfyUI. LLM is optional.</p>
+    <div class="req-grid">
+      <div class="req-card">
+        <div class="req-name">Python</div>
+        <div class="req-ver">3.10 or later</div>
+        <div class="req-desc">Only <code>pip install requests</code> needed. No frameworks, minimal dependencies.</div>
+      </div>
+      <div class="req-card">
+        <div class="req-name">ComfyUI</div>
+        <div class="req-ver">0.16.4 or later</div>
+        <div class="req-desc">Requires a working Anima workflow. Add <code>--listen</code> flag for mobile access.</div>
+      </div>
+      <div class="req-card">
+        <div class="req-name">LLM service</div>
+        <div class="req-ver req-ver-opt">Optional</div>
+        <div class="req-desc">Gemini API / LM Studio / any OpenAI-compatible API supported.</div>
+        <div class="req-opt">Works without LLM 遯ｶ繝ｻjust enter tags manually</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-sec">
+  <div class="inner">
+    <h2 class="cta-title">Get started now</h2>
+    <p class="cta-sub">
+      Download from GitHub and generate your first image in 5 minutes.<br>
+      Bug reports via <a href="https://github.com/tomotto1296/anima-pipeline/issues" target="_blank">Issue</a>. Latest updates on <a href="https://x.com/RHU_AIstudio" target="_blank">X</a>.
+    </p>
+    <div class="cta-btns">
+      <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" class="btn-primary" style="min-width: 260px; text-align: center;">Download on GitHub</a>
+      <a href="guides/anima_pipeline_guide_en.md" class="btn-secondary" style="min-width: 260px; text-align: center;">User Guide (English)</a>
+      <a href="index.html" class="btn-secondary" style="min-width: 260px; text-align: center;">隴鯉ｽ･隴幢ｽｬ髫ｱ讒ｭ繝ｻ郢晢ｽｼ郢ｧ・ｸ</a>
+    </div>
+    <div class="cta-links">
+      <a href="https://note.com/rhustudio/n/nf0dc2414f852" target="_blank" class="cta-link">note</a>
+      <a href="https://qiita.com/RHU/items/18095cb22281cd027bc4" target="_blank" class="cta-link">Qiita</a>
+      <a href="https://zenn.dev/rhu/articles/4a6c315533c4e9" target="_blank" class="cta-link">Zenn</a>
+      <a href="https://x.com/RHU_AIstudio" target="_blank" class="cta-link">X @RHU_AIstudio</a>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <p>・ゑｽｩ 2026 <a href="https://github.com/tomotto1296" target="_blank">tomotto1296</a> 遯ｶ繝ｻAnima Pipeline is released under the MIT License</p>
+</footer>
+
+</body>
+</html>
