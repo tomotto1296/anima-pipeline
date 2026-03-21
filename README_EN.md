@@ -8,6 +8,9 @@ This is a pipeline tool that allows you to enter character and scene information
 
 [Back to Japanese README → README.md](README.md)
 
+## 🌐 Live Demo / Landing Page
+- [日本語版サイト](https://tomotto1296.github.io/anima-pipeline/index.html)  
+- [English Version](https://tomotto1296.github.io/anima-pipeline/index_en.html)
 <p align="center">
   <img src="demo/demo-flow.gif" alt="Demo GIF" width="600">
 </p>
