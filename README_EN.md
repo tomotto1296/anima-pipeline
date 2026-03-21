@@ -122,7 +122,7 @@ Please refer to [docs/guides/anima_pipeline_guide_en.md](docs/guides/anima_pipel
 
 ## 🗺️ Roadmap
 
-See [docs/roadmap.md](docs/roadmap.md) for the full list.
+See [docs/updates/roadmap.md](docs/updates/roadmap.md) for the full list.
 
 ### Coming Soon
 

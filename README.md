@@ -120,7 +120,7 @@ anima_pipeline/
 
 ## 🗺️ ロードマップ
 
-詳細は [docs/roadmap.md](docs/roadmap.md) を参照してください。
+詳細は [docs/updates/roadmap.md](docs/updates/roadmap.md) を参照してください。
 
 ### 近日対応予定
 
