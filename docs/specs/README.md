@@ -57,71 +57,13 @@ API仕様書 / API reference: `feature_api_v<major>.md` — `feature_api_v<major
 
 ---
 
-## Spec Template / 仕様書テンプレート
+## Spec Template / ?????????
 
-以下をコピーして新規仕様書を作成してください。
-Copy the template below to start a new spec document.
+???????????????????????????????
+Use the dedicated template file for new spec documents.
 
-```md
-# Feature Spec: <Feature Name>
-
-## Meta
-- Issue: #<number>
-- Owner: <name>
-- Status: Draft / Review / Approved / Implemented
-- Version: v1
-- Last Updated: YYYY-MM-DD
-
-## Goal / 目的
-- この機能で解決する課題 / Problem this feature solves
-
-## Scope
-- In Scope:
-  -
-- Out of Scope:
-  -
-
-## User Story
-- As a <user>, I want <behavior>, so that <benefit>.
-
-## Requirements / 要件
-1.
-2.
-3.
-
-## UI/UX
-- 画面 / Screen:
-- 変更点 / Changes:
-- 文言（JA/EN） / Labels (JA/EN):
-
-## API / Data
-- Endpoint:
-- Request:
-- Response:
-- 保存先/設定キー / Storage / Config key:
-
-## Error Handling / エラー処理
-- 想定エラー / Expected errors:
-- 表示文言 / Error messages:
-- ログ出力方針 / Logging policy:
-
-## Acceptance Criteria / 完了基準
-1.
-2.
-3.
-
-## Test Plan / テスト計画
-- Manual:
-- Edge Cases:
-- Regression:
-
-## Rollout / Migration / リリース・移行
-- 既存ユーザーへの影響 / Impact on existing users:
-- 互換性 / Compatibility:
-
-## Open Questions / 未決事項
--
-```
+- Template: [feature_spec_template.md](feature_spec_template.md)
+- Path: `docs/specs/feature_spec_template.md`
 
 ---
 
