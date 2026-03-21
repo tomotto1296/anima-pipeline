@@ -1,0 +1,17 @@
+# CODEOWNERS
+# デフォルト: すべてのファイルのレビュー担当
+*                           @tomotto1296
+
+# メイン本体
+anima_pipeline.py           @tomotto1296
+
+# 設定・ワークフロー
+settings/                   @tomotto1296
+workflows/                  @tomotto1296
+
+# ドキュメント（レビュー任意）
+docs/                       @tomotto1296
+*.md                        @tomotto1296
+
+# GitHub 設定（要レビュー）
+.github/                    @tomotto1296
