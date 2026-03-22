@@ -18,6 +18,8 @@ def _run_git(*args: str) -> str:
         ["git", *args],
         cwd=ROOT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         capture_output=True,
         check=False,
     )
@@ -32,7 +34,7 @@ def _changed_files(base: str, head: str) -> list[str]:
 
 
 def _version_line_changed(base: str, head: str) -> bool:
-    diff = _run_git("diff", "--", base, head, TARGET)
+    diff = _run_git("diff", base, head, "--", TARGET)
     for line in diff.splitlines():
         if line.startswith(("+", "-")) and "__version__" in line:
             return True
