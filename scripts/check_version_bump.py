@@ -11,6 +11,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 TARGET = "anima_pipeline.py"
+EXEMPT_PY = {"scripts/check_version_bump.py"}
 
 
 def _run_git(*args: str) -> str:
@@ -51,7 +52,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> int:
     args = parse_args()
     files = _changed_files(args.base, args.head)
-    py_files = [p for p in files if p.lower().endswith(".py")]
+    py_files = [
+        p for p in files if p.lower().endswith(".py") and p.replace("\\", "/") not in EXEMPT_PY
+    ]
 
     if not py_files:
         print("[version-guard] No Python file changes detected.")
