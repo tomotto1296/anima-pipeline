@@ -1,0 +1,45 @@
+﻿name: Version Guard
+
+on:
+  pull_request:
+    paths:
+      - "**/*.py"
+      - "anima_pipeline.py"
+      - "scripts/check_version_bump.py"
+      - ".github/workflows/version-guard.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "**/*.py"
+      - "anima_pipeline.py"
+      - "scripts/check_version_bump.py"
+      - ".github/workflows/version-guard.yml"
+
+jobs:
+  version-guard:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set commit range
+        id: range
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "base=${{ github.event.pull_request.base.sha }}" >> "$GITHUB_OUTPUT"
+            echo "head=${{ github.event.pull_request.head.sha }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "base=${{ github.event.before }}" >> "$GITHUB_OUTPUT"
+            echo "head=${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate version bump for Python changes
+        run: |
+          python scripts/check_version_bump.py \
+            --base "${{ steps.range.outputs.base }}" \
+            --head "${{ steps.range.outputs.head }}"
