@@ -27,7 +27,7 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
-__version__ = "1.4.742"
+__version__ = "1.4.743"
 
 def _sf(name): return os.path.join(_settings_dir, name)
 
@@ -1389,6 +1389,10 @@ HTML = r"""<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>キャラクター生成（プロンプト+画像）</title>
+<link rel="icon" type="image/x-icon" href="/assets/icons/favicon-light.ico">
+<link rel="icon" type="image/x-icon" href="/assets/icons/favicon-dark.ico" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="/assets/icons/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.json">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@300;400;700&family=DM+Mono:ital@0;1&display=swap');
   :root {
@@ -7692,6 +7696,70 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
             return
+        elif req_path == '/manifest.json':
+            manifest_candidates = [
+                os.path.join(_base_dir, 'manifest.json'),
+                os.path.join(_base_dir, 'docs', 'manifest.json'),
+            ]
+            manifest_fp = next((fp for fp in manifest_candidates if os.path.isfile(fp)), None)
+            if not manifest_fp:
+                self.send_response(404)
+                self.end_headers()
+                return
+            with open(manifest_fp, 'rb') as f:
+                data = f.read()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/manifest+json')
+            self.send_header('Content-Length', str(len(data)))
+            self.send_header('Cache-Control', 'public, max-age=3600')
+            self.end_headers()
+            self.wfile.write(data)
+            return
+        elif req_path in ('/favicon.ico', '/favicon-light.ico', '/favicon-dark.ico'):
+            if req_path == '/favicon-dark.ico':
+                icon_fp = os.path.join(_base_dir, 'assets', 'icons', 'favicon-dark.ico')
+            else:
+                icon_fp = os.path.join(_base_dir, 'assets', 'icons', 'favicon-light.ico')
+            if not os.path.isfile(icon_fp):
+                self.send_response(404)
+                self.end_headers()
+                return
+            with open(icon_fp, 'rb') as f:
+                data = f.read()
+            self.send_response(200)
+            self.send_header('Content-Type', 'image/x-icon')
+            self.send_header('Content-Length', str(len(data)))
+            self.send_header('Cache-Control', 'public, max-age=3600')
+            self.end_headers()
+            self.wfile.write(data)
+            return
+        elif req_path.startswith('/assets/'):
+            import mimetypes
+            rel = req_path[len('/assets/'):]
+            if not rel:
+                self.send_response(404)
+                self.end_headers()
+                return
+            asset_root = os.path.realpath(os.path.join(_base_dir, 'assets'))
+            target = os.path.realpath(os.path.normpath(os.path.join(asset_root, rel)))
+            if not (target == asset_root or target.startswith(asset_root + os.sep)):
+                self.send_response(403)
+                self.end_headers()
+                return
+            if not os.path.isfile(target):
+                self.send_response(404)
+                self.end_headers()
+                return
+            with open(target, 'rb') as f:
+                data = f.read()
+            mime = mimetypes.guess_type(target)[0] or 'application/octet-stream'
+            self.send_response(200)
+            self.send_header('Content-Type', mime)
+            self.send_header('Content-Length', str(len(data)))
+            self.send_header('Cache-Control', 'public, max-age=3600')
+            self.end_headers()
+            self.wfile.write(data)
+            return
 
         if self.path=='/':
             self.send_response(200)
@@ -9164,6 +9232,10 @@ def main():
 
 if __name__=='__main__':
     main()
+
+
+
+
 
 
 

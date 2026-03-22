@@ -1,12 +1,12 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Anima Pipeline | ブラウザUIでAnimaワークフローを自動生成</title>
-<meta name="description" content="キャラ文を入れるだけでLLMがdanbooruタグを自動生成し、ComfyUI Animaワークフローへ連携。Pythonスクリプト1本でWindowsですぐ動きます。">
-<meta property="og:title" content="Anima Pipeline | ブラウザUIでAnimaワークフローを自動生成">
-<meta property="og:description" content="キャラ文を入れるだけでLLMがdanbooruタグを自動生成し、ComfyUI Animaワークフローへ連携。">
+<title>Anima Pipeline | 繝悶Λ繧ｦ繧ｶUI縺ｧAnima繝ｯ繝ｼ繧ｯ繝輔Ο繝ｼ繧定・蜍慕函謌・/title>
+<meta name="description" content="繧ｭ繝｣繝ｩ譁・ｒ蜈･繧後ｋ縺縺代〒LLM縺慧anbooru繧ｿ繧ｰ繧定・蜍慕函謌舌＠縲，omfyUI Anima繝ｯ繝ｼ繧ｯ繝輔Ο繝ｼ縺ｸ騾｣謳ｺ縲１ython繧ｹ繧ｯ繝ｪ繝励ヨ1譛ｬ縺ｧWindows縺ｧ縺吶＄蜍輔″縺ｾ縺吶・>
+<meta property="og:title" content="Anima Pipeline | 繝悶Λ繧ｦ繧ｶUI縺ｧAnima繝ｯ繝ｼ繧ｯ繝輔Ο繝ｼ繧定・蜍慕函謌・>
+<meta property="og:description" content="繧ｭ繝｣繝ｩ譁・ｒ蜈･繧後ｋ縺縺代〒LLM縺慧anbooru繧ｿ繧ｰ繧定・蜍慕函謌舌＠縲，omfyUI Anima繝ｯ繝ｼ繧ｯ繝輔Ο繝ｼ縺ｸ騾｣謳ｺ縲・>
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://tomotto1296.github.io/anima-pipeline/">
 <meta property="og:image" content="https://tomotto1296.github.io/anima-pipeline/images/hero-ui-and-result.jpg">
@@ -22,6 +22,10 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
+<link rel="icon" type="image/x-icon" href="assets/favicon-light.ico">
+<link rel="icon" type="image/x-icon" href="assets/favicon-dark.ico" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
 </head>
 <body>
 
@@ -33,10 +37,10 @@
     </div>
     <nav>
       <ul class="nav-links">
-        <li><a href="#howto">使い方</a></li>
-        <li><a href="#features">特徴</a></li>
-        <li><a href="#setup">セットアップ</a></li>
-        <li><a href="#gallery">生成例</a></li>
+        <li><a href="#howto">菴ｿ縺・婿</a></li>
+        <li><a href="#features">迚ｹ蠕ｴ</a></li>
+        <li><a href="#setup">繧ｻ繝・ヨ繧｢繝・・</a></li>
+        <li><a href="#gallery">逕滓・萓・/a></li>
         <li><a href="index_en.html" class="nav-lang-btn">English</a></li>
         <li><a href="https://github.com/tomotto1296/anima-pipeline" target="_blank" class="nav-gh-btn">GitHub</a></li>
       </ul>
@@ -50,57 +54,57 @@
       <div class="badge-dot"></div>
       v1.4.7
     </div>
-    <h1 class="hero-title">キャラ文を入れるだけで<em>Anima画像を自動生成</em></h1>
-    <p class="hero-sub">Pythonスクリプト1本で、ブラウザUIからすぐ起動。スマホ・タブレットからの操作にも対応し、LLMなしでも使える構成です。</p>
+    <h1 class="hero-title">繧ｭ繝｣繝ｩ譁・ｒ蜈･繧後ｋ縺縺代〒<em>Anima逕ｻ蜒上ｒ閾ｪ蜍慕函謌・/em></h1>
+    <p class="hero-sub">Python繧ｹ繧ｯ繝ｪ繝励ヨ1譛ｬ縺ｧ縲√ヶ繝ｩ繧ｦ繧ｶUI縺九ｉ縺吶＄襍ｷ蜍輔ゅせ繝槭・繝ｻ繧ｿ繝悶Ξ繝・ヨ縺九ｉ縺ｮ謫堺ｽ懊↓繧ょｯｾ蠢懊＠縲´LM縺ｪ縺励〒繧ゆｽｿ縺医ｋ讒区・縺ｧ縺吶・/p>
     <div class="flow-row">
-      <div class="flow-chip">キャラ文を入力</div>
-      <div class="flow-arr">→</div>
-      <div class="flow-chip">LLMがタグ生成</div>
-      <div class="flow-arr">→</div>
-      <div class="flow-chip">ComfyUIへ連携</div>
-      <div class="flow-arr">→</div>
-      <div class="flow-chip">画像生成完了</div>
+      <div class="flow-chip">繧ｭ繝｣繝ｩ譁・ｒ蜈･蜉・/div>
+      <div class="flow-arr">竊・/div>
+      <div class="flow-chip">LLM縺後ち繧ｰ逕滓・</div>
+      <div class="flow-arr">竊・/div>
+      <div class="flow-chip">ComfyUI縺ｸ騾｣謳ｺ</div>
+      <div class="flow-arr">竊・/div>
+      <div class="flow-chip">逕ｻ蜒冗函謌仙ｮ御ｺ・/div>
     </div>
     <div class="hero-actions">
-      <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" class="btn-primary">GitHubでダウンロード</a>
-      <a href="guides/anima_pipeline_guide.md" class="btn-secondary">使い方ガイド</a>
+      <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" class="btn-primary">GitHub縺ｧ繝繧ｦ繝ｳ繝ｭ繝ｼ繝・/a>
+      <a href="guides/anima_pipeline_guide.md" class="btn-secondary">菴ｿ縺・婿繧ｬ繧､繝・/a>
     </div>
   </div>
   <div class="hero-img-wrap">
-    <img src="images/hero-ui-and-result.jpg" alt="Anima Pipeline ブラウザUIと生成画像">
-    <div class="hero-caption">ブラウザUI（左）と生成されたAnima画像（右）</div>
+    <img src="images/hero-ui-and-result.jpg" alt="Anima Pipeline 繝悶Λ繧ｦ繧ｶUI縺ｨ逕滓・逕ｻ蜒・>
+    <div class="hero-caption">繝悶Λ繧ｦ繧ｶUI・亥ｷｦ・峨→逕滓・縺輔ｌ縺蘗nima逕ｻ蜒擾ｼ亥承・・/div>
   </div>
 </section>
 
 <section class="sec sec-bg2" id="howto">
   <div class="inner">
     <div class="sec-label">Flow</div>
-    <h2 class="sec-title">4ステップで生成</h2>
-    <p class="sec-sub">ブラウザUIとComfyUIの連携を自動化し、最小構成で使い始められます。</p>
+    <h2 class="sec-title">4繧ｹ繝・ャ繝励〒逕滓・</h2>
+    <p class="sec-sub">繝悶Λ繧ｦ繧ｶUI縺ｨComfyUI縺ｮ騾｣謳ｺ繧定・蜍募喧縺励∵怙蟆乗ｧ区・縺ｧ菴ｿ縺・ｧ九ａ繧峨ｌ縺ｾ縺吶・/p>
     <div class="flow-cards">
       <div class="flow-card">
         <div class="fc-num">1</div>
-        <div class="fc-title">キャラ・シーンを入力</div>
-        <div class="fc-desc">キャラ文や表情、雰囲気などをUIに入力。日本語のままでOK。</div>
-        <div class="fc-tag">ブラウザUI</div>
+        <div class="fc-title">繧ｭ繝｣繝ｩ繝ｻ繧ｷ繝ｼ繝ｳ繧貞・蜉・/div>
+        <div class="fc-desc">繧ｭ繝｣繝ｩ譁・ｄ陦ｨ諠・・峅蝗ｲ豌励↑縺ｩ繧旦I縺ｫ蜈･蜉帙よ律譛ｬ隱槭・縺ｾ縺ｾ縺ｧOK縲・/div>
+        <div class="fc-tag">繝悶Λ繧ｦ繧ｶUI</div>
       </div>
       <div class="flow-card">
         <div class="fc-num">2</div>
-        <div class="fc-title">LLMがタグを生成</div>
-        <div class="fc-desc">キャラ文からdanbooruタグを生成。必要なら手動編集も可能。</div>
-        <div class="fc-tag fc-tag-opt">オプション</div>
+        <div class="fc-title">LLM縺後ち繧ｰ繧堤函謌・/div>
+        <div class="fc-desc">繧ｭ繝｣繝ｩ譁・°繧嬰anbooru繧ｿ繧ｰ繧堤函謌舌ょｿ・ｦ√↑繧画焔蜍慕ｷｨ髮・ｂ蜿ｯ閭ｽ縲・/div>
+        <div class="fc-tag fc-tag-opt">繧ｪ繝励す繝ｧ繝ｳ</div>
       </div>
       <div class="flow-card">
         <div class="fc-num">3</div>
-        <div class="fc-title">ComfyUIへ自動連携</div>
-        <div class="fc-desc">生成したプロンプトをComfyUI APIへ送り、ワークフローを実行。</div>
-        <div class="fc-tag">自動化</div>
+        <div class="fc-title">ComfyUI縺ｸ閾ｪ蜍暮｣謳ｺ</div>
+        <div class="fc-desc">逕滓・縺励◆繝励Ο繝ｳ繝励ヨ繧辰omfyUI API縺ｸ騾√ｊ縲√Ρ繝ｼ繧ｯ繝輔Ο繝ｼ繧貞ｮ溯｡後・/div>
+        <div class="fc-tag">閾ｪ蜍募喧</div>
       </div>
       <div class="flow-card">
         <div class="fc-num">4</div>
-        <div class="fc-title">画像生成・ギャラリー表示</div>
-        <div class="fc-desc">出力結果をブラウザ上で確認。保存や再生成もスムーズ。</div>
-        <div class="fc-tag">結果表示</div>
+        <div class="fc-title">逕ｻ蜒冗函謌舌・繧ｮ繝｣繝ｩ繝ｪ繝ｼ陦ｨ遉ｺ</div>
+        <div class="fc-desc">蜃ｺ蜉帷ｵ先棡繧偵ヶ繝ｩ繧ｦ繧ｶ荳翫〒遒ｺ隱阪ゆｿ晏ｭ倥ｄ蜀咲函謌舌ｂ繧ｹ繝繝ｼ繧ｺ縲・/div>
+        <div class="fc-tag">邨先棡陦ｨ遉ｺ</div>
       </div>
     </div>
   </div>
@@ -109,38 +113,38 @@
 <section class="sec" id="features">
   <div class="inner">
     <div class="sec-label">Features</div>
-    <h2 class="sec-title">主な特徴</h2>
-    <p class="sec-sub">Windowsでの実行を前提に、スマホからの操作や拡張にも対応しています。</p>
+    <h2 class="sec-title">荳ｻ縺ｪ迚ｹ蠕ｴ</h2>
+    <p class="sec-sub">Windows縺ｧ縺ｮ螳溯｡後ｒ蜑肴署縺ｫ縲√せ繝槭・縺九ｉ縺ｮ謫堺ｽ懊ｄ諡｡蠑ｵ縺ｫ繧ょｯｾ蠢懊＠縺ｦ縺・∪縺吶・/p>
     <div class="feat-grid">
       <div class="feat-card">
         <div class="feat-icon">AI</div>
-        <div class="feat-title">LLMでタグ自動生成</div>
-        <div class="feat-body">Gemini API、LM Studio、OpenAI互換APIに対応。キャラ文から自然にタグ化。</div>
+        <div class="feat-title">LLM縺ｧ繧ｿ繧ｰ閾ｪ蜍慕函謌・/div>
+        <div class="feat-body">Gemini API縲´M Studio縲＾penAI莠呈鋤API縺ｫ蟇ｾ蠢懊ゅく繝｣繝ｩ譁・°繧芽・辟ｶ縺ｫ繧ｿ繧ｰ蛹悶・/div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">L4</div>
-        <div class="feat-title">LoRA 最大4スロット</div>
-        <div class="feat-body">サムネイル付きカードUIでLoRAを選択。JSON連携で反映。</div>
+        <div class="feat-title">LoRA 譛螟ｧ4繧ｹ繝ｭ繝・ヨ</div>
+        <div class="feat-body">繧ｵ繝繝阪う繝ｫ莉倥″繧ｫ繝ｼ繝蔚I縺ｧLoRA繧帝∈謚槭・SON騾｣謳ｺ縺ｧ蜿肴丐縲・/div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">CH</div>
-        <div class="feat-title">複数キャラ管理</div>
-        <div class="feat-body">キャラプリセットを保存し、UIで切り替えながら運用可能。</div>
+        <div class="feat-title">隍・焚繧ｭ繝｣繝ｩ邂｡逅・/div>
+        <div class="feat-body">繧ｭ繝｣繝ｩ繝励Μ繧ｻ繝・ヨ繧剃ｿ晏ｭ倥＠縲ゞI縺ｧ蛻・ｊ譖ｿ縺医↑縺後ｉ驕狗畑蜿ｯ閭ｽ縲・/div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">NET</div>
-        <div class="feat-title">スマホ・タブレット対応</div>
-        <div class="feat-body">同一Wi-Fi内でiPhone / iPadから操作可能。ComfyUIは <code>--listen</code> 推奨。</div>
+        <div class="feat-title">繧ｹ繝槭・繝ｻ繧ｿ繝悶Ξ繝・ヨ蟇ｾ蠢・/div>
+        <div class="feat-body">蜷御ｸWi-Fi蜀・〒iPhone / iPad縺九ｉ謫堺ｽ懷庄閭ｽ縲・omfyUI縺ｯ <code>--listen</code> 謗ｨ螂ｨ縲・/div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">UI</div>
-        <div class="feat-title">日英UI切替 <span class="tag-new">v1.4.7</span></div>
-        <div class="feat-body">OS言語を自動判定して日本語・英語表示を切替できます。</div>
+        <div class="feat-title">譌･闍ｱUI蛻・崛 <span class="tag-new">v1.4.7</span></div>
+        <div class="feat-body">OS險隱槭ｒ閾ｪ蜍募愛螳壹＠縺ｦ譌･譛ｬ隱槭・闍ｱ隱櫁｡ｨ遉ｺ繧貞・譖ｿ縺ｧ縺阪∪縺吶・/div>
       </div>
       <div class="feat-card">
         <div class="feat-icon">LOG</div>
-        <div class="feat-title">ログ表示マスク <span class="tag-new">v1.4.7</span></div>
-        <div class="feat-body">APIキーなど機密情報を表示時にマスクし、確認しやすく安全に運用。</div>
+        <div class="feat-title">繝ｭ繧ｰ陦ｨ遉ｺ繝槭せ繧ｯ <span class="tag-new">v1.4.7</span></div>
+        <div class="feat-body">API繧ｭ繝ｼ縺ｪ縺ｩ讖溷ｯ・ュ蝣ｱ繧定｡ｨ遉ｺ譎ゅ↓繝槭せ繧ｯ縺励∫｢ｺ隱阪＠繧・☆縺丞ｮ牙・縺ｫ驕狗畑縲・/div>
       </div>
     </div>
   </div>
@@ -149,36 +153,36 @@
 <section class="sec sec-bg2" id="setup">
   <div class="inner">
     <div class="sec-label">Setup</div>
-    <h2 class="sec-title">5分でセットアップ</h2>
-    <p class="sec-sub">Windowsなら <code>start_anima_pipeline.bat</code> で起動できます。</p>
+    <h2 class="sec-title">5蛻・〒繧ｻ繝・ヨ繧｢繝・・</h2>
+    <p class="sec-sub">Windows縺ｪ繧・<code>start_anima_pipeline.bat</code> 縺ｧ襍ｷ蜍輔〒縺阪∪縺吶・/p>
     <div class="setup-grid">
       <div class="steps">
         <div class="step-row">
           <div class="step-num">1</div>
           <div>
-            <div class="step-head">ComfyUIでワークフローJSONを保存</div>
-            <div class="step-body">Browse Templates → Anima → Save (API Format) で <code>workflows/</code> に配置。</div>
+            <div class="step-head">ComfyUI縺ｧ繝ｯ繝ｼ繧ｯ繝輔Ο繝ｼJSON繧剃ｿ晏ｭ・/div>
+            <div class="step-body">Browse Templates 竊・Anima 竊・Save (API Format) 縺ｧ <code>workflows/</code> 縺ｫ驟咲ｽｮ縲・/div>
           </div>
         </div>
         <div class="step-row">
           <div class="step-num">2</div>
           <div>
-            <div class="step-head">バッチを実行</div>
-            <div class="step-body"><code>start_anima_pipeline.bat</code> を実行。初回は依存関係を自動導入。</div>
+            <div class="step-head">繝舌ャ繝√ｒ螳溯｡・/div>
+            <div class="step-body"><code>start_anima_pipeline.bat</code> 繧貞ｮ溯｡後ょ・蝗槭・萓晏ｭ倬未菫ゅｒ閾ｪ蜍募ｰ主・縲・/div>
           </div>
         </div>
         <div class="step-row">
           <div class="step-num">3</div>
           <div>
-            <div class="step-head">localhost:7860を開く</div>
-            <div class="step-body">ブラウザからUIを開いて、ComfyUI URLとLLM設定を保存。</div>
+            <div class="step-head">localhost:7860繧帝幕縺・/div>
+            <div class="step-body">繝悶Λ繧ｦ繧ｶ縺九ｉUI繧帝幕縺・※縲，omfyUI URL縺ｨLLM險ｭ螳壹ｒ菫晏ｭ倥・/div>
           </div>
         </div>
         <div class="step-row">
           <div class="step-num">4</div>
           <div>
-            <div class="step-head">キャラ文を入力して生成</div>
-            <div class="step-body">Ctrl+Enterで生成実行。結果はUI上で確認できます。</div>
+            <div class="step-head">繧ｭ繝｣繝ｩ譁・ｒ蜈･蜉帙＠縺ｦ逕滓・</div>
+            <div class="step-body">Ctrl+Enter縺ｧ逕滓・螳溯｡後らｵ先棡縺ｯUI荳翫〒遒ｺ隱阪〒縺阪∪縺吶・/div>
           </div>
         </div>
       </div>
@@ -206,12 +210,12 @@
             </div>
           </div>
           <div class="mock-body">
-            <div class="mock-lbl">キャラ文（入力例）</div>
+            <div class="mock-lbl">繧ｭ繝｣繝ｩ譁・ｼ亥・蜉帑ｾ具ｼ・/div>
             <div class="mock-field mock-field-blue">
-              <span>博麗霊夢、神社でくつろぐ</span>
+              <span>蜊夐ｺ鈴怺螟｢縲∫･樒､ｾ縺ｧ縺上▽繧阪＄</span>
               <span class="llm-badge">LLM</span>
             </div>
-            <div class="mock-lbl">生成タグ（例）</div>
+            <div class="mock-lbl">逕滓・繧ｿ繧ｰ・井ｾ具ｼ・/div>
             <div class="mock-field mock-field-green">
               <div class="mock-tags">
                 <span class="mock-tag">1girl</span>
@@ -221,9 +225,9 @@
                 <span class="mock-tag">relaxed</span>
               </div>
             </div>
-            <div class="mock-gen-btn">画像生成（Ctrl+Enter）</div>
+            <div class="mock-gen-btn">逕ｻ蜒冗函謌撰ｼ・trl+Enter・・/div>
             <div class="mock-prog-wrap"><div class="mock-prog"></div></div>
-            <div class="mock-hint">ComfyUI 実行中... 62%</div>
+            <div class="mock-hint">ComfyUI 螳溯｡御ｸｭ... 62%</div>
           </div>
         </div>
       </div>
@@ -234,30 +238,30 @@
 <section class="sec" id="gallery">
   <div class="inner">
     <div class="sec-label">Gallery</div>
-    <h2 class="sec-title">こんな画像が作れます</h2>
-    <p class="sec-sub">実際に生成したキャラクター・シーンの例です</p>
+    <h2 class="sec-title">縺薙ｓ縺ｪ逕ｻ蜒上′菴懊ｌ縺ｾ縺・/h2>
+    <p class="sec-sub">螳滄圀縺ｫ逕滓・縺励◆繧ｭ繝｣繝ｩ繧ｯ繧ｿ繝ｼ繝ｻ繧ｷ繝ｼ繝ｳ縺ｮ萓九〒縺・/p>
     <div class="gallery-grid">
       <div class="gal-card">
-        <img src="images/reimu-shrine-relax.png" alt="博麗霊夢 - 神社でくつろぐ">
+        <img src="images/reimu-shrine-relax.png" alt="蜊夐ｺ鈴怺螟｢ - 逾樒､ｾ縺ｧ縺上▽繧阪＄">
         <div class="gal-meta">
-          <div class="gal-name">博麗霊夢</div>
-          <div class="gal-scene">東方 / 神社でくつろぐ</div>
+          <div class="gal-name">蜊夐ｺ鈴怺螟｢</div>
+          <div class="gal-scene">譚ｱ譁ｹ / 逾樒､ｾ縺ｧ縺上▽繧阪＄</div>
         </div>
       </div>
       <div class="gal-card">
-        <img src="images/sample_zundamon.png" alt="ずんだもん - カフェでのんびり">
+        <img src="images/sample_zundamon.png" alt="縺壹ｓ縺繧ゅｓ - 繧ｫ繝輔ぉ縺ｧ縺ｮ繧薙・繧・>
         <div class="gal-meta">
-          <div class="gal-name">ずんだもん</div>
-          <div class="gal-scene">VOICEVOX / カフェでのんびり</div>
+          <div class="gal-name">縺壹ｓ縺繧ゅｓ</div>
+          <div class="gal-scene">VOICEVOX / 繧ｫ繝輔ぉ縺ｧ縺ｮ繧薙・繧・/div>
         </div>
       </div>
       <div class="gal-card">
         <div class="gal-placeholder">
           <div class="gal-plus">+</div>
-          <div class="gal-placeholder-text">あなたの生成画像もここに掲載可能です</div>
+          <div class="gal-placeholder-text">縺ゅ↑縺溘・逕滓・逕ｻ蜒上ｂ縺薙％縺ｫ謗ｲ霈牙庄閭ｽ縺ｧ縺・/div>
         </div>
         <div class="gal-meta">
-          <div class="gal-name" style="color: var(--txt3);">投稿をお待ちしています</div>
+          <div class="gal-name" style="color: var(--txt3);">謚慕ｨｿ繧偵♀蠕・■縺励※縺・∪縺・/div>
         </div>
       </div>
     </div>
@@ -267,24 +271,24 @@
 <section class="sec sec-bg2">
   <div class="inner">
     <div class="sec-label">Requirements</div>
-    <h2 class="sec-title">必要環境</h2>
-    <p class="sec-sub">最低構成はPythonとComfyUIのみ。LLMは任意です。</p>
+    <h2 class="sec-title">蠢・ｦ∫腸蠅・/h2>
+    <p class="sec-sub">譛菴取ｧ区・縺ｯPython縺ｨComfyUI縺ｮ縺ｿ縲・LM縺ｯ莉ｻ諢上〒縺吶・/p>
     <div class="req-grid">
       <div class="req-card">
         <div class="req-name">Python</div>
-        <div class="req-ver">3.10 以上</div>
-        <div class="req-desc"><code>pip install requests</code> で依存を導入し、すぐ実行できます。</div>
+        <div class="req-ver">3.10 莉･荳・/div>
+        <div class="req-desc"><code>pip install requests</code> 縺ｧ萓晏ｭ倥ｒ蟆主・縺励√☆縺仙ｮ溯｡後〒縺阪∪縺吶・/div>
       </div>
       <div class="req-card">
         <div class="req-name">ComfyUI</div>
-        <div class="req-ver">0.16.4 以上</div>
-        <div class="req-desc">Animaワークフローが動作する環境。スマホ操作時は <code>--listen</code> を推奨。</div>
+        <div class="req-ver">0.16.4 莉･荳・/div>
+        <div class="req-desc">Anima繝ｯ繝ｼ繧ｯ繝輔Ο繝ｼ縺悟虚菴懊☆繧狗腸蠅・ゅせ繝槭・謫堺ｽ懈凾縺ｯ <code>--listen</code> 繧呈耳螂ｨ縲・/div>
       </div>
       <div class="req-card">
-        <div class="req-name">LLMサービス</div>
-        <div class="req-ver req-ver-opt">オプション</div>
-        <div class="req-desc">Gemini API / LM Studio / OpenAI互換API に対応。</div>
-        <div class="req-opt">未設定でも手動タグ入力で利用可能</div>
+        <div class="req-name">LLM繧ｵ繝ｼ繝薙せ</div>
+        <div class="req-ver req-ver-opt">繧ｪ繝励す繝ｧ繝ｳ</div>
+        <div class="req-desc">Gemini API / LM Studio / OpenAI莠呈鋤API 縺ｫ蟇ｾ蠢懊・/div>
+        <div class="req-opt">譛ｪ險ｭ螳壹〒繧よ焔蜍輔ち繧ｰ蜈･蜉帙〒蛻ｩ逕ｨ蜿ｯ閭ｽ</div>
       </div>
     </div>
   </div>
@@ -292,17 +296,16 @@
 
 <section class="cta-sec">
   <div class="inner">
-    <h2 class="cta-title">今すぐ試してみる</h2>    <p class="cta-sub">
-      GitHubからダウンロードして、5分後には画像生成できます。<br>
-      質問・バグ報告は <a href="https://github.com/tomotto1296/anima-pipeline/issues" target="_blank">Issue</a> で、最新情報は <a href="https://x.com/RHU_AIstudio" target="_blank">X</a> で。
-    </p>
+    <h2 class="cta-title">莉翫☆縺占ｩｦ縺励※縺ｿ繧・/h2>    <p class="cta-sub">
+      GitHub縺九ｉ繝繧ｦ繝ｳ繝ｭ繝ｼ繝峨＠縺ｦ縲・蛻・ｾ後↓縺ｯ逕ｻ蜒冗函謌舌〒縺阪∪縺吶・br>
+      雉ｪ蝠上・繝舌げ蝣ｱ蜻翫・ <a href="https://github.com/tomotto1296/anima-pipeline/issues" target="_blank">Issue</a> 縺ｧ縲∵怙譁ｰ諠・ｱ縺ｯ <a href="https://x.com/RHU_AIstudio" target="_blank">X</a> 縺ｧ縲・    </p>
     <div class="cta-btns">
-      <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" class="btn-primary" style="min-width: 260px; text-align: center;">GitHubでダウンロード</a>
-      <a href="guides/anima_pipeline_guide.md" class="btn-secondary" style="min-width: 260px; text-align: center;">使い方ガイド（日本語）</a>
+      <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" class="btn-primary" style="min-width: 260px; text-align: center;">GitHub縺ｧ繝繧ｦ繝ｳ繝ｭ繝ｼ繝・/a>
+      <a href="guides/anima_pipeline_guide.md" class="btn-secondary" style="min-width: 260px; text-align: center;">菴ｿ縺・婿繧ｬ繧､繝会ｼ域律譛ｬ隱橸ｼ・/a>
       <a href="guides/anima_pipeline_guide_en.md" class="btn-secondary" style="min-width: 260px; text-align: center;">English Guide</a>
     </div>
     <div class="cta-links">
-      <a href="https://note.com/rhustudio/n/nf0dc2414f852" target="_blank" class="cta-link">note 記事</a>
+      <a href="https://note.com/rhustudio/n/nf0dc2414f852" target="_blank" class="cta-link">note 險倅ｺ・/a>
       <a href="https://qiita.com/RHU/items/18095cb22281cd027bc4" target="_blank" class="cta-link">Qiita</a>
       <a href="https://zenn.dev/rhu/articles/4a6c315533c4e9" target="_blank" class="cta-link">Zenn</a>
       <a href="https://x.com/RHU_AIstudio" target="_blank" class="cta-link">X @RHU_AIstudio</a>
@@ -311,10 +314,15 @@
 </section>
 
 <footer class="site-footer">
-  <p>© 2026 <a href="https://github.com/tomotto1296" target="_blank">tomotto1296</a> - Anima Pipeline is released under the MIT License</p>
+  <p>ﾂｩ 2026 <a href="https://github.com/tomotto1296" target="_blank">tomotto1296</a> - Anima Pipeline is released under the MIT License</p>
 </footer>
 
 </body>
 </html>
+
+
+
+
+
 
 
