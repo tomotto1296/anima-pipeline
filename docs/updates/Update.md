@@ -8,66 +8,9 @@
 - `1.4.699x` 系は `1.4.7` として正式リリース済み
 
 ## 現在バージョン
-- `1.4.740`
+- `1.4.742`
 
 
-## 直近追記（INPUT-4: プリセット階層化）
-
-### 11) カテゴリ別プリセットAPIを追加
-- 新規エンドポイントを追加:
-  - `GET /presets/<category>`
-  - `GET /presets/<category>/<name>`
-  - `POST /presets/<category>/<name>`
-  - `DELETE /presets/<category>/<name>`
-- 対応カテゴリ:
-  - `chara / scene / camera / quality / lora / composite`
-- 保存先:
-  - `chara/`（既存互換）
-  - `presets/scene|camera|quality|lora|composite/`
-
-### 12) 既存キャラAPIの後方互換ラッパー追加
-- 追加:
-  - `GET /chara_list`
-  - `GET /chara_load?name=...`
-  - `POST /chara_save`
-  - `POST /chara_delete`
-- 新しい共通プリセットロジックを呼ぶ薄いラッパーとして実装
-
-### 13) UIにカテゴリプリセット管理パネルを追加
-- 設定パネル内に `Scene/Camera/Quality/LoRA/Composite` 管理UIを追加
-- 各カテゴリで一覧取得・保存・読込・削除が可能
-- `composite` は snapshot を含む保存/読込に対応
-
-### 14) セッション・設定キー拡張
-- `pipeline_config.default.json` / `pipeline_config.json` / `DEFAULT_CONFIG` に以下を追加:
-  - `last_scene_preset`
-  - `last_camera_preset`
-  - `last_quality_preset`
-  - `last_lora_preset`
-  - `last_composite_preset`
-- `load_config()` に不足キー補完マイグレーションを追加
-- セッション保存データに `last*Preset` を追加して復元対応
-
-## INPUT-4 完了確認 (v1.4.740)
-
-- プリセット階層化（Scene / Camera / Quality / Lora / Composite）を実装・反映
-- 既定プリセットを *_default.json へ統一
-  - Scene_default.json
-  - Camera_default.json
-  - Quality_default.json
-  - Lora_default.json
-  - Composite_default.json
-- Composite 読込時はスナップショット優先で復元（仕様確定に準拠）
-- Scene カテゴリ（屋外/屋内/特殊）と sub（屋外/屋上/屋内）の保持・復元を修正
-- Quality 保存エラー（collectCheckedNeg is not defined）を修正
-- 読込表示文言を 読込成功: <name> へ修正
-
-### 動作確認（完了）
-- Scene / Camera / Quality / Lora / Composite の保存・読込・削除
-- Composite の保持（scene/camera/quality/lora/chara snapshot）
-- 既存キャラプリセットの互換動作（読込/保存/削除）
-- 再起動後のプリセット一覧保持
-- 生成フローの回帰なし（生成/履歴/再生成）
 ## 実装サマリー（v1.4.6以降）
 
 ### 1) 起動不良・文字化け修正
@@ -322,7 +265,7 @@
 - `1.4.71` → `1.4.711` → `1.4.712` → `1.4.713` → `1.4.714` → `1.4.715` → `1.4.716` → `1.4.717` → `1.4.718`
 
 
-## 直近追記（v1.4.72 ～ v1.4.740）
+## 直近追記（v1.4.72 ～ v1.4.742）
 
 ### 33) OUTPUT-3: 生成履歴DB + 全履歴UI の初期実装
 - `generation_history` をSQLiteで永続化（`history/history.db`）。
@@ -354,28 +297,44 @@
 - 生成中 `%` 表示が出ないケースを回避。
 
 ### 37) 版上げ履歴（細修正）
-- `1.4.72` → `1.4.721` → `1.4.722` → `1.4.723` → `1.4.724` → `1.4.725` → `1.4.726` → `1.4.727` → `1.4.728` → `1.4.729` → `1.4.730` → `1.4.731` → `1.4.732` → `1.4.733` → `1.4.734` → `1.4.735` → `1.4.736` → `1.4.737` → `1.4.738` → `1.4.739` → `1.4.740`
+- `1.4.72` → `1.4.721` → `1.4.722` → `1.4.723` → `1.4.724` → `1.4.725` → `1.4.726` → `1.4.727` → `1.4.728` → `1.4.729` → `1.4.730` → `1.4.731` → `1.4.732` → `1.4.733` → `1.4.734` → `1.4.735` → `1.4.736` → `1.4.737` → `1.4.738` → `1.4.739` → `1.4.740` → `1.4.741` → `1.4.742`
+### 38) INPUT-4（後付け記録）: プリセット階層化
+- 本項目は `v1.4.740` 時点で実装済み機能を後付けで記録したもの。
+- API:
+  - `GET /presets/<category>`
+  - `GET /presets/<category>/<name>`
+  - `POST /presets/<category>/<name>`
+  - `DELETE /presets/<category>/<name>`
+- 対応カテゴリ:
+  - `chara / scene / camera / quality / lora / composite`
+- 既存互換ラッパー:
+  - `GET /chara_list`
+  - `GET /chara_load?name=...`
+  - `POST /chara_save`
+  - `POST /chara_delete`
+- 既定プリセット:
+  - `Scene_default.json`
+  - `Camera_default.json`
+  - `Quality_default.json`
+  - `Lora_default.json`
+  - `Composite_default.json`
+- Composite読込優先順位:
+  - スナップショット優先（名前参照は補助情報として保持）
 
+### 39) INPUT-4 実装修正（v1.4.740 時点）
+- Sceneカテゴリ（屋外/屋内/特殊）と sub（屋外/屋上/屋内）の保持・復元を修正。
+- `collectCheckedNeg is not defined` によるQuality保存エラーを修正。
+- 読込表示文言を `読込成功: <name>` に統一。
+- 実装スキーマ差分:
+  - Scene: `scene_place` / `scene_outdoor` / `scene_place_category` を保持。
+  - Camera: `posv` / `posh` / `pos_camera` / `camera_free` と `all[*].posc` を保持。
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+### INPUT-4 動作確認（完了）
+- Scene / Camera / Quality / Lora / Composite の保存・読込・削除
+- Composite の保持（scene/camera/quality/lora/chara snapshot）
+- 既存キャラプリセットの互換動作（読込/保存/削除）
+- 再起動後のプリセット一覧保持
+- 生成フローの回帰なし（生成/履歴/再生成）
 
 
 

@@ -1,4 +1,4 @@
-# Feature Spec: INPUT-4 プリセット階層化（キャラ/シーン/カメラ/品質/LoRA構成を分離）
+﻿# Feature Spec: INPUT-4 プリセット階層化（キャラ/シーン/カメラ/品質/LoRA構成を分離）
 
 ## Meta
 
@@ -6,7 +6,7 @@
 - Roadmap No.: INPUT-4
 - Roadmap Priority: MUST（★★☆）
 - Owner:
-- Status: Draft
+- Status: Approved
 - Version: v1
 - Last Updated: 2026-03-22
 - Target Version: v1.4.8
@@ -172,9 +172,13 @@ DELETE /presets/<category>/<name>
   "scene_world": "",
   "scene_tod": "",
   "scene_weather": "",
-  "scene_free": ""
+  "scene_free": "",
+  "scene_place": "",
+  "scene_outdoor": "",
+  "scene_place_category": ""
 }
 ```
+> `scene_place`（場所タグ）・`scene_outdoor`（屋外/屋上/屋内サブ）・`scene_place_category`（屋外/屋内/特殊）を保持し、UI状態とプロンプト整合を維持する。
 
 #### camera プリセット
 ```json
@@ -182,10 +186,13 @@ DELETE /presets/<category>/<name>
   "posv": "",
   "posh": "",
   "pos_camera": "",
-  "camera_free": ""
+  "camera_free": "",
+  "all": [
+    { "posv": "", "posh": "", "posc": "" }
+  ]
 }
 ```
-> `posv`（画面上下）・`posh`（画面左右）は `ui_options.json` の `pos_vertical` / `pos_horizontal` に対応。`pos_camera`（カメラアングル）と合わせて3フィールドが実際のUIに存在する（`anima_pipeline.py` 内 `chara_posv_*` / `chara_posh_*` 参照）。
+> `posv`（画面上下）・`posh`（画面左右）・`pos_camera`（カメラアングル）を保持。複数キャラ時は `all[*]` でキャラごとの `posv/posh/posc` を保存する。`camera_free` は将来拡張用の予約フィールドとして保持する。
 
 #### quality プリセット
 ```json
@@ -338,7 +345,7 @@ DELETE /presets/<category>/<name>
 
 ## Open Questions / 未決事項
 
-- 完成プリセットの読込時、スナップショット展開とプリセット名参照のどちらを優先するか（→ 現状はスナップショット優先を推奨）
+- ~~完成プリセットの読込時、スナップショット展開とプリセット名参照のどちらを優先するか~~ → **スナップショット優先で確定**
 - `style_tags.json` / `extra_tags.json` を将来的に scene/quality プリセットへ統合するか（→ 別 Issue で検討）
 - LoRA構成プリセットと ComfyUI ワークフロー内の LoRA ノードとのマッピング方法（ワークフロー依存のため要調査）
 - キャラプリセット JSON への `name_en` / `series_en` 追加（INPUT-12）は本機能と実装タイミングが重なる可能性がある。INPUT-12 実装時にスキーマを拡張すること（本 Issue の範囲外）。
@@ -357,3 +364,5 @@ DELETE /presets/<category>/<name>
 | `settings/ui_options.json` | scene_world / scene_tod / pos_camera / quality_human 等の選択肢定義 |
 | `docs/specs/feature_api_v1.md` | 既存APIリファレンス |
 | `docs/updates/Update.md` | 実装後の変更ログ |
+
+
