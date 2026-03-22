@@ -1,0 +1,42 @@
+﻿{
+    "name":  "Camera_default",
+    "data":  {
+                 "posv":  "",
+                 "posh":  "",
+                 "pos_camera":  "",
+                 "camera_free":  "",
+                 "all":  [
+                             {
+                                 "posv":  "",
+                                 "posh":  "",
+                                 "posc":  ""
+                             },
+                             {
+                                 "posv":  "",
+                                 "posh":  "",
+                                 "posc":  ""
+                             },
+                             {
+                                 "posv":  "",
+                                 "posh":  "",
+                                 "posc":  ""
+                             },
+                             {
+                                 "posv":  "",
+                                 "posh":  "",
+                                 "posc":  ""
+                             },
+                             {
+                                 "posv":  "",
+                                 "posh":  "",
+                                 "posc":  ""
+                             },
+                             {
+                                 "posv":  "",
+                                 "posh":  "",
+                                 "posc":  ""
+                             }
+                         ]
+             },
+    "savedAt":  "2026-03-22T15:54:49"
+}

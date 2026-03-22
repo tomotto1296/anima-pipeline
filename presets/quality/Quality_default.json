@@ -1,0 +1,22 @@
+﻿{
+    "name":  "Quality_default",
+    "data":  {
+                 "quality_tags":  [
+                                      "masterpiece",
+                                      "best quality",
+                                      "score_9",
+                                      "score_8",
+                                      "score_7"
+                                  ],
+                 "quality_neg_tags":  [
+                                          "normal quality",
+                                          "low quality",
+                                          "worst quality",
+                                          "score_4",
+                                          "score_3",
+                                          "score_2",
+                                          "score_1"
+                                      ]
+             },
+    "savedAt":  "2026-03-22T15:54:49"
+}

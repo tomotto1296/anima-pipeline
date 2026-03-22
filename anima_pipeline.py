@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
 Anima Pipeline
 ブラウザUI → LLM → ComfyUI 自動連携スクリプト
@@ -27,7 +27,7 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
-__version__ = "1.4.730"
+__version__ = "1.4.740"
 
 def _sf(name): return os.path.join(_settings_dir, name)
 
@@ -38,7 +38,103 @@ NEG_EXTRA_TAGS_FILE  = _sf('extra_tags_negative.json')
 NEG_STYLE_TAGS_FILE  = _sf('style_tags_negative.json')
 UI_OPTIONS_FILE      = _sf('ui_options.json')
 CHARA_PRESETS_DIR    = os.path.join(_base_dir, 'chara')
+PRESETS_BASE_DIR     = os.path.join(_base_dir, 'presets')
 DEFAULT_LOGS_DIR     = os.path.join(_base_dir, 'logs')
+
+PRESET_CATEGORIES = ("chara", "scene", "camera", "quality", "lora", "composite")
+
+
+def _preset_dir_for_category(category: str) -> str:
+    cat = str(category or "").strip().lower()
+    if cat == "chara":
+        return CHARA_PRESETS_DIR
+    return os.path.join(PRESETS_BASE_DIR, cat)
+
+
+def _is_valid_preset_category(category: str) -> bool:
+    return str(category or "").strip().lower() in PRESET_CATEGORIES
+
+
+def _sanitize_preset_name(name: str) -> str:
+    safe = str(name or "").strip().replace("/", "_").replace("\\", "_")
+    safe = safe.strip(".")
+    return safe[:80]
+
+
+def _preset_filepath(category: str, name: str) -> str:
+    safe_name = _sanitize_preset_name(name)
+    if not safe_name:
+        return ""
+    return os.path.join(_preset_dir_for_category(category), safe_name + ".json")
+
+
+def list_presets(category: str) -> list[str]:
+    if not _is_valid_preset_category(category):
+        raise ValueError("Unknown preset category")
+    pdir = _preset_dir_for_category(category)
+    if not os.path.exists(pdir):
+        return []
+    names = []
+    for fn in sorted(os.listdir(pdir)):
+        if fn.lower().endswith(".json"):
+            names.append(os.path.splitext(fn)[0])
+    return names
+
+
+def load_preset(category: str, name: str) -> dict:
+    if not _is_valid_preset_category(category):
+        raise ValueError("Unknown preset category")
+    fpath = _preset_filepath(category, name)
+    if not fpath:
+        raise ValueError("Invalid preset name")
+    if not os.path.exists(fpath):
+        raise FileNotFoundError("Preset not found")
+    with open(fpath, "r", encoding="utf-8-sig") as f:
+        raw = json.load(f)
+    if isinstance(raw, dict) and "data" in raw:
+        return {
+            "name": raw.get("name", _sanitize_preset_name(name)),
+            "data": raw.get("data", {}),
+            "savedAt": raw.get("savedAt", ""),
+            "status": "ok",
+        }
+    return {
+        "name": _sanitize_preset_name(name),
+        "data": raw if isinstance(raw, dict) else {},
+        "savedAt": "",
+        "status": "ok",
+    }
+
+
+def save_preset(category: str, name: str, data: dict) -> dict:
+    if not _is_valid_preset_category(category):
+        raise ValueError("Unknown preset category")
+    safe_name = _sanitize_preset_name(name)
+    if not safe_name:
+        raise ValueError("Invalid preset name")
+    pdir = _preset_dir_for_category(category)
+    os.makedirs(pdir, exist_ok=True)
+    fpath = _preset_filepath(category, safe_name)
+    payload = {
+        "name": safe_name,
+        "data": data if isinstance(data, dict) else {},
+        "savedAt": datetime.datetime.now().isoformat(),
+    }
+    with open(fpath, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+    return {"status": "ok", "name": safe_name}
+
+
+def delete_preset(category: str, name: str) -> dict:
+    if not _is_valid_preset_category(category):
+        raise ValueError("Unknown preset category")
+    fpath = _preset_filepath(category, name)
+    if not fpath:
+        raise ValueError("Invalid preset name")
+    if not os.path.exists(fpath):
+        raise FileNotFoundError("Preset not found")
+    os.remove(fpath)
+    return {"status": "ok"}
 
 _ORIG_PRINT = builtins.print
 _LOG_LOCK = threading.Lock()
@@ -263,6 +359,11 @@ DEFAULT_CONFIG = {
     "log_level": "normal",  # normal / debug
     "history_db_path": "history/history.db",
     "history_thumb_dir": "history/thumbs",
+    "last_scene_preset": "",
+    "last_camera_preset": "",
+    "last_quality_preset": "",
+    "last_lora_preset": "",
+    "last_composite_preset": "",
 }
 
 def load_config() -> dict:
@@ -278,6 +379,10 @@ def load_config() -> dict:
                     migrated = True
             # OUTPUT-4: 新規キーの補完
             for k in ("output_format", "embed_metadata"):
+                if k not in saved:
+                    saved[k] = DEFAULT_CONFIG[k]
+                    migrated = True
+            for k in ("last_scene_preset", "last_camera_preset", "last_quality_preset", "last_lora_preset", "last_composite_preset"):
                 if k not in saved:
                     saved[k] = DEFAULT_CONFIG[k]
                     migrated = True
@@ -1899,6 +2004,28 @@ HTML = r"""<!DOCTYPE html>
         <button onclick="deleteCharaPresetFromSettings()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0;width:2.8rem;text-align:center;border:1px solid #e0779a;border-radius:5px;background:white;color:#c0392b;cursor:pointer;">DEL</button>
       </div>
     </div>
+    <div style="margin-top:0.8rem;padding:0.6rem 0.7rem;background:#f5f9ff;border:1px solid #9db9df;border-radius:7px;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#2d5f99;font-weight:bold;margin-bottom:0.4rem;">🗂 プリセット管理（Scene/Camera/Quality/LoRA/Composite）</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem;margin-bottom:0.35rem;">
+        <select id="presetCategorySel" onchange="onPresetCategoryChanged()" style="font-family:'DM Mono',monospace;font-size:0.72rem;border:1px solid #9db9df;border-radius:5px;padding:0.3rem 0.5rem;background:white;color:var(--ink);cursor:pointer;">
+          <option value="scene">Scene</option>
+          <option value="camera">Camera</option>
+          <option value="quality">Quality</option>
+          <option value="lora">LoRA Set</option>
+          <option value="composite">Composite</option>
+        </select>
+        <input id="presetNameInput" type="text" placeholder="preset name"
+          style="font-family:'DM Mono',monospace;font-size:0.72rem;border:1px solid #9db9df;border-radius:5px;padding:0.3rem 0.5rem;background:white;color:var(--ink);">
+      </div>
+      <div style="display:flex;gap:0.35rem;align-items:center;">
+        <select id="presetItemSel" onchange="onPresetItemChanged(this.value)" style="flex:1;min-width:0;font-family:'DM Mono',monospace;font-size:0.72rem;border:1px solid #9db9df;border-radius:5px;padding:0.3rem 0.5rem;background:white;color:var(--ink);cursor:pointer;">
+          <option value="">── Select preset ──</option>
+        </select>
+        <button onclick="loadSelectedPresetFromPanel()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0;width:2.8rem;text-align:center;border:1px solid #9db9df;border-radius:5px;background:white;color:#2d5f99;cursor:pointer;">Load</button>
+        <button onclick="savePresetFromPanel()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0;width:2.8rem;text-align:center;border:1px solid #9db9df;border-radius:5px;background:white;color:#2d5f99;cursor:pointer;">Save</button>
+        <button onclick="deletePresetFromPanel()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0;width:2.8rem;text-align:center;border:1px solid #9db9df;border-radius:5px;background:white;color:#2d5f99;cursor:pointer;">Del</button>
+      </div>
+    </div>
   </div>
 
   <div class="save-load-row" style="margin-bottom:1rem;">
@@ -2607,6 +2734,8 @@ const BASE_I18N_MAP_EN = {
   '全体': 'All',
   '⑫ 脚': '⑫ Legs',
   'プリセット名を入力してください': 'Please enter preset name',
+  '同名のプリセットが存在します。上書きしますか？': 'A preset with the same name already exists. Overwrite?',
+  'プリセット管理（Scene/Camera/Quality/LoRA/Composite）': 'Preset Manager (Scene/Camera/Quality/LoRA/Composite)',
   '小': 'Small',
   '低': 'Short',
   '高': 'Tall',
@@ -3742,6 +3871,355 @@ function loadCharaPreset(idx){
     }
   }, 50);
 }
+
+const PRESET_CATEGORIES = ['scene','camera','quality','lora','composite'];
+let presetCatalog = {scene:[], camera:[], quality:[], lora:[], composite:[]};
+let lastPresetSelection = {scene:'', camera:'', quality:'', lora:'', composite:''};
+
+function _escPresetPart(v){ return encodeURIComponent(String(v||'')); }
+function _setCheckValues(containerId, tags){
+  const wanted = new Set((tags||[]).map(String));
+  document.querySelectorAll(`#${containerId} input[type=checkbox]`).forEach(cb=>{
+    cb.checked = wanted.has(cb.dataset.tag);
+  });
+}
+
+async function listCategoryPresets(category){
+  const r = await fetch(`/presets/${_escPresetPart(category)}`, {cache:'no-store'});
+  const d = await r.json();
+  if(d.status !== 'ok') throw new Error(d.error || 'list failed');
+  return d.presets || [];
+}
+
+async function loadCategoryPreset(category, name){
+  const r = await fetch(`/presets/${_escPresetPart(category)}/${_escPresetPart(name)}`, {cache:'no-store'});
+  const d = await r.json();
+  if(d.status !== 'ok') throw new Error(d.error || 'load failed');
+  return d;
+}
+
+async function saveCategoryPreset(category, name, data){
+  const r = await fetch(`/presets/${_escPresetPart(category)}/${_escPresetPart(name)}`, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({data}),
+  });
+  const d = await r.json();
+  if(d.status !== 'ok') throw new Error(d.error || 'save failed');
+  return d;
+}
+
+async function deleteCategoryPreset(category, name){
+  const r = await fetch(`/presets/${_escPresetPart(category)}/${_escPresetPart(name)}`, {method:'DELETE'});
+  const d = await r.json();
+  if(d.status !== 'ok') throw new Error(d.error || 'delete failed');
+  return d;
+}
+
+function collectScenePresetData(){
+  return {
+    scene_world: document.getElementById('f_world')?.value || '',
+    scene_tod: document.getElementById('f_tod')?.value || '',
+    scene_weather: document.getElementById('f_weather')?.value || '',
+    scene_free: document.getElementById('f_misc')?.value || '',
+    scene_place: document.getElementById('f_place')?.value || '',
+    scene_outdoor: document.getElementById('f_outdoor')?.value || '',
+    scene_place_category: placeActiveCat || '',
+  };
+}
+
+function applyScenePresetData(data){
+  const world = data.scene_world || '';
+  const tod = data.scene_tod || '';
+  const weather = data.scene_weather || '';
+  const free = data.scene_free || '';
+  const place = data.scene_place || '';
+  const outdoor = data.scene_outdoor || '';
+  const placeCat = data.scene_place_category || '';
+  if(document.getElementById('f_world')) document.getElementById('f_world').value = world;
+  if(document.getElementById('f_tod')) document.getElementById('f_tod').value = tod;
+  if(document.getElementById('f_weather')) document.getElementById('f_weather').value = weather;
+  if(document.getElementById('f_misc')) document.getElementById('f_misc').value = free;
+  if(document.getElementById('f_place')) document.getElementById('f_place').value = place;
+  if(document.getElementById('f_outdoor')) document.getElementById('f_outdoor').value = outdoor;
+  ['world','tod','weather'].forEach(k=>{
+    const val = (k==='world') ? world : (k==='tod' ? tod : weather);
+    document.querySelectorAll(`[data-${k}]`).forEach(b=>b.classList.toggle('active', (b.dataset[k]||'')===val));
+  });
+  if(placeCat){
+    const catBtn = document.querySelector(`[data-placecat="${placeCat}"]`);
+    if(placeActiveCat === placeCat) placeActiveCat = null;
+    showPlaceCat(placeCat, catBtn || null);
+    const itemRow = document.getElementById('place_item_row');
+    itemRow?.querySelectorAll('[data-placeval]').forEach(b=>{
+      b.classList.toggle('active', (b.dataset.placeval||'') === place);
+    });
+    if(outdoor){
+      const subRow = document.getElementById('place_sub_row');
+      if(subRow){
+        const subOpts = PLACE_SUB[placeCat] || [];
+        const matchSub = subOpts.find(o=>o.v===outdoor);
+        subRow.querySelectorAll('.period-btn').forEach(b=>{
+          b.classList.toggle('active', matchSub ? b.textContent===matchSub.label : false);
+        });
+      }
+    }
+  } else {
+    placeActiveCat = null;
+    document.querySelectorAll('[data-placecat]').forEach(b=>b.classList.remove('active'));
+    const itemRow = document.getElementById('place_item_row');
+    const subRow = document.getElementById('place_sub_row');
+    if(itemRow){
+      itemRow.style.display = 'none';
+      itemRow.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+    }
+    if(subRow){
+      subRow.style.display = 'none';
+      subRow.querySelectorAll('.period-btn').forEach(b=>b.classList.remove('active'));
+    }
+  }
+}
+
+function collectCameraPresetData(){
+  const count = Math.max(0, Math.min(6, parseInt(document.getElementById('f_charcount')?.value)||0));
+  const all = [];
+  for(let i=0;i<count;i++){
+    all.push({
+      posv: document.getElementById(`chara_posv_${i}`)?.value || '',
+      posh: document.getElementById(`chara_posh_${i}`)?.value || '',
+      posc: document.getElementById(`chara_posc_${i}`)?.value || '',
+    });
+  }
+  return {
+    posv: all[0]?.posv || '',
+    posh: all[0]?.posh || '',
+    pos_camera: all[0]?.posc || '',
+    camera_free: '',
+    all,
+  };
+}
+
+function applyCameraPresetData(data){
+  const all = Array.isArray(data.all) ? data.all : [];
+  const count = Math.max(0, Math.min(6, parseInt(document.getElementById('f_charcount')?.value)||0));
+  for(let i=0;i<count; i++){
+    const pv = (all[i]?.posv ?? data.posv ?? '');
+    const ph = (all[i]?.posh ?? data.posh ?? '');
+    const pc = (all[i]?.posc ?? data.pos_camera ?? '');
+    const ev = document.getElementById(`chara_posv_${i}`);
+    const eh = document.getElementById(`chara_posh_${i}`);
+    const ec = document.getElementById(`chara_posc_${i}`);
+    if(ev){
+      ev.value = pv;
+      const rowV = ev.closest('.opt-row');
+      rowV?.querySelectorAll('.age-btn').forEach(b=>{
+        b.classList.toggle('active', (b.dataset.val||'') === pv);
+      });
+    }
+    if(eh){
+      eh.value = ph;
+      const rowH = eh.closest('.opt-row');
+      rowH?.querySelectorAll('.age-btn').forEach(b=>{
+        b.classList.toggle('active', (b.dataset.val||'') === ph);
+      });
+    }
+    if(ec){
+      ec.value = pc;
+      const rowC = ec.closest('.opt-row');
+      rowC?.querySelectorAll('.age-btn').forEach(b=>{
+        b.classList.toggle('active', (b.dataset.val||'') === pc);
+      });
+    }
+  }
+}
+
+function collectQualityPresetData(){
+  const quality_tags = [
+    ...collectCheckedTags('qualityHuman'),
+    ...collectCheckedTags('qualityPony'),
+  ];
+  const quality_neg_tags = [
+    ...collectCheckedNeg('qualityHumanNeg'),
+    ...collectCheckedNeg('qualityPonyNeg'),
+  ];
+  return {quality_tags, quality_neg_tags};
+}
+
+function applyQualityPresetData(data){
+  const posTags = new Set((data.quality_tags||[]).map(String));
+  const negTags = new Set((data.quality_neg_tags||[]).map(String));
+  document.querySelectorAll('#qualityHuman input[type=checkbox], #qualityPony input[type=checkbox]').forEach(cb=>{
+    cb.checked = posTags.has(cb.dataset.tag);
+  });
+  document.querySelectorAll('#qualityHumanNeg input[type=checkbox], #qualityPonyNeg input[type=checkbox]').forEach(cb=>{
+    cb.checked = negTags.has(cb.dataset.tag);
+  });
+}
+
+function collectLoraPresetData(){
+  const loras = collectLoraSlots()
+    .filter(s=>s && s.name)
+    .map(s=>({name:s.name, weight:Number(s.strength||1)}));
+  return {loras};
+}
+
+function applyLoraPresetData(data){
+  const slots = new Array(LORA_SLOT_COUNT).fill(null).map(()=>({name:'', strength:1}));
+  (data.loras||[]).slice(0, LORA_SLOT_COUNT).forEach((l, i)=>{
+    slots[i] = {name: l.name || '', strength: Number(l.weight ?? 1)};
+  });
+  applyLoraSlots(slots);
+  updateLoraCardBadges();
+}
+
+function collectCharaCompositeSnapshot(){
+  const now = collectSessionData();
+  return {charcount: now.charcount, characters: now.characters || []};
+}
+
+function applyCharaCompositeSnapshot(charaSnap){
+  if(!charaSnap || !Array.isArray(charaSnap.characters)) return;
+  const now = collectSessionData();
+  now.charcount = Math.max(0, Math.min(6, parseInt(charaSnap.charcount)||0));
+  now.characters = charaSnap.characters;
+  applySession(now);
+}
+
+function collectCompositePresetData(){
+  return {
+    chara: null,
+    scene: lastPresetSelection.scene || null,
+    camera: lastPresetSelection.camera || null,
+    quality: lastPresetSelection.quality || null,
+    lora: lastPresetSelection.lora || null,
+    snapshot: {
+      chara: collectCharaCompositeSnapshot(),
+      scene: collectScenePresetData(),
+      camera: collectCameraPresetData(),
+      quality: collectQualityPresetData(),
+      lora: collectLoraPresetData(),
+    }
+  };
+}
+
+function applyCompositePresetData(data){
+  const snap = data.snapshot || {};
+  if(snap.scene) applyScenePresetData(snap.scene);
+  if(snap.camera) applyCameraPresetData(snap.camera);
+  if(snap.quality) applyQualityPresetData(snap.quality);
+  if(snap.lora) applyLoraPresetData(snap.lora);
+  // Apply chara snapshot last so delayed applySession() does not revert scene/camera/quality.
+  if(snap.chara) applyCharaCompositeSnapshot(snap.chara);
+  if(data.scene) lastPresetSelection.scene = data.scene;
+  if(data.camera) lastPresetSelection.camera = data.camera;
+  if(data.quality) lastPresetSelection.quality = data.quality;
+  if(data.lora) lastPresetSelection.lora = data.lora;
+}
+
+function collectPresetByCategory(category){
+  if(category === 'scene') return collectScenePresetData();
+  if(category === 'camera') return collectCameraPresetData();
+  if(category === 'quality') return collectQualityPresetData();
+  if(category === 'lora') return collectLoraPresetData();
+  if(category === 'composite') return collectCompositePresetData();
+  return {};
+}
+
+function applyPresetByCategory(category, data){
+  if(category === 'scene') applyScenePresetData(data);
+  if(category === 'camera') applyCameraPresetData(data);
+  if(category === 'quality') applyQualityPresetData(data);
+  if(category === 'lora') applyLoraPresetData(data);
+  if(category === 'composite') applyCompositePresetData(data);
+}
+
+function onPresetCategoryChanged(){
+  const cat = document.getElementById('presetCategorySel')?.value || 'scene';
+  const sel = document.getElementById('presetItemSel');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">── Select preset ──</option>';
+  (presetCatalog[cat] || []).forEach(name=>{
+    const o = document.createElement('option');
+    o.value = name;
+    o.textContent = name;
+    sel.appendChild(o);
+  });
+  const cur = lastPresetSelection[cat] || '';
+  if(cur && (presetCatalog[cat]||[]).includes(cur)) sel.value = cur;
+  const nameIn = document.getElementById('presetNameInput');
+  if(nameIn) nameIn.value = sel.value || '';
+}
+
+function onPresetItemChanged(v){
+  const cat = document.getElementById('presetCategorySel')?.value || 'scene';
+  lastPresetSelection[cat] = v || '';
+  const nameIn = document.getElementById('presetNameInput');
+  if(nameIn) nameIn.value = v || '';
+}
+
+async function loadSelectedPresetFromPanel(){
+  const cat = document.getElementById('presetCategorySel')?.value || 'scene';
+  const name = (document.getElementById('presetItemSel')?.value || '').trim();
+  if(!name){ alert('プリセットを選択'); return; }
+  try{
+    const p = await loadCategoryPreset(cat, name);
+    applyPresetByCategory(cat, p.data || {});
+    lastPresetSelection[cat] = name;
+    alert(`読込成功: ${name}`);
+  }catch(e){
+    alert('読み込みエラー: ' + e.message);
+  }
+}
+
+async function savePresetFromPanel(){
+  const cat = document.getElementById('presetCategorySel')?.value || 'scene';
+  const inputName = (document.getElementById('presetNameInput')?.value || '').trim();
+  const fallback = lastPresetSelection[cat] || `${cat}_preset`;
+  const name = (inputName || prompt('プリセット名を入力してください', fallback) || '').trim();
+  if(!name) return;
+  try{
+    if((presetCatalog[cat]||[]).includes(name)){
+      if(!confirm('同名のプリセットが存在します。上書きしますか？')) return;
+    }
+    const data = collectPresetByCategory(cat);
+    await saveCategoryPreset(cat, name, data);
+    lastPresetSelection[cat] = name;
+    presetCatalog[cat] = await listCategoryPresets(cat);
+    onPresetCategoryChanged();
+    const sel = document.getElementById('presetItemSel');
+    if(sel) sel.value = name;
+    alert(`Saved: ${name}`);
+  }catch(e){
+    alert('保存エラー: ' + e.message);
+  }
+}
+
+async function deletePresetFromPanel(){
+  const cat = document.getElementById('presetCategorySel')?.value || 'scene';
+  const name = (document.getElementById('presetItemSel')?.value || '').trim();
+  if(!name){ alert('プリセットを選択'); return; }
+  if(!confirm(`Delete preset "${name}"?`)) return;
+  try{
+    await deleteCategoryPreset(cat, name);
+    if(lastPresetSelection[cat] === name) lastPresetSelection[cat] = '';
+    presetCatalog[cat] = await listCategoryPresets(cat);
+    onPresetCategoryChanged();
+  }catch(e){
+    alert('削除エラー: ' + e.message);
+  }
+}
+
+async function initHierarchicalPresets(){
+  for(const cat of PRESET_CATEGORIES){
+    try{
+      presetCatalog[cat] = await listCategoryPresets(cat);
+    }catch(_){
+      presetCatalog[cat] = [];
+    }
+  }
+  onPresetCategoryChanged();
+}
+
 let selectedW=1024, selectedH=1024;
 let selectedFmt='png';
 let selectedCount=1;
@@ -4171,6 +4649,12 @@ async function loadSettings(){
     document.getElementById('logDirInput').value=cfg.log_dir||'logs';
     document.getElementById('logRetentionInput').value=(cfg.log_retention_days ?? 30);
     document.getElementById('logLevelInput').value=(cfg.log_level||'normal');
+    lastPresetSelection.scene = cfg.last_scene_preset || '';
+    lastPresetSelection.camera = cfg.last_camera_preset || '';
+    lastPresetSelection.quality = cfg.last_quality_preset || '';
+    lastPresetSelection.lora = cfg.last_lora_preset || '';
+    lastPresetSelection.composite = cfg.last_composite_preset || '';
+    onPresetCategoryChanged();
   }catch(e){console.warn(e);}
 }
 
@@ -4221,6 +4705,11 @@ async function saveSettings(){
     output_format:selectedFmt,
     embed_metadata:(document.getElementById('embedMetadataToggle')?.checked ?? true),
     console_lang: currentLang,
+    last_scene_preset: lastPresetSelection.scene || '',
+    last_camera_preset: lastPresetSelection.camera || '',
+    last_quality_preset: lastPresetSelection.quality || '',
+    last_lora_preset: lastPresetSelection.lora || '',
+    last_composite_preset: lastPresetSelection.composite || '',
     ...collectGenParams(),
   };
   await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});
@@ -4358,6 +4847,11 @@ function collectSessionData(){
     useLLM: document.getElementById('useLLM').checked,
     workflowFile: getSelectedWorkflow(),
     loraSlots: collectLoraSlots(),
+    lastScenePreset: lastPresetSelection.scene || '',
+    lastCameraPreset: lastPresetSelection.camera || '',
+    lastQualityPreset: lastPresetSelection.quality || '',
+    lastLoraPreset: lastPresetSelection.lora || '',
+    lastCompositePreset: lastPresetSelection.composite || '',
     savedAt: new Date().toISOString(),
   };
 }
@@ -4634,6 +5128,7 @@ function applySession(data){
     if(data.place && _legacyMap[data.place]) data.place = _legacyMap[data.place];
     if(data.placeActiveCat){
       const catBtn = document.querySelector(`[data-placecat="${data.placeActiveCat}"]`);
+      if(placeActiveCat === data.placeActiveCat) placeActiveCat = null;
       showPlaceCat(data.placeActiveCat, catBtn);
       if(data.place){
         const itemRow = document.getElementById('place_item_row');
@@ -4742,6 +5237,12 @@ function applySession(data){
       if(sel && [...sel.options].some(o=>o.value===data.workflowFile)) sel.value = data.workflowFile;
     }
     if(data.loraSlots) applyLoraSlots(data.loraSlots);
+    if(data.lastScenePreset !== undefined) lastPresetSelection.scene = data.lastScenePreset || '';
+    if(data.lastCameraPreset !== undefined) lastPresetSelection.camera = data.lastCameraPreset || '';
+    if(data.lastQualityPreset !== undefined) lastPresetSelection.quality = data.lastQualityPreset || '';
+    if(data.lastLoraPreset !== undefined) lastPresetSelection.lora = data.lastLoraPreset || '';
+    if(data.lastCompositePreset !== undefined) lastPresetSelection.composite = data.lastCompositePreset || '';
+    onPresetCategoryChanged();
   }, 50);
 }
 
@@ -4797,6 +5298,11 @@ function selSafety(el){
 }
 
 function collectCheckedTags(containerId){
+  return Array.from(document.querySelectorAll(`#${containerId} input[type=checkbox]:checked`))
+    .map(cb=>cb.dataset.tag);
+}
+
+function collectCheckedNeg(containerId){
   return Array.from(document.querySelectorAll(`#${containerId} input[type=checkbox]:checked`))
     .map(cb=>cb.dataset.tag);
 }
@@ -6769,6 +7275,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   initSizePresets();
   initGenParams();
   initLoraSlots();
+  initHierarchicalPresets();
   loadWorkflowList();
   loadLastSession();
   // Ensure section toggles are ready immediately.
@@ -7129,6 +7636,63 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self,fmt,*args):pass
 
     def do_GET(self):
+        from urllib.parse import urlparse, parse_qs, unquote
+        parsed = urlparse(self.path)
+        req_path = parsed.path
+        req_qs = parse_qs(parsed.query, keep_blank_values=True)
+
+        if req_path.startswith('/presets/'):
+            parts = [p for p in req_path.split('/') if p]
+            payload = {"status": "error", "error": "Unknown preset category"}
+            code = 200
+            try:
+                if len(parts) == 2:
+                    category = parts[1]
+                    payload = {"presets": list_presets(category), "status": "ok"}
+                elif len(parts) == 3:
+                    category = parts[1]
+                    name = unquote(parts[2])
+                    payload = load_preset(category, name)
+                else:
+                    code = 400
+                    payload = {"status": "error", "error": "Invalid presets endpoint"}
+            except FileNotFoundError:
+                payload = {"status": "error", "error": "Preset not found"}
+            except ValueError as e:
+                payload = {"status": "error", "error": str(e)}
+            except json.JSONDecodeError:
+                payload = {"status": "error", "error": "Preset file is corrupted"}
+            except Exception as e:
+                payload = {"status": "error", "error": str(e)}
+            self.send_response(code)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
+            return
+        elif req_path == '/chara_list':
+            try:
+                payload = {"presets": list_presets("chara"), "status": "ok"}
+            except Exception as e:
+                payload = {"presets": [], "status": "error", "error": str(e)}
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
+            return
+        elif req_path == '/chara_load':
+            name = str(req_qs.get("name", [""])[0] or "").strip()
+            try:
+                payload = load_preset("chara", name)
+            except FileNotFoundError:
+                payload = {"status": "error", "error": "Preset not found"}
+            except Exception as e:
+                payload = {"status": "error", "error": str(e)}
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
+            return
+
         if self.path=='/':
             self.send_response(200)
             self.send_header('Content-Type','text/html; charset=utf-8')
@@ -7881,6 +8445,54 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         length=int(self.headers.get('Content-Length',0))
         body=json.loads(self.rfile.read(length))
+        from urllib.parse import urlparse, unquote
+        parsed = urlparse(self.path)
+        req_path = parsed.path
+
+        if req_path.startswith('/presets/'):
+            parts = [p for p in req_path.split('/') if p]
+            payload = {"status": "error", "error": "Invalid presets endpoint"}
+            code = 200
+            try:
+                if len(parts) != 3:
+                    code = 400
+                    raise ValueError("Invalid presets endpoint")
+                category = parts[1]
+                name = unquote(parts[2])
+                data = body.get("data", {})
+                payload = save_preset(category, name, data)
+            except ValueError as e:
+                payload = {"status": "error", "error": str(e)}
+            except Exception as e:
+                payload = {"status": "error", "error": str(e)}
+            self.send_response(code)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
+            return
+        elif req_path == '/chara_save':
+            name = str(body.get("name", "") or "").strip()
+            data = body.get("data", {})
+            try:
+                payload = save_preset("chara", name, data)
+            except Exception as e:
+                payload = {"status": "error", "error": str(e)}
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
+            return
+        elif req_path == '/chara_delete':
+            name = str(body.get("name", "") or "").strip()
+            try:
+                payload = delete_preset("chara", name)
+            except Exception as e:
+                payload = {"status": "error", "error": str(e)}
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
+            return
 
         if self.path=='/config':
             save_config(body)
@@ -7998,6 +8610,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Type','application/json')
             self.end_headers()
             self.wfile.write(json.dumps(result,ensure_ascii=False).encode('utf-8'))
+
         elif self.path=='/chara_preset_thumb':
             os.makedirs(CHARA_PRESETS_DIR, exist_ok=True)
             result = {'ok': True}
@@ -8481,6 +9094,35 @@ class Handler(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(json.dumps(result,ensure_ascii=False).encode('utf-8'))
 
+    def do_DELETE(self):
+        from urllib.parse import urlparse, unquote
+        parsed = urlparse(self.path)
+        req_path = parsed.path
+        if req_path.startswith('/presets/'):
+            parts = [p for p in req_path.split('/') if p]
+            payload = {"status": "error", "error": "Invalid presets endpoint"}
+            code = 200
+            try:
+                if len(parts) != 3:
+                    code = 400
+                    raise ValueError("Invalid presets endpoint")
+                category = parts[1]
+                name = unquote(parts[2])
+                payload = delete_preset(category, name)
+            except FileNotFoundError:
+                payload = {"status": "error", "error": "Preset not found"}
+            except ValueError as e:
+                payload = {"status": "error", "error": str(e)}
+            except Exception as e:
+                payload = {"status": "error", "error": str(e)}
+            self.send_response(code)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
+            return
+        self.send_response(404)
+        self.end_headers()
+
 
 def check_server(name,url,path="/", cfg=None):
     try:
@@ -8522,3 +9164,12 @@ def main():
 
 if __name__=='__main__':
     main()
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,86 @@
+﻿{
+    "name":  "Composite_default",
+    "data":  {
+                 "chara":  null,
+                 "scene":  "Scene_default",
+                 "camera":  "Camera_default",
+                 "quality":  "Quality_default",
+                 "lora":  "Lora_default",
+                 "snapshot":  {
+                                  "chara":  {
+
+                                            },
+                                  "scene":  {
+                                                "scene_world":  "",
+                                                "scene_tod":  "",
+                                                "scene_weather":  "",
+                                                "scene_free":  "",
+                                                "scene_place":  "",
+                                                "scene_outdoor":  "",
+                                                "scene_place_category":  ""
+                                            },
+                                  "camera":  {
+                                                 "posv":  "",
+                                                 "posh":  "",
+                                                 "pos_camera":  "",
+                                                 "camera_free":  "",
+                                                 "all":  [
+                                                             {
+                                                                 "posv":  "",
+                                                                 "posh":  "",
+                                                                 "posc":  ""
+                                                             },
+                                                             {
+                                                                 "posv":  "",
+                                                                 "posh":  "",
+                                                                 "posc":  ""
+                                                             },
+                                                             {
+                                                                 "posv":  "",
+                                                                 "posh":  "",
+                                                                 "posc":  ""
+                                                             },
+                                                             {
+                                                                 "posv":  "",
+                                                                 "posh":  "",
+                                                                 "posc":  ""
+                                                             },
+                                                             {
+                                                                 "posv":  "",
+                                                                 "posh":  "",
+                                                                 "posc":  ""
+                                                             },
+                                                             {
+                                                                 "posv":  "",
+                                                                 "posh":  "",
+                                                                 "posc":  ""
+                                                             }
+                                                         ]
+                                             },
+                                  "quality":  {
+                                                  "quality_tags":  [
+                                                                       "masterpiece",
+                                                                       "best quality",
+                                                                       "score_9",
+                                                                       "score_8",
+                                                                       "score_7"
+                                                                   ],
+                                                  "quality_neg_tags":  [
+                                                                           "normal quality",
+                                                                           "low quality",
+                                                                           "worst quality",
+                                                                           "score_4",
+                                                                           "score_3",
+                                                                           "score_2",
+                                                                           "score_1"
+                                                                       ]
+                                              },
+                                  "lora":  {
+                                               "loras":  [
+
+                                                         ]
+                                           }
+                              }
+             },
+    "savedAt":  "2026-03-22T16:08:37"
+}

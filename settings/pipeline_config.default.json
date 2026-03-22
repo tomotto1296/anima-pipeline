@@ -21,8 +21,15 @@
   "scheduler": "simple",
   "output_format": "png",
   "embed_metadata": true,
+  "history_db_path": "history/history.db",
+  "history_thumb_dir": "history/thumbs/",
   "console_lang": "ja",
   "log_dir": "logs",
   "log_retention_days": 30,
-  "log_level": "normal"
+  "log_level": "normal",
+  "last_scene_preset": "",
+  "last_camera_preset": "",
+  "last_quality_preset": "",
+  "last_lora_preset": "",
+  "last_composite_preset": ""
 }

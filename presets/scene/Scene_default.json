@@ -1,0 +1,13 @@
+﻿{
+    "name":  "Scene_default",
+    "data":  {
+                 "scene_world":  "",
+                 "scene_tod":  "",
+                 "scene_weather":  "",
+                 "scene_free":  "",
+                 "scene_place":  "",
+                 "scene_outdoor":  "",
+                 "scene_place_category":  ""
+             },
+    "savedAt":  "2026-03-22T16:08:37"
+}
