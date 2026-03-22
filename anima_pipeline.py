@@ -17,6 +17,7 @@ import threading
 import datetime
 import traceback
 import builtins
+import sqlite3
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 UI_PORT = 7860
@@ -26,7 +27,7 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
-__version__ = "1.4.718"
+__version__ = "1.4.730"
 
 def _sf(name): return os.path.join(_settings_dir, name)
 
@@ -260,6 +261,8 @@ DEFAULT_CONFIG = {
     "log_dir": "logs",
     "log_retention_days": 30,
     "log_level": "normal",  # normal / debug
+    "history_db_path": "history/history.db",
+    "history_thumb_dir": "history/thumbs",
 }
 
 def load_config() -> dict:
@@ -315,6 +318,201 @@ def save_config(cfg: dict):
         print(f"[設定] 保存: {CONFIG_FILE}")
     except Exception as e:
         print(f"[設定] 保存エラー: {e}")
+
+def _resolve_history_db_path(cfg: dict) -> str:
+    raw = str((cfg or {}).get("history_db_path", DEFAULT_CONFIG["history_db_path"]) or "").strip()
+    if not raw:
+        raw = DEFAULT_CONFIG["history_db_path"]
+    if os.path.isabs(raw):
+        return os.path.normpath(raw)
+    return os.path.normpath(os.path.join(_base_dir, raw))
+
+
+def _resolve_history_thumb_dir(cfg: dict) -> str:
+    raw = str((cfg or {}).get("history_thumb_dir", DEFAULT_CONFIG["history_thumb_dir"]) or "").strip()
+    if not raw:
+        raw = DEFAULT_CONFIG["history_thumb_dir"]
+    if os.path.isabs(raw):
+        return os.path.normpath(raw)
+    return os.path.normpath(os.path.join(_base_dir, raw))
+
+
+def _ensure_history_db(cfg: dict):
+    db_path = _resolve_history_db_path(cfg)
+    thumb_dir = _resolve_history_thumb_dir(cfg)
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    os.makedirs(thumb_dir, exist_ok=True)
+    con = sqlite3.connect(db_path, timeout=5)
+    try:
+        con.execute(
+            """
+            CREATE TABLE IF NOT EXISTS generation_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                created_at TEXT NOT NULL,
+                prompt_id TEXT,
+                thumbnail_path TEXT,
+                image_path TEXT NOT NULL,
+                prompt TEXT,
+                negative_prompt TEXT,
+                seed INTEGER,
+                steps INTEGER,
+                cfg REAL,
+                sampler TEXT,
+                scheduler TEXT,
+                workflow_name TEXT,
+                loras TEXT,
+                session_snapshot TEXT,
+                favorite INTEGER DEFAULT 0,
+                tags TEXT DEFAULT '',
+                width INTEGER,
+                height INTEGER,
+                model TEXT,
+                model_hash TEXT
+            )
+            """
+        )
+        # Schema migration for existing users (older table without new columns).
+        cols = set()
+        for r in con.execute("PRAGMA table_info(generation_history)").fetchall():
+            if len(r) >= 2:
+                cols.add(str(r[1]))
+        add_cols = [
+            ("prompt_id", "TEXT"),
+            ("thumbnail_path", "TEXT"),
+            ("image_path", "TEXT"),
+            ("prompt", "TEXT"),
+            ("negative_prompt", "TEXT"),
+            ("seed", "INTEGER"),
+            ("steps", "INTEGER"),
+            ("cfg", "REAL"),
+            ("sampler", "TEXT"),
+            ("scheduler", "TEXT"),
+            ("workflow_name", "TEXT"),
+            ("loras", "TEXT"),
+            ("session_snapshot", "TEXT"),
+            ("favorite", "INTEGER DEFAULT 0"),
+            ("tags", "TEXT DEFAULT ''"),
+            ("width", "INTEGER"),
+            ("height", "INTEGER"),
+            ("model", "TEXT"),
+            ("model_hash", "TEXT"),
+        ]
+        for name, ddl in add_cols:
+            if name not in cols:
+                con.execute(f"ALTER TABLE generation_history ADD COLUMN {name} {ddl}")
+        con.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_history_prompt_image ON generation_history(prompt_id, image_path)")
+        con.execute("CREATE INDEX IF NOT EXISTS idx_history_created_at ON generation_history(created_at DESC)")
+        con.execute("CREATE INDEX IF NOT EXISTS idx_history_favorite ON generation_history(favorite)")
+        con.execute("CREATE INDEX IF NOT EXISTS idx_history_workflow ON generation_history(workflow_name)")
+        con.commit()
+    finally:
+        con.close()
+
+
+def _load_session_snapshot_text() -> str:
+    sf = _sf('anima_session_last.json')
+    if not os.path.exists(sf):
+        return "{}"
+    try:
+        with open(sf, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception:
+        return "{}"
+
+
+def _create_history_thumb(src_path: str, thumb_path: str):
+    from PIL import Image
+    with Image.open(src_path) as im:
+        im.thumbnail((256, 256), Image.Resampling.LANCZOS if hasattr(Image, "Resampling") else Image.LANCZOS)
+        if im.mode not in ("RGB", "RGBA"):
+            im = im.convert("RGB")
+        im.save(thumb_path, "WEBP", quality=80, method=6)
+
+
+def _resolve_image_path_with_webp_fallback(path: str) -> str:
+    p = os.path.normpath(str(path or ""))
+    if not p:
+        return p
+    if os.path.exists(p):
+        return p
+    root, ext = os.path.splitext(p)
+    if ext.lower() == ".png":
+        wp = root + ".webp"
+        if os.path.exists(wp):
+            return os.path.normpath(wp)
+    return p
+
+
+def _save_history_record(cfg: dict, prompt_id: str, image_path: str, meta: dict) -> bool:
+    try:
+        _ensure_history_db(cfg)
+    except Exception as e:
+        print(f"[OUTPUT-3] DB init error: {e}")
+        return False
+
+    db_path = _resolve_history_db_path(cfg)
+    thumb_dir = _resolve_history_thumb_dir(cfg)
+    created_at = datetime.datetime.now().isoformat(timespec="seconds")
+    loras = []
+    for pair in (meta or {}).get("lora", []) or []:
+        if isinstance(pair, (list, tuple)) and len(pair) >= 2:
+            loras.append({"name": str(pair[0]), "weight": float(pair[1])})
+    loras_json = json.dumps(loras, ensure_ascii=False)
+    session_snapshot = _load_session_snapshot_text()
+
+    resolved_image_path = _resolve_image_path_with_webp_fallback(str(image_path))
+    con = sqlite3.connect(db_path, timeout=5)
+    try:
+        cur = con.cursor()
+        cur.execute(
+            """
+            INSERT OR IGNORE INTO generation_history (
+                created_at, prompt_id, thumbnail_path, image_path,
+                prompt, negative_prompt, seed, steps, cfg,
+                sampler, scheduler, workflow_name, loras,
+                session_snapshot, favorite, tags, width, height, model, model_hash
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, '', ?, ?, ?, ?)
+            """,
+            (
+                created_at,
+                str(prompt_id or ""),
+                "",
+                str(resolved_image_path or "").replace("\\", "/"),
+                str((meta or {}).get("positive_prompt", "") or ""),
+                str((meta or {}).get("negative_prompt", "") or ""),
+                int((meta or {}).get("seed", 0) or 0),
+                int((meta or {}).get("steps", 0) or 0),
+                float((meta or {}).get("cfg", 0) or 0),
+                str((meta or {}).get("sampler", "") or ""),
+                str((meta or {}).get("scheduler", "") or ""),
+                str((meta or {}).get("workflow_version", "") or ""),
+                loras_json,
+                session_snapshot,
+                int((meta or {}).get("width", 0) or 0),
+                int((meta or {}).get("height", 0) or 0),
+                str((meta or {}).get("model", "") or ""),
+                str((meta or {}).get("model_hash", "") or ""),
+            ),
+        )
+        if cur.rowcount <= 0:
+            con.commit()
+            return False
+        row_id = int(cur.lastrowid)
+        thumb_abs = os.path.join(thumb_dir, f"{row_id}.webp")
+        thumb_val = ""
+        try:
+            _create_history_thumb(str(resolved_image_path), thumb_abs)
+            thumb_val = thumb_abs.replace("\\", "/")
+        except Exception as te:
+            print(f"[OUTPUT-3] Thumb create error: {te}")
+        cur.execute("UPDATE generation_history SET thumbnail_path=? WHERE id=?", (thumb_val, row_id))
+        con.commit()
+        return True
+    except Exception as e:
+        print(f"[OUTPUT-3] DB write error: {e}")
+        return False
+    finally:
+        con.close()
 
 def _console_lang(cfg: dict | None = None) -> str:
     try:
@@ -2094,7 +2292,17 @@ HTML = r"""<!DOCTYPE html>
       <div style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--muted);font-weight:bold;white-space:nowrap;">📷 生成履歴（このセッション）</div>
       <button onclick="clearGallery()" style="font-family:'DM Mono',monospace;font-size:0.7rem;padding:0.2rem 0.8rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--muted);cursor:pointer;white-space:nowrap;flex-shrink:0;width:auto;">クリア</button>
     </div>
+    <div style="display:flex;gap:0.4rem;margin-bottom:0.5rem;">
+      <button id="galleryTabSession" onclick="setGalleryTab('session')" style="margin:0;width:auto;padding:0.25rem 0.7rem;border:1px solid var(--border);border-radius:999px;background:var(--highlight);color:var(--multi);font-family:'DM Mono',monospace;font-size:0.68rem;cursor:pointer;">セッション履歴</button>
+      <button id="galleryTabAll" onclick="setGalleryTab('all')" style="margin:0;width:auto;padding:0.25rem 0.7rem;border:1px solid var(--border);border-radius:999px;background:white;color:var(--muted);font-family:'DM Mono',monospace;font-size:0.68rem;cursor:pointer;">全履歴</button>
+    </div>
     <div id="galleryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem;"></div>
+    <div id="galleryGridAll" style="display:none;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem;"></div>
+    <div id="historyPager" style="display:none;margin-top:0.5rem;justify-content:flex-end;align-items:center;gap:0.4rem;">
+      <button onclick="changeHistoryPage(-1)" style="margin:0;width:auto;padding:0.2rem 0.6rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);font-family:'DM Mono',monospace;font-size:0.68rem;cursor:pointer;">Prev</button>
+      <div id="historyPageLabel" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);min-width:4.5rem;text-align:center;">1/1</div>
+      <button onclick="changeHistoryPage(1)" style="margin:0;width:auto;padding:0.2rem 0.6rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);font-family:'DM Mono',monospace;font-size:0.68rem;cursor:pointer;">Next</button>
+    </div>
   </div>
 
   <div id="galleryModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;display:none;align-items:center;justify-content:center;padding:1rem;" onclick="closeGalleryModal(event)">
@@ -2787,6 +2995,10 @@ let lastFinalPrompt='', lastNegativePrompt='';
 let galleryItems = []; // {imagePaths:[], positivePrompt:'', negativePrompt:'', timestamp:''}
 let modalItemIndex = -1;
 let modalCurrentImgUrl = '';
+let currentGalleryTab = 'session';
+let historyPage = 1;
+let historyTotalPages = 1;
+const historyPerPage = 20;
 let selectedPresetFilename = '';
 let presetThumbOpen = false;
 let _updatingPresetThumbTargetSel = false;
@@ -2802,6 +3014,9 @@ function addGalleryItems(imagePaths, positivePrompt, negativePrompt){
   galleryItems.push(item);
   renderGalleryItem(item, galleryItems.length-1);
   document.getElementById('gallerySection').style.display='block';
+  if(currentGalleryTab === 'all'){
+    loadAllHistory(1);
+  }
 }
 
 function renderGalleryItem(item, idx){
@@ -2810,7 +3025,7 @@ function renderGalleryItem(item, idx){
     const card = document.createElement('div');
     card.style.cssText = 'position:relative;cursor:pointer;border-radius:8px;overflow:hidden;background:#f0f0f0;aspect-ratio:1;';
     const img = document.createElement('img');
-    img.src = imgPath.startsWith('http') ? imgPath : '/get_image?path='+encodeURIComponent(imgPath);
+    img.src = buildGalleryImageSrc(imgPath);
     img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
     img.onerror = ()=>{ img.style.display='none'; card.style.background='#e0e0e0'; };
     const ts = document.createElement('div');
@@ -2828,8 +3043,44 @@ function openGalleryModal(idx, imgPath, item){
   const modal = document.getElementById('galleryModal');
   if(modal.parentElement !== document.body) document.body.appendChild(modal);
   modal.style.display='flex';
-  modalCurrentImgUrl = imgPath;
-  document.getElementById('modalImg').src = imgPath.startsWith('http') ? imgPath : '/get_image?path='+encodeURIComponent(imgPath);
+  const candidates = [];
+  const pushCandidate = (p)=>{
+    const v = String(p||'').trim();
+    if(!v) return;
+    if(candidates.includes(v)) return;
+    candidates.push(v);
+  };
+  pushCandidate(imgPath);
+  if(item && Array.isArray(item.imagePaths)){
+    item.imagePaths.forEach(pushCandidate);
+  }
+  modalCurrentImgUrl = candidates[0] || '';
+  const modalImg = document.getElementById('modalImg');
+  let candidateIdx = 0;
+  let retry = 0;
+  const maxRetryPerCandidate = 2;
+  const loadModal = ()=>{
+    const cur = candidates[candidateIdx] || '';
+    if(!cur){
+      modalImg.removeAttribute('src');
+      return;
+    }
+    modalCurrentImgUrl = cur;
+    modalImg.src = buildGalleryImageSrc(cur);
+  };
+  modalImg.onerror = ()=>{
+    if(retry < maxRetryPerCandidate){
+      retry += 1;
+      setTimeout(loadModal, 120);
+      return;
+    }
+    retry = 0;
+    candidateIdx += 1;
+    if(candidateIdx < candidates.length){
+      setTimeout(loadModal, 60);
+    }
+  };
+  loadModal();
   document.getElementById('modalTitle').textContent = '生成結果 ' + item.timestamp;
   document.getElementById('modalPositive').textContent = item.positivePrompt||'（なし）';
   document.getElementById('modalNegative').textContent = item.negativePrompt||'（なし）';
@@ -2838,6 +3089,12 @@ function openGalleryModal(idx, imgPath, item){
 
 function closeGalleryModal(event){
   document.getElementById('galleryModal').style.display='none';
+}
+
+function buildGalleryImageSrc(imgPath){
+  if(String(imgPath||'').startsWith('http')) return imgPath;
+  const nonce = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  return '/get_image?path=' + encodeURIComponent(imgPath) + '&_=' + nonce;
 }
 
 function getPresetThumbPath(preset){
@@ -3154,7 +3411,106 @@ function navScrollTo(id){
 function clearGallery(){
   galleryItems = [];
   document.getElementById('galleryGrid').innerHTML='';
-  document.getElementById('gallerySection').style.display='none';
+  const allGrid = document.getElementById('galleryGridAll');
+  const hasAll = !!(allGrid && allGrid.children && allGrid.children.length);
+  document.getElementById('gallerySection').style.display = hasAll ? 'block' : 'none';
+}
+
+function setGalleryTab(tab){
+  currentGalleryTab = (tab === 'all') ? 'all' : 'session';
+  const btnSession = document.getElementById('galleryTabSession');
+  const btnAll = document.getElementById('galleryTabAll');
+  const gridSession = document.getElementById('galleryGrid');
+  const gridAll = document.getElementById('galleryGridAll');
+  const pager = document.getElementById('historyPager');
+  if(btnSession){
+    btnSession.style.background = (currentGalleryTab === 'session') ? 'var(--highlight)' : 'white';
+    btnSession.style.color = (currentGalleryTab === 'session') ? 'var(--multi)' : 'var(--muted)';
+  }
+  if(btnAll){
+    btnAll.style.background = (currentGalleryTab === 'all') ? 'var(--highlight)' : 'white';
+    btnAll.style.color = (currentGalleryTab === 'all') ? 'var(--multi)' : 'var(--muted)';
+  }
+  if(gridSession) gridSession.style.display = (currentGalleryTab === 'session') ? 'grid' : 'none';
+  if(gridAll) gridAll.style.display = (currentGalleryTab === 'all') ? 'grid' : 'none';
+  if(pager) pager.style.display = (currentGalleryTab === 'all') ? 'flex' : 'none';
+  if(currentGalleryTab === 'all'){
+    loadAllHistory(historyPage);
+  }
+}
+
+async function loadAllHistory(page = 1){
+  historyPage = Math.max(1, parseInt(page) || 1);
+  const grid = document.getElementById('galleryGridAll');
+  if(!grid) return;
+  try{
+    const res = await fetch('/history_list?page=' + historyPage + '&per_page=' + historyPerPage, {cache:'no-store'});
+    const data = await res.json();
+    if(data.status !== 'ok'){
+      throw new Error(data.error || 'history load failed');
+    }
+    const total = parseInt(data.total || 0);
+    historyTotalPages = Math.max(1, Math.ceil(total / historyPerPage));
+    if(historyPage > historyTotalPages){
+      historyPage = historyTotalPages;
+      return loadAllHistory(historyPage);
+    }
+    renderAllHistoryGrid(Array.isArray(data.items) ? data.items : []);
+    const pageLabel = document.getElementById('historyPageLabel');
+    if(pageLabel) pageLabel.textContent = historyPage + '/' + historyTotalPages;
+    const sec = document.getElementById('gallerySection');
+    if(sec && (total > 0 || galleryItems.length > 0)) sec.style.display = 'block';
+  }catch(e){
+    grid.innerHTML = '';
+    const empty = document.createElement('div');
+    empty.style.cssText = 'grid-column:1/-1;font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);padding:0.4rem;';
+    empty.textContent = '履歴の読み込みに失敗しました';
+    grid.appendChild(empty);
+  }
+}
+
+function renderAllHistoryGrid(items){
+  const grid = document.getElementById('galleryGridAll');
+  if(!grid) return;
+  grid.innerHTML = '';
+  if(!items || items.length === 0){
+    const empty = document.createElement('div');
+    empty.style.cssText = 'grid-column:1/-1;font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);padding:0.4rem;';
+    empty.textContent = '全履歴はまだありません';
+    grid.appendChild(empty);
+    return;
+  }
+  items.forEach((it)=>{
+    const card = document.createElement('div');
+    card.style.cssText = 'position:relative;cursor:pointer;border-radius:8px;overflow:hidden;background:#f0f0f0;aspect-ratio:1;';
+    const img = document.createElement('img');
+    img.src = buildGalleryImageSrc(it.thumbnail_path || it.image_path || '');
+    img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
+    img.onerror = ()=>{ img.style.display='none'; card.style.background='#e0e0e0'; };
+    const ts = document.createElement('div');
+    ts.style.cssText = 'position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,0.5);color:white;font-family:DM Mono,monospace;font-size:0.58rem;padding:0.2rem 0.35rem;';
+    ts.textContent = String(it.created_at || '').replace('T', ' ').slice(0, 19);
+    card.appendChild(img);
+    card.appendChild(ts);
+    card.onclick = ()=>openGalleryModal(
+      -1,
+      it.image_path || it.thumbnail_path || '',
+      {
+        timestamp: ts.textContent,
+        positivePrompt: it.prompt || '',
+        negativePrompt: it.negative_prompt || '',
+        imagePaths: [it.image_path || '', it.thumbnail_path || '']
+      }
+    );
+    grid.appendChild(card);
+  });
+}
+
+function changeHistoryPage(delta){
+  if(currentGalleryTab !== 'all') return;
+  const next = historyPage + (parseInt(delta) || 0);
+  if(next < 1 || next > historyTotalPages) return;
+  loadAllHistory(next);
 }
 let charaPresets = [];  // キャラプリセット一覧
 
@@ -6417,6 +6773,8 @@ document.addEventListener('DOMContentLoaded', ()=>{
   loadLastSession();
   // Ensure section toggles are ready immediately.
   initSectionToggles();
+  setGalleryTab('session');
+  loadAllHistory(1);
   // 少し遅らせて実行（スマホ表示速度改善）
   setTimeout(()=>{
     initExtraPresets();
@@ -6562,6 +6920,8 @@ async function pollComfyUIComplete(promptIds, steps, stepId='s3'){
   const collectedPaths = [];
   const progressWrap = document.getElementById('progressBarWrap');
   const progressBar  = document.getElementById('progressBar');
+  let percentShown = false;
+  let fallbackPct = 0;
 
   progressWrap.style.display = 'block';
   progressBar.style.width = '0%';
@@ -6569,19 +6929,34 @@ async function pollComfyUIComplete(promptIds, steps, stepId='s3'){
   if(wsNotice && !window._comfyWsReady) wsNotice.style.display='block';
 
   // onmessageハンドラを定義してグローバルに保持（再接続時も有効）
-  const wsHandler = (event)=>{
+  const applyProgressMessage = (msg)=>{
     try{
-      const msg = JSON.parse(event.data);
+      if(!msg || typeof msg !== 'object') return;
       const type = msg.type;
-      const d = msg.data||{};
-      if(type === 'progress'){
-        const pct = d.max ? Math.round(d.value/d.max*100) : 0;
+      const d = msg.data || msg;
+      if(type === 'progress' || (d && d.value != null && d.max != null)){
+        const value = Number(d.value ?? 0);
+        const maxv = Number(d.max ?? 0);
+        const pct = maxv > 0 ? Math.max(0, Math.min(100, Math.round((value / maxv) * 100))) : 0;
         progressBar.style.width = pct + '%';
+        percentShown = true;
         setStep(steps,stepId,'active',`ComfyUI: Generating... ${pct}%`);
       } else if(type === 'executing' && d.node){
         setStep(steps,stepId,'active',`ComfyUI: Generating... ${progressBar.style.width}`);
       }
-    }catch(e){}
+    }catch(_e){}
+  };
+  const wsHandler = async (event)=>{
+    try{
+      if(typeof event?.data === 'string'){
+        applyProgressMessage(JSON.parse(event.data));
+        return;
+      }
+      if(event?.data && typeof event.data.text === 'function'){
+        const txt = await event.data.text();
+        if(txt) applyProgressMessage(JSON.parse(txt));
+      }
+    }catch(_e){}
   };
   window._comfyWsHandler = wsHandler;
 
@@ -6597,6 +6972,10 @@ async function pollComfyUIComplete(promptIds, steps, stepId='s3'){
     if(window._comfyWsReady && window._comfyWs && window._comfyWs.onmessage !== wsHandler){
       window._comfyWs.onmessage = wsHandler;
     }
+    if(!window._comfyWsReady && (tries % 5 === 0)){
+      // 再接続を定期的に試みる（%表示の復帰を狙う）
+      initComfyWs();
+    }
     try{
       const ids = [...pending].join(',');
       const res = await fetch(`/poll_status?ids=${encodeURIComponent(ids)}`).catch(()=>null);
@@ -6606,13 +6985,24 @@ async function pollComfyUIComplete(promptIds, steps, stepId='s3'){
         for(const [pid, info] of Object.entries(data.image_paths)){
           const files = info.file_paths || [];
           const urls = info.view_urls || [];
-          if(Array.isArray(urls) && urls.length) collectedPaths.push(...urls);
-          else if(Array.isArray(files) && files.length) collectedPaths.push(...files);
+          // Prefer local file paths to avoid stale /view URLs after PNG->WebP conversion.
+          if(Array.isArray(files) && files.length) collectedPaths.push(...files);
+          else if(Array.isArray(urls) && urls.length) collectedPaths.push(...urls);
           else if(Array.isArray(info) && info.length) collectedPaths.push(...info);
         }
       }
       for(const pid of (data.completed||[])) pending.delete(pid);
-      if(!window._comfyWsReady){
+      if(!percentShown){
+        // WS進捗が来ない環境向けフォールバック（疑似進捗）
+        const done = promptIds.length - pending.size;
+        const doneRatio = promptIds.length > 0 ? (done / promptIds.length) : 0;
+        fallbackPct = Math.max(fallbackPct, Math.min(95, Math.round(doneRatio * 100)));
+        if(done === 0){
+          fallbackPct = Math.min(95, Math.max(fallbackPct, Math.min(90, 5 + Math.floor(tries * 1.4))));
+        }
+        progressBar.style.width = fallbackPct + '%';
+        setStep(steps,stepId,'active',`ComfyUI: Generating... ${fallbackPct}%`);
+      } else if(!window._comfyWsReady){
         const done = promptIds.length - pending.size;
         const q = data.queue||{};
         let queueStr = '';
@@ -6627,6 +7017,7 @@ async function pollComfyUIComplete(promptIds, steps, stepId='s3'){
   window._comfyWsHandler = null;
   if(window._comfyWs) window._comfyWs.onmessage = ()=>{};
 
+  progressBar.style.width = '100%';
   progressWrap.style.display = 'none';
   progressBar.style.width = '0%';
   if(wsNotice) wsNotice.style.display='none';
@@ -6732,6 +7123,9 @@ document.addEventListener('keydown',e=>{
 class Handler(BaseHTTPRequestHandler):
     cancel_event = __import__('threading').Event()
     lm_session = None
+    history_pending = {}
+    history_saved_paths = set()
+    history_lock = threading.Lock()
     def log_message(self,fmt,*args):pass
 
     def do_GET(self):
@@ -6868,24 +7262,45 @@ class Handler(BaseHTTPRequestHandler):
                                             break
                                     if not output_dir:
                                         output_dir=os.path.normpath(os.path.join(os.path.dirname(wf_path),'..','..','output'))
+                                comfy_port = comfy.split('//')[-1].split(':')[-1].split('/')[0] if ':' in comfy.split('//')[-1] else '8188'
+                                req_host = self.headers.get('Host','').split(':')[0] or '127.0.0.1'
+                                comfy_base = f'http://{req_host}:{comfy_port}'
                                 paths = []
+                                view_urls = []
                                 for img in imgs:
                                     subfolder = img.get('subfolder','')
                                     fname = img.get('filename','')
                                     if fname:
-                                        full = os.path.normpath(os.path.join(output_dir, subfolder, fname)) if subfolder else os.path.normpath(os.path.join(output_dir, fname))
+                                        actual_fname = fname
+                                        full = os.path.normpath(os.path.join(output_dir, subfolder, actual_fname)) if subfolder else os.path.normpath(os.path.join(output_dir, actual_fname))
+                                        if (not os.path.exists(full)) and fname.lower().endswith('.png'):
+                                            webp_name = fname[:-4] + '.webp'
+                                            webp_full = os.path.normpath(os.path.join(output_dir, subfolder, webp_name)) if subfolder else os.path.normpath(os.path.join(output_dir, webp_name))
+                                            if os.path.exists(webp_full):
+                                                actual_fname = webp_name
+                                                full = webp_full
                                         paths.append(full.replace('\\', '/'))
-                                        # ComfyUI /view URLも追加
+                                        view_urls.append(f'{comfy_base}/view?filename={actual_fname}&subfolder={subfolder}&type=output')
                                 if paths:
                                     # リクエスト元のホストからComfyUIポートでアクセスできるURLに変換
-                                    comfy_port = comfy.split('//')[-1].split(':')[-1].split('/')[0] if ':' in comfy.split('//')[-1] else '8188'
-                                    req_host = self.headers.get('Host','').split(':')[0] or '127.0.0.1'
-                                    comfy_base = f'http://{req_host}:{comfy_port}'
-                                    view_urls = [f'{comfy_base}/view?filename={img["filename"]}&subfolder={img.get("subfolder","")}&type=output' for img in imgs if img.get('filename')]
                                     image_paths[pid] = {
                                         'file_paths': paths,
                                         'view_urls': view_urls
                                     }
+                                    with Handler.history_lock:
+                                        pending_meta = Handler.history_pending.get(pid)
+                                    if pending_meta:
+                                        for pth in paths:
+                                            key = (pid, str(pth))
+                                            with Handler.history_lock:
+                                                if key in Handler.history_saved_paths:
+                                                    continue
+                                            ok = _save_history_record(cfg, pid, pth, pending_meta)
+                                            if ok:
+                                                with Handler.history_lock:
+                                                    Handler.history_saved_paths.add(key)
+                                        with Handler.history_lock:
+                                            Handler.history_pending.pop(pid, None)
                                 break
             except Exception as _pe:
                 pass
@@ -6917,6 +7332,91 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Type','application/json')
             self.end_headers()
             self.wfile.write(json.dumps(data,ensure_ascii=False).encode('utf-8'))
+        elif self.path.startswith('/history_list'):
+            from urllib.parse import urlparse, parse_qs
+            qs = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+            try:
+                page = max(1, int(qs.get('page', ['1'])[0] or '1'))
+            except Exception:
+                page = 1
+            try:
+                per_page = int(qs.get('per_page', ['20'])[0] or '20')
+            except Exception:
+                per_page = 20
+            per_page = max(1, min(100, per_page))
+            favorite_only = str(qs.get('favorite', ['0'])[0] or '0') == '1'
+            workflow = str(qs.get('workflow', [''])[0] or '').strip()
+            tag = str(qs.get('tag', [''])[0] or '').strip()
+            cfg = load_config()
+            try:
+                _ensure_history_db(cfg)
+                db_path = _resolve_history_db_path(cfg)
+                con = sqlite3.connect(db_path, timeout=5)
+                con.row_factory = sqlite3.Row
+                where = []
+                params = []
+                if favorite_only:
+                    where.append("favorite=1")
+                if workflow:
+                    where.append("workflow_name LIKE ?")
+                    params.append(f"%{workflow}%")
+                if tag:
+                    where.append("tags LIKE ?")
+                    params.append(f"%{tag}%")
+                where_sql = (" WHERE " + " AND ".join(where)) if where else ""
+                total = int(con.execute("SELECT COUNT(*) FROM generation_history" + where_sql, params).fetchone()[0])
+                offset = (page - 1) * per_page
+                rows = con.execute(
+                    "SELECT id, created_at, prompt_id, thumbnail_path, image_path, prompt, negative_prompt, seed, steps, cfg, sampler, scheduler, workflow_name, loras, favorite, tags, width, height, model, model_hash "
+                    "FROM generation_history" + where_sql + " ORDER BY id DESC LIMIT ? OFFSET ?",
+                    params + [per_page, offset]
+                ).fetchall()
+                items = []
+                for r in rows:
+                    item = dict(r)
+                    try:
+                        item["loras"] = json.loads(item.get("loras") or "[]")
+                    except Exception:
+                        item["loras"] = []
+                    items.append(item)
+                con.close()
+                payload = {"status": "ok", "total": total, "page": page, "per_page": per_page, "items": items}
+            except Exception as e:
+                payload = {"status": "error", "error": str(e), "total": 0, "page": page, "per_page": per_page, "items": []}
+            self.send_response(200)
+            self.send_header('Content-Type','application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
+        elif self.path.startswith('/history_detail'):
+            from urllib.parse import urlparse, parse_qs
+            qs = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+            try:
+                history_id = int(qs.get('id', ['0'])[0] or '0')
+            except Exception:
+                history_id = 0
+            payload = {"status": "error", "error": "not found"}
+            if history_id > 0:
+                cfg = load_config()
+                try:
+                    _ensure_history_db(cfg)
+                    db_path = _resolve_history_db_path(cfg)
+                    con = sqlite3.connect(db_path, timeout=5)
+                    con.row_factory = sqlite3.Row
+                    row = con.execute("SELECT * FROM generation_history WHERE id=?", (history_id,)).fetchone()
+                    con.close()
+                    if row:
+                        item = dict(row)
+                        try:
+                            item["loras"] = json.loads(item.get("loras") or "[]")
+                        except Exception:
+                            item["loras"] = []
+                        payload = {"status": "ok", "item": item}
+                except Exception as e:
+                    payload = {"status": "error", "error": str(e)}
+            self.send_response(200)
+            self.send_header('Content-Type','application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
         elif self.path.startswith('/generate_preset'):
             from urllib.parse import urlparse, parse_qs
             qs = parse_qs(urlparse(self.path).query)
@@ -7307,6 +7807,7 @@ class Handler(BaseHTTPRequestHandler):
             if output_dir:
                 allowed_roots.append(os.path.realpath(output_dir))
 
+            img_path = _resolve_image_path_with_webp_fallback(img_path)
             real_path = os.path.normcase(os.path.realpath(os.path.normpath(img_path)))
             is_allowed = False
             for root in allowed_roots:
@@ -7319,13 +7820,34 @@ class Handler(BaseHTTPRequestHandler):
                 self.end_headers()
                 return
 
+            import time as _time
             ext = os.path.splitext(real_path)[1].lower()
             mime = {'png':'image/png','jpg':'image/jpeg','jpeg':'image/jpeg','webp':'image/webp'}.get(ext.lstrip('.'), 'image/png')
-            with open(real_path, 'rb') as f:
-                data = f.read()
+            data = b''
+            for _ in range(8):
+                if not os.path.exists(real_path):
+                    break
+                try:
+                    size1 = os.path.getsize(real_path)
+                    with open(real_path, 'rb') as f:
+                        buf = f.read()
+                    size2 = os.path.getsize(real_path)
+                    # 書き込み中ファイルの中途半端読み取りを避ける
+                    if size1 > 0 and size1 == size2 and len(buf) == size1:
+                        data = buf
+                        break
+                except Exception:
+                    pass
+                _time.sleep(0.06)
+            if not data:
+                self.send_response(503)
+                self.end_headers()
+                return
             self.send_response(200)
             self.send_header('Content-Type', mime)
             self.send_header('Content-Length', str(len(data)))
+            self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            self.send_header('Pragma', 'no-cache')
             self.end_headers()
             self.wfile.write(data)
             return
@@ -7374,6 +7896,69 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Type','application/json')
             self.end_headers()
             self.wfile.write(b'{"ok":true}')
+        elif self.path=='/history_update':
+            cfg = load_config()
+            payload = {"status": "error", "error": "invalid id"}
+            try:
+                history_id = int(body.get('id', 0) or 0)
+            except Exception:
+                history_id = 0
+            if history_id > 0:
+                try:
+                    _ensure_history_db(cfg)
+                    db_path = _resolve_history_db_path(cfg)
+                    con = sqlite3.connect(db_path, timeout=5)
+                    favorite = 1 if int(body.get('favorite', 0) or 0) else 0
+                    tags = str(body.get('tags', '') or '')
+                    con.execute("UPDATE generation_history SET favorite=?, tags=? WHERE id=?", (favorite, tags, history_id))
+                    con.commit()
+                    con.close()
+                    payload = {"status": "ok"}
+                except Exception as e:
+                    payload = {"status": "error", "error": str(e)}
+            self.send_response(200)
+            self.send_header('Content-Type','application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
+        elif self.path=='/history_delete':
+            cfg = load_config()
+            deleted = 0
+            try:
+                _ensure_history_db(cfg)
+                db_path = _resolve_history_db_path(cfg)
+                con = sqlite3.connect(db_path, timeout=5)
+                con.row_factory = sqlite3.Row
+                keep_favorites = bool(body.get('keep_favorites', False))
+                delete_all = bool(body.get('all', False))
+                if delete_all:
+                    if keep_favorites:
+                        rows = con.execute("SELECT id, thumbnail_path FROM generation_history WHERE favorite=0").fetchall()
+                        con.execute("DELETE FROM generation_history WHERE favorite=0")
+                    else:
+                        rows = con.execute("SELECT id, thumbnail_path FROM generation_history").fetchall()
+                        con.execute("DELETE FROM generation_history")
+                else:
+                    history_id = int(body.get('id', 0) or 0)
+                    rows = con.execute("SELECT id, thumbnail_path FROM generation_history WHERE id=?", (history_id,)).fetchall() if history_id > 0 else []
+                    if history_id > 0:
+                        con.execute("DELETE FROM generation_history WHERE id=?", (history_id,))
+                deleted = len(rows)
+                con.commit()
+                con.close()
+                for r in rows:
+                    tp = str(r["thumbnail_path"] or "").strip()
+                    if tp and os.path.exists(tp):
+                        try:
+                            os.remove(tp)
+                        except Exception:
+                            pass
+                payload = {"status": "ok", "deleted": deleted}
+            except Exception as e:
+                payload = {"status": "error", "error": str(e), "deleted": deleted}
+            self.send_response(200)
+            self.send_header('Content-Type','application/json')
+            self.end_headers()
+            self.wfile.write(json.dumps(payload, ensure_ascii=False).encode('utf-8'))
         elif self.path=='/chara_presets':
             # body: {action:'save'|'delete', preset:{name,data}, filename?}
             action = body.get('action','save')
@@ -7598,6 +8183,8 @@ class Handler(BaseHTTPRequestHandler):
                         prompt, cfg, width, height, fmt, cid,
                         negative_prompt=regen_negative, lora_slots=regen_lora_slots
                     )
+                    with Handler.history_lock:
+                        Handler.history_pending[pid] = meta
                     prompt_ids.append(pid)
                     print(f"[ComfyUI] 再生成キュー ({i+1}/{count}): {pid}")
                     watch_and_postprocess(
@@ -7661,6 +8248,7 @@ class Handler(BaseHTTPRequestHandler):
             if output_dir:
                 allowed_roots.append(os.path.realpath(output_dir))
 
+            img_path = _resolve_image_path_with_webp_fallback(img_path)
             real_path = os.path.normcase(os.path.realpath(os.path.normpath(img_path)))
             is_allowed = False
             for root in allowed_roots:
@@ -7850,6 +8438,8 @@ class Handler(BaseHTTPRequestHandler):
                             positive_flat, cfg, img_width, img_height, img_fmt, shared_cid,
                             negative_prompt=negative_prompt, lora_slots=lora_slots
                         )
+                        with Handler.history_lock:
+                            Handler.history_pending[pid] = meta
                         prompt_ids.append(pid)
                         print(f"[ComfyUI] キューに追加 ({i+1}/{img_count}): {pid}")
                         watch_and_postprocess(
@@ -7902,6 +8492,10 @@ def check_server(name,url,path="/", cfg=None):
 def main():
     _install_exception_logging()
     cfg=load_config()
+    try:
+        _ensure_history_db(cfg)
+    except Exception as e:
+        print(f"[OUTPUT-3] DB init error: {e}")
     # Console block from "[接続確認]" downward should follow OS language.
     _os_lang = detect_os_ui_lang()
     _os_cfg = {"console_lang": _os_lang}
