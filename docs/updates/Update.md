@@ -8,7 +8,7 @@
 - `1.4.699x` 系は `1.4.7` として正式リリース済み
 
 ## 現在バージョン
-- `1.4.742`
+- `1.4.743`
 
 
 ## 実装サマリー（v1.4.6以降）
@@ -338,3 +338,33 @@
 
 
 
+
+## 直近追記（v1.4.743）
+
+### 40) アイコン配信導線の整理（アプリ / GitHub Pages 両対応）
+- ルート配信用アセットを追加: `assets/icons/*`。
+- GitHub Pages配信用アセットを追加: `docs/assets/*` + `docs/manifest.json`。
+- `docs/index.html` / `docs/index_en.html` の `<head>` に以下を設定:
+  - `favicon-light.ico`
+  - `favicon-dark.ico`（`prefers-color-scheme: dark`）
+  - `apple-touch-icon.png`
+  - `manifest.json`
+
+### 41) favicon のライト/ダーク分離
+- 生成ファイルを `favicon-light.ico` / `favicon-dark.ico` に分離。
+- SVG運用を廃止し、PNG/ICO運用へ統一。
+
+### 42) アプリ内HTTP配信に静的アイコンルートを追加
+- `anima_pipeline.py` 側で以下を配信:
+  - `GET /assets/...`
+  - `GET /manifest.json`
+  - `GET /favicon.ico` / `GET /favicon-light.ico` / `GET /favicon-dark.ico`
+- アプリUI (`/`) の `<head>` に favicon / manifest 参照を追加。
+
+### 43) Version Guard の修正
+- `scripts/check_version_bump.py` の差分判定を修正（`git diff` 引数順）。
+- 文字コード取り扱いを安定化（`utf-8` + `errors=replace`）。
+- `scripts/check_version_bump.py` 自身の変更は版上げ必須判定から除外。
+
+### 44) 版上げ履歴
+- `1.4.742` -> `1.4.743`
