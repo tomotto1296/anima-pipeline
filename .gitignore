@@ -23,4 +23,7 @@ Thumbs.db
 settings/pipeline_config.local.json
 .env
 .env.local
+history/history.db
+logs/*.log
+chara/*.webp
 
