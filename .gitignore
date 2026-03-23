@@ -1,0 +1,26 @@
+﻿# 蛟倶ｺｺ險ｭ螳夲ｼ・PI繧ｭ繝ｼ遲会ｼ俄ｻpipeline_config.json縺ｯAPI繧ｭ繝ｼ縺梧嶌縺崎ｾｼ縺ｾ繧後ｋ縺溘ａ髯､螟・
+# 蛻晄悄蛟､縺ｯ pipeline_config.default.json 縺ｨ縺励※邂｡逅・
+settings/pipeline_config.json
+
+# 繧ｭ繝｣繝ｩ繝励Μ繧ｻ繝・ヨ・・00_default.json縺ｮ縺ｿ蜷梧｢ｱ縲√Θ繝ｼ繧ｶ繝ｼ霑ｽ蜉蛻・・髯､螟厄ｼ・
+chara/*.json
+!chara/000_default.json
+
+# 閾ｪ蜍慕函謌舌ヵ繧｡繧､繝ｫ・亥倶ｺｺ迺ｰ蠅・ｾ晏ｭ假ｼ・
+settings/extra_tags.json
+settings/extra_tags_negative.json
+settings/style_tags.json
+settings/style_tags_negative.json
+settings/anima_session_last.json
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db
+settings/pipeline_config.local.json
+.env
+.env.local
+

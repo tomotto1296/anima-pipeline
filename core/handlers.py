@@ -1715,8 +1715,7 @@ def build_handler(context: dict):
                             cfg['seed_value'] = int(cfg.get('seed_value', 0)) + 1
                             save_cfg = load_config()
                             save_cfg['seed_value'] = cfg['seed_value']
-                            with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
-                                json.dump(save_cfg, f, ensure_ascii=False, indent=2)
+                            save_config(save_cfg)
                     result["comfyui_sent"] = True
                     result["prompt_ids"] = prompt_ids
                     result["prompt_id"] = prompt_ids[0] if prompt_ids else ""

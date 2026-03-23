@@ -17,7 +17,11 @@ def _sf(name: str) -> str:
     return os.path.join(SETTINGS_DIR, name)
 
 
-CONFIG_FILE = _sf('pipeline_config.json')
+LEGACY_CONFIG_FILE = _sf('pipeline_config.json')
+LOCAL_CONFIG_FILE = _sf('pipeline_config.local.json')
+DEFAULT_CONFIG_FILE = _sf('pipeline_config.default.json')
+# Backward-compatible export name. Runtime writes should go to local config.
+CONFIG_FILE = LOCAL_CONFIG_FILE
 EXTRA_TAGS_FILE = _sf('extra_tags.json')
 STYLE_TAGS_FILE = _sf('style_tags.json')
 NEG_EXTRA_TAGS_FILE = _sf('extra_tags_negative.json')
@@ -185,7 +189,7 @@ def load_ui_options() -> dict:
             with open(UI_OPTIONS_FILE, encoding='utf-8-sig') as f:
                 return json.load(f)
         except Exception as e:
-            print(f'[ui_options] 読み込みエラー: {e}')
+            print(f'[ui_options] load error: {e}')
     return {}
 
 
@@ -314,12 +318,36 @@ def _backfill_config(cfg: dict) -> bool:
             changed = True
     return changed
 
+def _load_json_file(path: str) -> dict:
+    with open(path, 'r', encoding='utf-8-sig') as f:
+        data = json.load(f)
+    if isinstance(data, dict):
+        return data
+    return {}
+
+
+def _resolve_user_config_file() -> str:
+    if os.path.exists(LOCAL_CONFIG_FILE):
+        return LOCAL_CONFIG_FILE
+    if os.path.exists(LEGACY_CONFIG_FILE):
+        return LEGACY_CONFIG_FILE
+    return LOCAL_CONFIG_FILE
+
+
+def get_active_config_file() -> str:
+    return _resolve_user_config_file()
+
 def load_config() -> dict:
-    if os.path.exists(CONFIG_FILE):
+    cfg = DEFAULT_CONFIG.copy()
+    if os.path.exists(DEFAULT_CONFIG_FILE):
         try:
-            cfg = DEFAULT_CONFIG.copy()
-            with open(CONFIG_FILE, 'r', encoding='utf-8-sig') as f:
-                saved = json.load(f)
+            cfg.update(_load_json_file(DEFAULT_CONFIG_FILE))
+        except Exception as e:
+            print(f'[config] shared defaults load error: {e}')
+    user_config_file = _resolve_user_config_file()
+    if os.path.exists(user_config_file):
+        try:
+            saved = _load_json_file(user_config_file)
             migrated = False
             for old_key, new_key in [('lm_studio_url', 'llm_url'), ('lm_studio_token', 'llm_token'), ('lm_studio_model', 'llm_model')]:
                 if old_key in saved and new_key not in saved:
@@ -334,7 +362,7 @@ def load_config() -> dict:
                     saved[k] = DEFAULT_CONFIG[k]
                     migrated = True
             if _backfill_config(saved):
-                print('[config] 不足キーを補完しました')
+                print('[config] backfilled missing keys')
                 migrated = True
             cfg.update(saved)
             if str(cfg.get('output_format', 'png')).lower() not in ('png', 'webp'):
@@ -344,13 +372,13 @@ def load_config() -> dict:
                 cfg['output_format'] = str(cfg.get('output_format', 'png')).lower()
             cfg['embed_metadata'] = bool(cfg.get('embed_metadata', True))
             if migrated:
-                with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+                target_file = LOCAL_CONFIG_FILE if user_config_file == LEGACY_CONFIG_FILE else user_config_file
+                with open(target_file, 'w', encoding='utf-8') as f:
                     json.dump(cfg, f, ensure_ascii=False, indent=2)
             _apply_log_config(cfg)
             return cfg
         except Exception as e:
-            print(f'[設定] 読み込みエラー: {e}')
-    cfg = DEFAULT_CONFIG.copy()
+            print(f'[config] load error: {e}')
     _apply_log_config(cfg)
     return cfg
 
@@ -358,6 +386,11 @@ def load_config() -> dict:
 def save_config(cfg: dict):
     try:
         base = DEFAULT_CONFIG.copy()
+        if os.path.exists(DEFAULT_CONFIG_FILE):
+            try:
+                base.update(_load_json_file(DEFAULT_CONFIG_FILE))
+            except Exception as e:
+                print(f'[config] shared defaults load error: {e}')
         base.update(cfg or {})
         cfg = base
         try:
@@ -370,12 +403,12 @@ def save_config(cfg: dict):
         cfg['embed_metadata'] = bool(cfg.get('embed_metadata', True))
         cfg['log_level'] = 'debug' if str(cfg.get('log_level', 'normal')).lower() == 'debug' else 'normal'
         cfg['log_dir'] = str(cfg.get('log_dir', 'logs') or 'logs').strip() or 'logs'
-        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+        with open(LOCAL_CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump(cfg, f, ensure_ascii=False, indent=2)
         _apply_log_config(cfg)
-        print(f'[設定] 保存: {CONFIG_FILE}')
+        print(f'[config] saved: {LOCAL_CONFIG_FILE}')
     except Exception as e:
-        print(f'[設定] 保存エラー: {e}')
+        print(f'[config] save error: {e}')
 
 
 def _console_lang(cfg: dict | None = None) -> str:
@@ -389,5 +422,4 @@ def _console_lang(cfg: dict | None = None) -> str:
 
 def _ct(ja: str, en: str, cfg: dict | None = None) -> str:
     return en if _console_lang(cfg) == 'en' else ja
-
 

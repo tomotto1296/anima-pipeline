@@ -35,7 +35,7 @@ def _sf(name):
 
 
 from core.config import (
-    CONFIG_FILE,
+    get_active_config_file,
     DEFAULT_CONFIG,
     EXTRA_TAGS_FILE,
     NEG_EXTRA_TAGS_FILE,
@@ -135,7 +135,7 @@ def main():
         cfg,
         version=__version__,
         ui_port=UI_PORT,
-        config_file=CONFIG_FILE,
+        config_file=get_active_config_file(),
         ct=_ct,
         os_cfg=_os_cfg,
     )
@@ -151,6 +151,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
