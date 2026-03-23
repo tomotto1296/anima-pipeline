@@ -51,6 +51,7 @@ anima-pipeline/
   settings/                   (初回起動で自動生成)
   chara/                      (プリセット)
   presets/                    (Scene/Camera/Quality/LoRA/Composite)
+  sessions/                   (名前付きセッション保存先)
   assets/                     (favicon / icon / manifest用リソース)
 ```
 
@@ -129,6 +130,7 @@ The result panel shows `OK / WARN / ERR / SKIP`, and `WARN / ERR` rows include h
 - `Composite` 読込は `snapshot` を優先して復元します（参照名より先に適用）。
 - `Camera` はキャラごとの値を `all[]` で保持します。
 - 複数キャラ読込時、保存データが不足するキャラは先頭のカメラ値（`posv`/`posh`/`pos_camera`）をフォールバックとして適用します。
+
 ### キャラ名・作品名の日英分離（INPUT-12）
 
 - キャラ入力欄は Name JA / Name EN と Series JA / Series EN の4項目を扱えます。
@@ -251,6 +253,22 @@ python scripts/run_quick_checks.py --include-hooks-guard
 
 致命的ではないため、現時点では継続観察中です。
 
+---
 
+## 13. バージョン履歴
 
-
+| バージョン | 主な変更内容 |
+|-----------|------------|
+| **v1.5.0** | モジュール分割（core/・frontend/）、生成履歴DB、プリセット階層化、ポジティブ/ネガティブプリセット、名前付きセッション保存、キャラ名日英分離、セットアップ診断UI |
+| **v1.4.7** | UI言語切替（JA/EN）、ログ機能、プリセットサムネイル一覧、キャラ数0許可、BOM読み込み改善 |
+| **v1.4.6** | SaveImageExtended対応、LLMシステムプロンプトに/no_think追加 |
+| **v1.4.5** | 生成進捗%表示（WebSocket）、再生成の各種二重挿入修正、スマホWS接続バナー |
+| **v1.4.4** | ExtraTag二重挿入修正、キャラブロック化、番号修正、requests自動インストール対応 |
+| **v1.4.3** | 自前ワークフロー（API形式JSON）対応、ワークフロー選択時のNode ID自動検出 |
+| **v1.4.2** | LoRA未選択・一部選択時の400エラー修正（LoraLoaderノード自動バイパス） |
+| **v1.4.1** | スマホ対応（モバイルUI大幅改善）、LoRAサムネイル表示、各セクショントグル開閉、バージョン表示 |
+| **v1.4.0** | LoRA注入、ワークフロー選択ドロップダウン、バグ修正 |
+| **v1.3.0** | ギャラリー機能、生成パラメータセクション、フローティングナビ、シーンブロック独立 |
+| **v1.2.1** | プリセット自動生成（Danbooru Wiki + LLM）、色選択ドロップダウン化 |
+| **v1.2.0** | キャラプリセット機能、接続テスト、ComfyUIキュー表示 |
+| **v1.1.0** | 初回公開 |

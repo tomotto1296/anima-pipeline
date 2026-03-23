@@ -51,6 +51,7 @@ anima-pipeline/
   settings/                   (auto-generated on first run)
   chara/                      (character presets)
   presets/                    (Scene/Camera/Quality/LoRA/Composite)
+  sessions/                   (named session saves)
   assets/                     (favicon/icon/manifest resources)
 ```
 
@@ -129,6 +130,7 @@ Behavior notes:
 - Composite load restores from `snapshot` first (snapshot has priority over name references).
 - Camera presets store per-character values in `all[]`.
 - When loading for multiple characters, if some character slots are missing in saved data, the first camera values (`posv`/`posh`/`pos_camera`) are used as fallback.
+
 ### Character/Series JA-EN Split (INPUT-12)
 
 - Character fields now support four inputs: Name JA / Name EN and Series JA / Series EN.
@@ -248,3 +250,22 @@ python scripts/run_quick_checks.py --include-hooks-guard
 
 These are currently tracked as non-critical issues.
 
+---
+
+## 13. Version History
+
+| Version | Changes |
+|---------|---------|
+| **v1.5.0** | Module split (core/ · frontend/), generation history DB, preset hierarchy, positive/negative presets, named session save, character name JA/EN split, setup diagnostics UI |
+| **v1.4.7** | UI language switch (JA/EN), logging, preset thumbnail list, allow 0 characters, BOM read fix |
+| **v1.4.6** | SaveImageExtended support, /no_think added to LLM system prompt |
+| **v1.4.5** | Generation progress % (WebSocket), re-generation double-insertion fixes, smartphone WS banner |
+| **v1.4.4** | ExtraTag double-insertion fix, character block refactor, requests auto-install |
+| **v1.4.3** | Custom workflow (API format JSON) support, Node ID auto-detection on workflow select |
+| **v1.4.2** | 400 error fix for partial/no LoRA selection (LoraLoader auto-bypass) |
+| **v1.4.1** | Smartphone support (major mobile UI improvements), LoRA thumbnail display, section toggles |
+| **v1.4.0** | LoRA injection, workflow selection dropdown, bug fixes |
+| **v1.3.0** | Gallery, generation parameters section, floating nav, scene block separation |
+| **v1.2.1** | Auto preset generation (Danbooru Wiki + LLM), color dropdown |
+| **v1.2.0** | Character preset feature, connection test, ComfyUI queue display |
+| **v1.1.0** | Initial release |
