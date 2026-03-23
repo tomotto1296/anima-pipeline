@@ -1,4 +1,4 @@
-const __LANG_STORAGE_KEY__ = 'anima_ui_lang_v2';
+﻿const __LANG_STORAGE_KEY__ = 'anima_ui_lang_v2';
 const __OS_DEFAULT_LANG__ = (typeof __OS_LANG__ === 'string' && __OS_LANG__.toLowerCase().startsWith('ja')) ? 'ja' : 'en';
 let currentLang = localStorage.getItem(__LANG_STORAGE_KEY__) || __OS_DEFAULT_LANG__;
 if(currentLang !== 'ja' && currentLang !== 'en') currentLang = __OS_DEFAULT_LANG__;
@@ -113,8 +113,22 @@ const BASE_I18N_MAP_EN = {
   'その他': 'Other',
   '作品名': 'Series',
   'キャラ名': 'Character Name',
+  'キャラ名 JA *': 'Name JA *',
+  'キャラ名 EN': 'Name EN',
+  '作品名 JA': 'Series JA',
+  '作品名 EN': 'Series EN',
   'オリジナル': 'Original',
   'プリセット選択': 'Preset',
+  'ネガティブプリセット': 'Negative Preset',
+  'ネガティブプリセットを選択': 'Select negative preset',
+  '── ネガティブプリセット選択 ──': '── Select negative preset ──',
+  'ネガティブプリセット名を入力してください': 'Please enter negative preset name',
+  '現在のネガティブ設定を上書きしますか？': 'Overwrite current negative settings?',
+  'ポジティブプリセット': 'Positive Preset',
+  'ポジティブプリセットを選択': 'Select positive preset',
+  '── ポジティブプリセット選択 ──': '── Select positive preset ──',
+  'ポジティブプリセット名を入力してください': 'Please enter positive preset name',
+  '現在のポジティブ設定を上書きしますか？': 'Overwrite current positive settings?',
   '共通作品（任意）': 'Shared Series (Optional)',
   'キャラ数': 'Chara Count',
   '全裸': 'Nude',

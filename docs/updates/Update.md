@@ -519,4 +519,55 @@
 
 ### 14) 現在の補足
 - 既知課題として「起動直後の進捗%追従遅れ」は継続観察（致命ではないため後続対応）
-- 本追記時点の本体バージョン: `1.4.892`
+- 本追記時点の本体バージョン: `1.4.900`
+
+### v1.4.900
+- INPUT-12: キャラ名/作品名に JA/EN 欄を追加（`name_en` / `series_en`）。
+- INPUT-12: LLMなし生成で EN 欄優先、空欄時は JA 欄フォールバックで `name_(series)` 生成。
+- INPUT-12: セッション保存/復元・キャラプリセット保存/読込に `name_en` / `series_en` を反映。
+- INPUT-5: プリセットカテゴリに `negative` を追加し、`/presets/negative/*` で保存/読込/削除対応。
+- INPUT-5: ネガティブ調整セクション上部に Negative Preset UI（選択/保存/読込/削除）を追加。
+- INPUT-5: ネガティブプリセットで `quality_neg_tags` / `neg_extra_tags` / `neg_style_tags` / `neg_extra_note` / `selected_neg_safety` を保存/復元。
+- Config: `last_negative_preset` を `pipeline_config` の保存対象に追加。
+- 検証: `python scripts/check_frontend_syntax.py` / `python scripts/run_quick_checks.py --include-hooks-guard` 成功。
+
+### v1.4.901
+- `/generate_preset` の命名を JA/EN 連動に拡張。`name_en` が入力されている場合、保存名の既定値を `JA（EN）` 形式に統一。
+- 自動生成プリセット保存時に `name_en` / `series_en` も保持。
+- フロントの「プリセット自動生成」「キャラプリセット保存」のデフォルト名を同じ規則（JA（EN）優先）に統一。
+
+### v1.4.902
+- `settings/preset_gen_prompt.txt` に出力フォーマット制約を追記（コードフェンス禁止・単一JSON必須）。
+- `/generate_preset` で LLM空応答/内容不足時に1回だけ自動リトライする処理を追加。
+
+### v1.4.903
+- `/generate_preset` で `name_en` / `series_en` の自動補完を追加（Danbooruタグ検索 -> 補助LLM推定 -> フォールバックの順）。
+- 日本語名のみ入力時でも、返却プリセットに英語タグ候補を含めるよう改善。
+- 自動生成プリセット名の既定値判定を補完後の `name_en` ベースに統一（`JA（EN）`）。
+
+### v1.4.904
+- 英語名補助推定で制御語（例: `no_think`）を候補から除外するガードを追加。
+- 補助推定プロンプトを調整し、不要な制御語の混入を抑制。
+
+### v1.4.905
+- `/generate_preset` の英語名補助推定に妥当性バリデーションを追加。
+- 指示文混入系の不正候補（例: `the_user_wants_to_convert...`）を除外。
+
+### v1.4.906
+- `Series EN` が空になるケース向けに、`name_(series)` 形式のキャラタグから series を抽出するフォールバックを追加。
+- これにより JA作品名のみ入力時でも、キャラタグに series が含まれる場合は `Series EN` を補完可能。
+
+### v1.4.907
+- EN補完値の正規化を追加: `name_(series)` は `Name EN=name` / `Series EN=series` に分離。
+- `Series EN` の `fate_(series)` 形式を `fate` へ正規化。
+- `Name EN` にはASCIIタグ妥当性チェックを適用し、日本語や指示文混入を除外。
+
+### v1.4.908
+- Positive preset を追加（positive カテゴリ保存/読込/削除）。
+- ポジティブ調整セクション上部に Positive Preset UI（選択/保存/読込/削除）を追加。
+- Positive preset で selected_period / year / quality_tags / meta_tags / selected_safety / style_tags / extra_tags / extra_note を保存/復元。
+- Config/Session に last_positive_preset / lastPositivePreset を追加し、最終選択を復元。
+
+### v1.4.909
+- Positive Preset UI 文言の文字化けを修正（選択肢・確認ダイアログ・エラーメッセージ）。
+- Positive preset の読込/保存/削除導線で表示メッセージを正常化。

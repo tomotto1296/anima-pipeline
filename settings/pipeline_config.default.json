@@ -1,4 +1,4 @@
-{
+﻿{
   "llm_platform": "",
   "llm_url": "http://localhost:1234",
   "llm_token": "",
@@ -31,5 +31,7 @@
   "last_camera_preset": "",
   "last_quality_preset": "",
   "last_lora_preset": "",
-  "last_composite_preset": ""
+  "last_composite_preset": "",
+  "last_negative_preset": "",
+  "last_positive_preset": ""
 }

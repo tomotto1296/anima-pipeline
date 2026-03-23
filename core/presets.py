@@ -6,7 +6,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHARA_PRESETS_DIR = os.path.join(BASE_DIR, "chara")
 PRESETS_BASE_DIR = os.path.join(BASE_DIR, "presets")
 
-PRESET_CATEGORIES = ("chara", "scene", "camera", "quality", "lora", "composite")
+PRESET_CATEGORIES = ("chara", "scene", "camera", "quality", "lora", "composite", "negative", "positive")
 
 
 def _preset_dir_for_category(category: str) -> str:

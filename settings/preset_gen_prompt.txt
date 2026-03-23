@@ -1,4 +1,4 @@
-/no_think
+﻿/no_think
 Generate a character preset JSON for anime image generation.
 Character: {chara_name}
 Series: {chara_series}
@@ -17,3 +17,8 @@ Output ONLY a valid JSON object with these exact fields (Danbooru tags or empty 
 }
 IMPORTANT: Be accurate about hair/eye colors. Use your training knowledge about this character.
 Rules: lowercase underscore Danbooru tags only. Output ONLY the JSON.
+
+STRICT FORMAT:
+- Do NOT use markdown code fences.
+- Return exactly ONE JSON object and nothing else.
+- No explanation text before or after JSON.

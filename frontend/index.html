@@ -625,7 +625,7 @@
       </div>
     </div>
     <div style="margin-top:0.8rem;padding:0.6rem 0.7rem;background:#f5f9ff;border:1px solid #9db9df;border-radius:7px;">
-      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#2d5f99;font-weight:bold;margin-bottom:0.4rem;">🗂 プリセット管理（Scene/Camera/Quality/LoRA/Composite）</div>
+      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#2d5f99;font-weight:bold;margin-bottom:0.4rem;">🗂 プリセット管理（Scene/Camera/Quality/LoRA/Composite/Negative/Positive）</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem;margin-bottom:0.35rem;">
         <select id="presetCategorySel" onchange="onPresetCategoryChanged()" style="font-family:'DM Mono',monospace;font-size:0.72rem;border:1px solid #9db9df;border-radius:5px;padding:0.3rem 0.5rem;background:white;color:var(--ink);cursor:pointer;">
           <option value="scene">Scene</option>
@@ -633,6 +633,8 @@
           <option value="quality">Quality</option>
           <option value="lora">LoRA Set</option>
           <option value="composite">Composite</option>
+          <option value="negative">Negative</option>
+          <option value="positive">Positive</option>
         </select>
         <input id="presetNameInput" type="text" placeholder="preset name"
           style="font-family:'DM Mono',monospace;font-size:0.72rem;border:1px solid #9db9df;border-radius:5px;padding:0.3rem 0.5rem;background:white;color:var(--ink);">
@@ -873,6 +875,18 @@
     </div>
     <div id="extraContent" style="display:none;">
 
+    <div style="margin-bottom:0.7rem;padding:0.55rem 0.6rem;border:1px solid var(--border);border-radius:7px;background:#fff;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);font-weight:bold;margin-bottom:0.35rem;">ポジティブプリセット</div>
+      <div style="display:flex;gap:0.35rem;align-items:center;flex-wrap:wrap;">
+        <select id="positivePresetSel" onchange="onPositivePresetChanged(this.value)" style="flex:1;min-width:180px;font-family:'DM Mono',monospace;font-size:0.72rem;border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.5rem;background:white;color:var(--ink);cursor:pointer;">
+          <option value="">── ポジティブプリセット選択 ──</option>
+        </select>
+        <button onclick="loadPositivePresetFromSection()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0;width:2.8rem;text-align:center;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;">Load</button>
+        <button onclick="savePositivePresetFromSection()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0;width:2.8rem;text-align:center;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;">Save</button>
+        <button onclick="deletePositivePresetFromSection()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0;width:2.8rem;text-align:center;border:1px solid var(--border);border-radius:5px;background:white;color:var(--ink);cursor:pointer;">Del</button>
+      </div>
+    </div>
+
     <div style="margin-bottom:0.7rem;">
       <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ① 期間タグ</div>
       <div class="period-row">
@@ -947,6 +961,18 @@
       <span id="negContentArrow">▶</span> ネガティブプロンプト調整
     </div>
     <div id="negContent" style="display:none;">
+
+        <div style="margin-bottom:0.7rem;padding:0.55rem 0.6rem;border:1px solid #efcfd6;border-radius:7px;background:#fff;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#c0392b;font-weight:bold;margin-bottom:0.35rem;">ネガティブプリセット</div>
+      <div style="display:flex;gap:0.35rem;align-items:center;flex-wrap:wrap;">
+        <select id="negativePresetSel" onchange="onNegativePresetChanged(this.value)" style="flex:1;min-width:180px;font-family:'DM Mono',monospace;font-size:0.72rem;border:1px solid #e8c4c4;border-radius:5px;padding:0.3rem 0.5rem;background:white;color:var(--ink);cursor:pointer;">
+          <option value="">── ネガティブプリセット選択 ──</option>
+        </select>
+        <button onclick="loadNegativePresetFromSection()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0;width:2.8rem;text-align:center;border:1px solid #e8c4c4;border-radius:5px;background:white;color:#c0392b;cursor:pointer;">Load</button>
+        <button onclick="saveNegativePresetFromSection()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0;width:2.8rem;text-align:center;border:1px solid #e8c4c4;border-radius:5px;background:white;color:#c0392b;cursor:pointer;">Save</button>
+        <button onclick="deleteNegativePresetFromSection()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0;width:2.8rem;text-align:center;border:1px solid #e8c4c4;border-radius:5px;background:white;color:#c0392b;cursor:pointer;">Del</button>
+      </div>
+    </div>
 
     <div style="margin-bottom:0.7rem;">
       <div class="toggle-section-header" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--muted);margin-bottom:0.3rem;">▼ ① Period Tags (shared with Positive)</div>
@@ -1185,8 +1211,22 @@ const BASE_I18N_MAP_EN = {
   'その他': 'Other',
   '作品名': 'Series',
   'キャラ名': 'Character Name',
+  'キャラ名 JA *': 'Name JA *',
+  'キャラ名 EN': 'Name EN',
+  '作品名 JA': 'Series JA',
+  '作品名 EN': 'Series EN',
   'オリジナル': 'Original',
   'プリセット選択': 'Preset',
+  'ネガティブプリセット': 'Negative Preset',
+  'ネガティブプリセットを選択': 'Select negative preset',
+  '── ネガティブプリセット選択 ──': '── Select negative preset ──',
+  'ネガティブプリセット名を入力してください': 'Please enter negative preset name',
+  '現在のネガティブ設定を上書きしますか？': 'Overwrite current negative settings?',
+  'ポジティブプリセット': 'Positive Preset',
+  'ポジティブプリセットを選択': 'Select positive preset',
+  '── ポジティブプリセット選択 ──': '── Select positive preset ──',
+  'ポジティブプリセット名を入力してください': 'Please enter positive preset name',
+  '現在のポジティブ設定を上書きしますか？': 'Overwrite current positive settings?',
   '共通作品（任意）': 'Shared Series (Optional)',
   'キャラ数': 'Chara Count',
   '全裸': 'Nude',
@@ -2394,8 +2434,10 @@ async function deleteCharaPresetFromServer(filename){
 function collectCharaData(idx){
   const ch = {
     series:   (document.getElementById('chara_series_'+idx)||{value:''}).value,
+    series_en:(document.getElementById('chara_series_en_'+idx)||{value:''}).value.trim(),
     original: document.getElementById('chara_orig_'+idx)?.classList.contains('active')||false,
     name:     (document.getElementById('chara_name_'+idx)||{value:''}).value,
+    name_en:  (document.getElementById('chara_name_en_'+idx)||{value:''}).value.trim(),
     gender:   document.querySelector(`#chara_${idx} .gender-btn.active`)?.dataset.g||'female',
     age:      document.querySelector(`#chara_${idx} .age-btn.active`)?.dataset.a||'unset',
   };
@@ -2419,18 +2461,30 @@ function collectCharaData(idx){
 
 async function generateCharaPreset(idx){
   const nameEl = document.getElementById('chara_name_'+idx);
+  const nameEnEl = document.getElementById('chara_name_en_'+idx);
   const seriesEl = document.getElementById('chara_series_'+idx);
+  const seriesEnEl = document.getElementById('chara_series_en_'+idx);
   const name = nameEl?.value.trim()||'';
+  const nameEn = nameEnEl?.value.trim()||'';
   const series = seriesEl?.value.trim()||'';
+  const seriesEn = seriesEnEl?.value.trim()||'';
   if(!name){ alert('キャラ名を入力してください'); return; }
   const btn = document.querySelector('#chara_'+idx+' button[title*="自動生成"]');
   if(btn){ btn.textContent='⏳'; btn.disabled=true; }
   try{
-    const url = '/generate_preset?name='+encodeURIComponent(name)+'&series='+encodeURIComponent(series);
+    const url = '/generate_preset?name='+encodeURIComponent(name)
+      +'&name_en='+encodeURIComponent(nameEn)
+      +'&series='+encodeURIComponent(series)
+      +'&series_en='+encodeURIComponent(seriesEn);
     const res = await fetch(url);
     const data = await res.json();
     if(data.ok){
       const preset = data.preset;
+      const defaultPresetName = (name && nameEn && name.toLowerCase() !== nameEn.toLowerCase()) ? `${name}（${nameEn}）` : (name || nameEn);
+      if(defaultPresetName && (!preset.name || preset.name === name)) preset.name = defaultPresetName;
+      preset.data = preset.data || {};
+      if(nameEn && !preset.data.name_en) preset.data.name_en = nameEn;
+      if(seriesEn && !preset.data.series_en) preset.data.series_en = seriesEn;
       charaPresets.push(preset);
       updateAllPresetSelects();
       const sel = document.getElementById('chara_preset_sel_'+idx);
@@ -2449,7 +2503,12 @@ async function generateCharaPreset(idx){
 
 async function saveCharaPreset(idx){
   const ch = collectCharaData(idx);
-  const label = ch.name || 'キャラ'+(idx+1);
+  const ja = (ch.name || '').trim();
+  const en = (ch.name_en || '').trim();
+  let label = 'キャラ'+(idx+1);
+  if(ja && en && ja.toLowerCase() !== en.toLowerCase()) label = `${ja}（${en}）`;
+  else if(ja) label = ja;
+  else if(en) label = en;
   const name = prompt('プリセット名を入力してください', label);
   if(name===null) return;
   const preset = { name: name.trim()||label, data: ch, savedAt: new Date().toISOString() };
@@ -2488,7 +2547,7 @@ async function deleteCharaPresetFromSettings(){
   if(isNaN(i)) return;
   const preset = charaPresets[i];
   if(!preset) return;
-  if(!confirm(`Delete preset "${preset.name}"?`)) return;
+  if(!confirm("削除しますか？")) return;
   await deleteCharaPresetFromServer(preset._filename);
   charaPresets.splice(i, 1);
   updateAllPresetSelects();
@@ -2502,11 +2561,13 @@ function loadCharaPreset(idx){
   const ch = preset.data;
   setTimeout(()=>{
     if(document.getElementById('chara_series_'+idx)) document.getElementById('chara_series_'+idx).value = ch.series||'';
+    if(document.getElementById('chara_series_en_'+idx)) document.getElementById('chara_series_en_'+idx).value = ch.series_en||'';
     if(ch.original){
       const ob = document.getElementById('chara_orig_'+idx);
       if(ob && !ob.classList.contains('active')) ob.click();
     }
     if(document.getElementById('chara_name_'+idx)) document.getElementById('chara_name_'+idx).value = ch.name||'';
+    if(document.getElementById('chara_name_en_'+idx)) document.getElementById('chara_name_en_'+idx).value = ch.name_en||'';
     const gRow = document.querySelector(`#chara_${idx} .chara-attr-btns.gender-row`);
     if(gRow) gRow.querySelectorAll('.gender-btn').forEach(b=>b.classList.toggle('active', b.dataset.g===ch.gender));
     const aRow = document.querySelector(`#chara_${idx} .chara-attr-btns.age-row`);
@@ -2597,9 +2658,9 @@ function loadCharaPreset(idx){
   }, 50);
 }
 
-const PRESET_CATEGORIES = ['scene','camera','quality','lora','composite'];
-let presetCatalog = {scene:[], camera:[], quality:[], lora:[], composite:[]};
-let lastPresetSelection = {scene:'', camera:'', quality:'', lora:'', composite:''};
+const PRESET_CATEGORIES = ['scene','camera','quality','lora','composite','negative','positive'];
+let presetCatalog = {scene:[], camera:[], quality:[], lora:[], composite:[], negative:[], positive:[]};
+let lastPresetSelection = {scene:'', camera:'', quality:'', lora:'', composite:'', negative:'', positive:''};
 
 function _escPresetPart(v){ return encodeURIComponent(String(v||'')); }
 function _setCheckValues(containerId, tags){
@@ -2780,6 +2841,225 @@ function applyQualityPresetData(data){
     cb.checked = negTags.has(cb.dataset.tag);
   });
 }
+function collectPositivePresetData(){
+  return {
+    selected_period: selectedPeriod || '',
+    year: (document.getElementById('yearInput')||{value:''}).value || '',
+    quality_tags: [
+      ...collectCheckedTags('qualityHuman'),
+      ...collectCheckedTags('qualityPony'),
+    ],
+    meta_tags: collectCheckedTags('metaTags'),
+    selected_safety: selectedSafety || '',
+    style_tags: Array.from(styleTags || []),
+    extra_tags: Array.from(extraTags || []),
+    extra_note: (document.getElementById('extraNoteEn')||{value:''}).value || '',
+  };
+}
+
+function applyPositivePresetData(data){
+  const quality = new Set((data.quality_tags || []).map(String));
+  const meta = new Set((data.meta_tags || []).map(String));
+
+  document.querySelectorAll('#qualityHuman input[type=checkbox], #qualityPony input[type=checkbox]').forEach(cb=>{
+    cb.checked = quality.has(cb.dataset.tag);
+  });
+  document.querySelectorAll('#metaTags input[type=checkbox]').forEach(cb=>{
+    cb.checked = meta.has(cb.dataset.tag);
+  });
+
+  selectedPeriod = data.selected_period || '';
+  document.querySelectorAll('.period-btn[data-p]').forEach(b=>{
+    b.classList.toggle('active', b.dataset.p===selectedPeriod);
+  });
+
+  const yearEl = document.getElementById('yearInput');
+  if(yearEl) yearEl.value = data.year || '';
+
+  selectedSafety = data.selected_safety || '';
+  document.querySelectorAll('#safety_btns .safety-btn').forEach(b=>{
+    b.classList.toggle('active', b.dataset.s===selectedSafety);
+  });
+
+  styleTags = Array.from((data.style_tags || []).map(String));
+  extraTags = new Set((data.extra_tags || []).map(String));
+  renderStylePresets();
+  renderStyleBadges();
+  buildPresetButtons();
+  renderExtraBadges();
+
+  const noteEl = document.getElementById('extraNoteEn');
+  if(noteEl) noteEl.value = data.extra_note || '';
+}
+
+function refreshPositivePresetSectionUI(){
+  const sel = document.getElementById('positivePresetSel');
+  if(!sel) return;
+  const cur = lastPresetSelection.positive || '';
+  sel.innerHTML = '<option value="">── ポジティブプリセット選択 ──</option>';
+  (presetCatalog.positive || []).forEach(name=>{
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+  if(cur && (presetCatalog.positive || []).includes(cur)) sel.value = cur;
+}
+
+function onPositivePresetChanged(v){
+  lastPresetSelection.positive = (v || '').trim();
+}
+
+async function loadPositivePresetFromSection(){
+  const name = (document.getElementById('positivePresetSel')?.value || '').trim();
+  if(!name){ alert('ポジティブプリセットを選択'); return; }
+  if(!confirm('現在のポジティブ設定を上書きしますか？')) return;
+  try{
+    const p = await loadCategoryPreset('positive', name);
+    applyPositivePresetData(p.data || {});
+    lastPresetSelection.positive = name;
+    refreshPositivePresetSectionUI();
+    alert(`読込: ${name}`);
+  }catch(e){
+    alert('読込エラー: ' + e.message);
+  }
+}
+
+async function savePositivePresetFromSection(){
+  const fallback = lastPresetSelection.positive || 'positive_preset';
+  const name = (prompt('ポジティブプリセット名を入力してください', fallback) || '').trim();
+  if(!name) return;
+  try{
+    if((presetCatalog.positive||[]).includes(name)){
+      if(!confirm('同名のポジティブプリセットがあります。上書きしますか？')) return;
+    }
+    await saveCategoryPreset('positive', name, collectPositivePresetData());
+    lastPresetSelection.positive = name;
+    presetCatalog.positive = await listCategoryPresets('positive');
+    refreshPositivePresetSectionUI();
+    alert(`保存: ${name}`);
+  }catch(e){
+    alert('保存エラー: ' + e.message);
+  }
+}
+
+async function deletePositivePresetFromSection(){
+  const name = (document.getElementById('positivePresetSel')?.value || '').trim();
+  if(!name){ alert('ポジティブプリセットを選択'); return; }
+  if(!confirm("削除しますか？")) return;
+  try{
+    await deleteCategoryPreset('positive', name);
+    if(lastPresetSelection.positive === name) lastPresetSelection.positive = '';
+    presetCatalog.positive = await listCategoryPresets('positive');
+    refreshPositivePresetSectionUI();
+  }catch(e){
+    alert('削除エラー: ' + e.message);
+  }
+}
+
+function collectNegativePresetData(){
+  const quality_neg_tags = [
+    ...collectCheckedNeg('qualityHumanNeg'),
+    ...collectCheckedNeg('qualityPonyNeg'),
+  ];
+  return {
+    quality_neg_tags,
+    neg_extra_tags: Array.from(negExtraTags || []),
+    neg_style_tags: Array.from(negStyleTags || []),
+    neg_extra_note: (document.getElementById('negExtraNoteEn')||{value:''}).value || '',
+    selected_neg_safety: selectedNegSafety || '',
+  };
+}
+
+function applyNegativePresetData(data){
+  const qualityNeg = new Set((data.quality_neg_tags || []).map(String));
+  document.querySelectorAll('#qualityHumanNeg input[type=checkbox], #qualityPonyNeg input[type=checkbox]').forEach(cb=>{
+    cb.checked = qualityNeg.has(cb.dataset.tag);
+  });
+
+  negExtraTags = new Set((data.neg_extra_tags || []).map(String));
+  negStyleTags = Array.from((data.neg_style_tags || []).map(String));
+  renderNegExtraPresets();
+  renderNegExtraBadges();
+  renderNegStylePresets();
+  renderNegStyleBadges();
+
+  const noteEl = document.getElementById('negExtraNoteEn');
+  if(noteEl) noteEl.value = data.neg_extra_note || '';
+
+  if(data.selected_neg_safety !== undefined){
+    selectedNegSafety = data.selected_neg_safety || '';
+    document.querySelectorAll('#neg_safety_btns .safety-btn').forEach(b=>{
+      b.classList.toggle('active', b.dataset.ns===selectedNegSafety);
+    });
+  }
+}
+
+function refreshNegativePresetSectionUI(){
+  const sel = document.getElementById('negativePresetSel');
+  if(!sel) return;
+  const cur = lastPresetSelection.negative || '';
+  sel.innerHTML = '<option value="">── ネガティブプリセット選択 ──</option>';
+  (presetCatalog.negative || []).forEach(name=>{
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
+  if(cur && (presetCatalog.negative || []).includes(cur)) sel.value = cur;
+}
+
+function onNegativePresetChanged(v){
+  lastPresetSelection.negative = (v || '').trim();
+}
+
+async function loadNegativePresetFromSection(){
+  const name = (document.getElementById('negativePresetSel')?.value || '').trim();
+  if(!name){ alert('ネガティブプリセットを選択'); return; }
+  if(!confirm('現在のネガティブ設定を上書きしますか？')) return;
+  try{
+    const p = await loadCategoryPreset('negative', name);
+    applyNegativePresetData(p.data || {});
+    lastPresetSelection.negative = name;
+    refreshNegativePresetSectionUI();
+    alert(`読込: ${name}`);
+  }catch(e){
+    alert('読み込みエラー: ' + e.message);
+  }
+}
+
+async function saveNegativePresetFromSection(){
+  const fallback = lastPresetSelection.negative || 'negative_preset';
+  const name = (prompt('ネガティブプリセット名を入力してください', fallback) || '').trim();
+  if(!name) return;
+  try{
+    if((presetCatalog.negative||[]).includes(name)){
+      if(!confirm('同名のプリセットが存在します。上書きしますか？')) return;
+    }
+    await saveCategoryPreset('negative', name, collectNegativePresetData());
+    lastPresetSelection.negative = name;
+    presetCatalog.negative = await listCategoryPresets('negative');
+    refreshNegativePresetSectionUI();
+    alert(`保存: ${name}`);
+  }catch(e){
+    alert('保存エラー: ' + e.message);
+  }
+}
+
+async function deleteNegativePresetFromSection(){
+  const name = (document.getElementById('negativePresetSel')?.value || '').trim();
+  if(!name){ alert('ネガティブプリセットを選択'); return; }
+  if(!confirm("削除しますか？")) return;
+  try{
+    await deleteCategoryPreset('negative', name);
+    if(lastPresetSelection.negative === name) lastPresetSelection.negative = '';
+    presetCatalog.negative = await listCategoryPresets('negative');
+    refreshNegativePresetSectionUI();
+    refreshPositivePresetSectionUI();
+  }catch(e){
+    alert('削除エラー: ' + e.message);
+  }
+}
 
 function collectLoraPresetData(){
   const loras = collectLoraSlots()
@@ -2847,6 +3127,8 @@ function collectPresetByCategory(category){
   if(category === 'quality') return collectQualityPresetData();
   if(category === 'lora') return collectLoraPresetData();
   if(category === 'composite') return collectCompositePresetData();
+  if(category === 'negative') return collectNegativePresetData();
+  if(category === 'positive') return collectPositivePresetData();
   return {};
 }
 
@@ -2856,6 +3138,8 @@ function applyPresetByCategory(category, data){
   if(category === 'quality') applyQualityPresetData(data);
   if(category === 'lora') applyLoraPresetData(data);
   if(category === 'composite') applyCompositePresetData(data);
+  if(category === 'negative') applyNegativePresetData(data);
+  if(category === 'positive') applyPositivePresetData(data);
 }
 
 function onPresetCategoryChanged(){
@@ -2873,6 +3157,8 @@ function onPresetCategoryChanged(){
   if(cur && (presetCatalog[cat]||[]).includes(cur)) sel.value = cur;
   const nameIn = document.getElementById('presetNameInput');
   if(nameIn) nameIn.value = sel.value || '';
+  refreshNegativePresetSectionUI();
+  refreshPositivePresetSectionUI();
 }
 
 function onPresetItemChanged(v){
@@ -2890,7 +3176,7 @@ async function loadSelectedPresetFromPanel(){
     const p = await loadCategoryPreset(cat, name);
     applyPresetByCategory(cat, p.data || {});
     lastPresetSelection[cat] = name;
-    alert(`読込成功: ${name}`);
+    alert(`読込: ${name}`);
   }catch(e){
     alert('読み込みエラー: ' + e.message);
   }
@@ -2910,10 +3196,12 @@ async function savePresetFromPanel(){
     await saveCategoryPreset(cat, name, data);
     lastPresetSelection[cat] = name;
     presetCatalog[cat] = await listCategoryPresets(cat);
-    onPresetCategoryChanged()
+    onPresetCategoryChanged();
+    refreshNegativePresetSectionUI();
+    refreshPositivePresetSectionUI();
     const sel = document.getElementById('presetItemSel');
     if(sel) sel.value = name;
-    alert(`Saved: ${name}`);
+    alert(`保存: ${name}`);
   }catch(e){
     alert('保存エラー: ' + e.message);
   }
@@ -2923,12 +3211,14 @@ async function deletePresetFromPanel(){
   const cat = document.getElementById('presetCategorySel')?.value || 'scene';
   const name = (document.getElementById('presetItemSel')?.value || '').trim();
   if(!name){ alert('プリセットを選択'); return; }
-  if(!confirm(`Delete preset "${name}"?`)) return;
+  if(!confirm("削除しますか？")) return;
   try{
     await deleteCategoryPreset(cat, name);
     if(lastPresetSelection[cat] === name) lastPresetSelection[cat] = '';
     presetCatalog[cat] = await listCategoryPresets(cat);
-    onPresetCategoryChanged()
+    onPresetCategoryChanged();
+    refreshNegativePresetSectionUI();
+    refreshPositivePresetSectionUI();
   }catch(e){
     alert('削除エラー: ' + e.message);
   }
@@ -2942,7 +3232,9 @@ async function initHierarchicalPresets(){
       presetCatalog[cat] = [];
     }
   }
-    onPresetCategoryChanged()
+    onPresetCategoryChanged();
+    refreshNegativePresetSectionUI();
+  refreshPositivePresetSectionUI();
 }
 
 let selectedW=1024, selectedH=1024;
@@ -3379,7 +3671,11 @@ async function loadSettings(){
     lastPresetSelection.quality = cfg.last_quality_preset || '';
     lastPresetSelection.lora = cfg.last_lora_preset || '';
     lastPresetSelection.composite = cfg.last_composite_preset || '';
-    onPresetCategoryChanged()
+    lastPresetSelection.negative = cfg.last_negative_preset || '';
+    lastPresetSelection.positive = cfg.last_positive_preset || '';
+    onPresetCategoryChanged();
+    refreshNegativePresetSectionUI();
+    refreshPositivePresetSectionUI();
   }catch(e){console.warn(e);}
 }
 
@@ -3435,6 +3731,8 @@ async function saveSettings(){
     last_quality_preset: lastPresetSelection.quality || '',
     last_lora_preset: lastPresetSelection.lora || '',
     last_composite_preset: lastPresetSelection.composite || '',
+    last_negative_preset: lastPresetSelection.negative || '',
+    last_positive_preset: lastPresetSelection.positive || '',
     ...collectGenParams(),
   };
   await fetch('/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cfg)});
@@ -3504,8 +3802,10 @@ function collectSessionData(){
   for(let i=0;i<count;i++){
     const ch = {
       series: (document.getElementById('chara_series_'+i)||{value:''}).value,
+      series_en: (document.getElementById('chara_series_en_'+i)||{value:''}).value.trim(),
       original: document.getElementById('chara_orig_'+i)?.classList.contains('active')||false,
       name:   (document.getElementById('chara_name_'+i)||{value:''}).value,
+      name_en: (document.getElementById('chara_name_en_'+i)||{value:''}).value.trim(),
       gender: document.querySelector(`#chara_${i} .gender-btn.active`)?.dataset.g||'female',
       age:    document.querySelector(`#chara_${i} .age-btn.active`)?.dataset.a||'unset',
     };
@@ -3565,7 +3865,10 @@ function collectSessionData(){
     selectedSafety,
     qualityHuman: collectCheckedTags('qualityHuman'),
     qualityPony:  collectCheckedTags('qualityPony'),
+    qualityHumanNeg: collectCheckedNeg('qualityHumanNeg'),
+    qualityPonyNeg:  collectCheckedNeg('qualityPonyNeg'),
     metaTags:     collectCheckedTags('metaTags'),
+    metaTagsNeg:  collectCheckedNeg('metaTagsNeg'),
     lmPrompt:     document.getElementById('promptOutput').textContent||'',
     finalPrompt:  document.getElementById('promptFinal').textContent||'',
     negFinalPrompt: document.getElementById('promptNegFinal').textContent||'',
@@ -3580,6 +3883,8 @@ function collectSessionData(){
     lastQualityPreset: lastPresetSelection.quality || '',
     lastLoraPreset: lastPresetSelection.lora || '',
     lastCompositePreset: lastPresetSelection.composite || '',
+    lastNegativePreset: lastPresetSelection.negative || '',
+    lastPositivePreset: lastPresetSelection.positive || '',
     savedAt: new Date().toISOString(),
   };
 }
@@ -3640,12 +3945,16 @@ function applySession(data){
     (data.characters||[]).forEach((ch,i)=>{
       if(document.getElementById('chara_series_'+i))
         document.getElementById('chara_series_'+i).value = ch.series||'';
+      if(document.getElementById('chara_series_en_'+i))
+        document.getElementById('chara_series_en_'+i).value = ch.series_en||'';
       if(ch.original){
         const ob = document.getElementById('chara_orig_'+i);
         if(ob && !ob.classList.contains('active')) ob.click();
       }
       if(document.getElementById('chara_name_'+i))
         document.getElementById('chara_name_'+i).value = ch.name||'';
+      if(document.getElementById('chara_name_en_'+i))
+        document.getElementById('chara_name_en_'+i).value = ch.name_en||'';
       const gRow = document.querySelector(`#chara_${i} .chara-attr-btns.gender-row`);
       if(gRow) gRow.querySelectorAll('.gender-btn').forEach(b=>{
         b.classList.toggle('active', b.dataset.g===ch.gender);
@@ -3924,6 +4233,9 @@ function applySession(data){
     if(data.qualityHuman) applyChecks('qualityHuman', data.qualityHuman);
     if(data.qualityPony)  applyChecks('qualityPony',  data.qualityPony);
     if(data.metaTags)     applyChecks('metaTags',     data.metaTags);
+    if(data.qualityHumanNeg) applyChecks('qualityHumanNeg', data.qualityHumanNeg);
+    if(data.qualityPonyNeg)  applyChecks('qualityPonyNeg',  data.qualityPonyNeg);
+    if(data.metaTagsNeg)     applyChecks('metaTagsNeg',     data.metaTagsNeg);
     if(data.lmPrompt){
       lastPositivePrompt = data.lmPrompt;
       document.getElementById('lmLabel').style.display='block'; document.getElementById('lmLabel').classList.remove('collapsed');
@@ -3970,6 +4282,8 @@ function applySession(data){
     if(data.lastQualityPreset !== undefined) lastPresetSelection.quality = data.lastQualityPreset || '';
     if(data.lastLoraPreset !== undefined) lastPresetSelection.lora = data.lastLoraPreset || '';
     if(data.lastCompositePreset !== undefined) lastPresetSelection.composite = data.lastCompositePreset || '';
+    if(data.lastNegativePreset !== undefined) lastPresetSelection.negative = data.lastNegativePreset || '';
+    if(data.lastPositivePreset !== undefined) lastPresetSelection.positive = data.lastPositivePreset || '';
     onPresetCategoryChanged()
   }, 50);
 }
@@ -4515,9 +4829,9 @@ function makeCharaBlock(idx){
   num.className = 'chara-num';
   num.textContent = 'キャラ '+n;
 
-  const nameWrap = document.createElement('div');
-  nameWrap.style.cssText = 'display:flex;flex-direction:column;min-width:0;';
-  nameWrap.appendChild(makeLabelDiv('キャラ名 *'));
+    const nameWrap = document.createElement('div');
+  nameWrap.style.cssText = 'display:flex;flex-direction:column;min-width:0;gap:0.25rem;';
+  nameWrap.appendChild(makeLabelDiv('キャラ名 JA *'));
   const nameInput = document.createElement('input');
   nameInput.type = 'text';
   nameInput.id = 'chara_name_'+idx;
@@ -4526,39 +4840,63 @@ function makeCharaBlock(idx){
   nameInput.style.cssText = 'width:100%;background:#f8f4ff;border:1px solid var(--accent);border-radius:5px;padding:0.45rem 0.6rem;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--ink);outline:none;box-sizing:border-box;';
   nameWrap.appendChild(nameInput);
 
+  nameWrap.appendChild(makeLabelDiv('キャラ名 EN'));
+  const nameEnInput = document.createElement('input');
+  nameEnInput.type = 'text';
+  nameEnInput.id = 'chara_name_en_'+idx;
+  nameEnInput.placeholder = 'e.g.: hakurei_reimu';
+  nameEnInput.className = 'inp-en';
+  nameEnInput.style.cssText = 'width:100%;background:#f3fff3;border:1px solid #82c596;border-radius:5px;padding:0.45rem 0.6rem;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--ink);outline:none;box-sizing:border-box;';
+  nameWrap.appendChild(nameEnInput);
+
   const seriesWrap = document.createElement('div');
-  seriesWrap.style.cssText = 'display:flex;flex-direction:column;min-width:0;';
-  seriesWrap.appendChild(makeLabelDiv('作品名'));
+  seriesWrap.style.cssText = 'display:flex;flex-direction:column;min-width:0;gap:0.25rem;';
+  seriesWrap.appendChild(makeLabelDiv('作品名 JA'));
   const seriesInnerWrap = document.createElement('div');
   seriesInnerWrap.style.cssText = 'display:flex;gap:0.3rem;align-items:center;';
   const seriesInput = document.createElement('input');
   seriesInput.type = 'text';
   seriesInput.id = 'chara_series_'+idx;
-  seriesInput.placeholder = 'Umamusume';
+  seriesInput.placeholder = '例: 東方Project';
   seriesInput.className = 'inp-ja';
-  seriesInput.style.cssText = 'flex:1;min-width:0;background:white;border:1px solid var(--border);border-radius:5px;padding:0.45rem 0.6rem;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--ink);outline:none;box-sizing:border-box;';
+  seriesInput.style.cssText = 'flex:1;min-width:0;background:#f8f4ff;border:1px solid var(--accent);border-radius:5px;padding:0.45rem 0.6rem;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--ink);outline:none;box-sizing:border-box;';
 
   const origBtn = document.createElement('div');
   origBtn.className = 'age-btn';
   origBtn.id = 'chara_orig_'+idx;
   origBtn.textContent = 'オリジナル';
   origBtn.style.cssText = 'flex-shrink:0;font-size:0.7rem;white-space:nowrap;';
+
+  seriesInnerWrap.appendChild(seriesInput);
+  seriesInnerWrap.appendChild(origBtn);
+  seriesWrap.appendChild(seriesInnerWrap);
+
+  seriesWrap.appendChild(makeLabelDiv('作品名 EN'));
+  const seriesEnInput = document.createElement('input');
+  seriesEnInput.type = 'text';
+  seriesEnInput.id = 'chara_series_en_'+idx;
+  seriesEnInput.placeholder = 'e.g.: touhou';
+  seriesEnInput.className = 'inp-en';
+  seriesEnInput.style.cssText = 'width:100%;background:#f3fff3;border:1px solid #82c596;border-radius:5px;padding:0.45rem 0.6rem;font-family:DM Mono,monospace;font-size:0.78rem;color:var(--ink);outline:none;box-sizing:border-box;';
+  seriesWrap.appendChild(seriesEnInput);
+
   origBtn.addEventListener('click', function(){
     const isOrig = !this.classList.contains('active');
     this.classList.toggle('active', isOrig);
     seriesInput.disabled = isOrig;
+    seriesEnInput.disabled = isOrig;
     seriesInput.style.opacity = isOrig ? '0.4' : '1';
-    if(isOrig) seriesInput.value = '';
+    seriesEnInput.style.opacity = isOrig ? '0.4' : '1';
+    if(isOrig){
+      seriesInput.value = '';
+      seriesEnInput.value = '';
+    }
     div.querySelectorAll('.lm-check-wrap').forEach(w=>{
       const cb = w.querySelector('input[type="checkbox"]');
       if(cb) cb.checked = false;
       w.style.display = isOrig ? 'none' : '';
     });
   });
-
-  seriesInnerWrap.appendChild(seriesInput);
-  seriesInnerWrap.appendChild(origBtn);
-  seriesWrap.appendChild(seriesInnerWrap);
 
   const expandBtn = document.createElement('button');
   expandBtn.className = 'chara-expand';
@@ -5778,6 +6116,7 @@ function collectInput(useLLM=true){
   let boys=0, girls=0, others=0;
   for(let i=0; i<count; i++){
     const name = (document.getElementById('chara_name_'+i)||{value:''}).value.trim();
+    const nameEn = (document.getElementById('chara_name_en_'+i)||{value:''}).value.trim();
     const genderEl = document.querySelector(`#chara_${i} .gender-btn.active`);
     const gender = genderEl ? genderEl.dataset.g : 'female';
     if(gender==='male') boys++;
@@ -5787,8 +6126,9 @@ function collectInput(useLLM=true){
     const age = ageEl ? ageEl.dataset.a : 'unset';
     const isOriginal = document.getElementById('chara_orig_'+i)?.classList.contains('active')||false;
     const charaSeries = isOriginal ? '' : (document.getElementById('chara_series_'+i)||{value:''}).value.trim();
+    const charaSeriesEn = isOriginal ? '' : (document.getElementById('chara_series_en_'+i)||{value:''}).value.trim();
     let directTags = [];
-    const ch = {name, gender, age, series: charaSeries || series};
+    const ch = {name, name_en: nameEn, gender, age, series: charaSeries || series, series_en: charaSeriesEn};
     if(isOriginal) ch['original'] = true;
     OPT_FIELDS.forEach(f=>{
       const v = (document.getElementById(`chara_${f.id}_${i}`)||{value:''}).value.trim();
@@ -5909,7 +6249,7 @@ function collectInput(useLLM=true){
   const charDirectTags = []; // LLMなし時はifブロック内で組み立て、LLMあり時はflatMapで組み立て
   characters.forEach(c=>{ (c._directTagsBlock||[]).forEach(t=>charDirectTags.push(t)); });
   const extraTagList = Array.from(extraTags);
-  return {valid: !!(series || characters.some(c=>c.name)), payload, genderSummary, extraTagList, charDirectTags};
+  return {valid: !!(series || characters.some(c=>c.name || c.name_en)), payload, genderSummary, extraTagList, charDirectTags};
 }
 
 // ===== 初期化 =====
@@ -6082,9 +6422,11 @@ async function generate(){
         const genderTag = gender==='female'||gender==='girl' ? '1girl'
                         : gender==='male'||gender==='boy'   ? '1boy' : '';
         // キャラ名タグ
-        if(!ch.original && ch.name){
-          const namePart = ch.name.toLowerCase().replace(/\s+/g,'_').replace(/[^\w]/g,'_');
-          const seriesPart = (ch.series||'').toLowerCase().replace(/\s+/g,'_').replace(/[^\w]/g,'_');
+        const nameSource = (ch.name_en || ch.name || '').trim();
+        const seriesSource = (ch.series_en || ch.series || '').trim();
+        if(!ch.original && nameSource){
+          const namePart = nameSource.toLowerCase().replace(/\s+/g,'_').replace(/[^\w]/g,'_');
+          const seriesPart = seriesSource.toLowerCase().replace(/\s+/g,'_').replace(/[^\w]/g,'_');
           const charTag = seriesPart ? `${namePart}_(${seriesPart})` : namePart;
           if(genderTag) charDirectTags.push(genderTag);
           charDirectTags.push(charTag);
@@ -6433,6 +6775,8 @@ document.addEventListener('keydown',e=>{
 
 </body>
 </html>
+
+
 
 
 

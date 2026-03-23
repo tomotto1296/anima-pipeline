@@ -301,6 +301,8 @@ DEFAULT_CONFIG = {
     'last_quality_preset': '',
     'last_lora_preset': '',
     'last_composite_preset': '',
+    'last_negative_preset': '',
+    'last_positive_preset': '',
 }
 
 

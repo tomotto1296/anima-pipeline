@@ -548,7 +548,9 @@ def build_handler(context: dict):
                 return False
 
             chara_name = req_qs.get('name',[''])[0].strip()
+            chara_name_en = req_qs.get('name_en',[''])[0].strip()
             chara_series = req_qs.get('series',[''])[0].strip()
+            chara_series_en = req_qs.get('series_en',[''])[0].strip()
             if not chara_name:
                 self._send_json({'error':'キャラ名が必要です'}, code=400)
                 return True
@@ -568,18 +570,164 @@ def build_handler(context: dict):
             except Exception as e:
                 print('[プリセット生成] Wiki取得失敗: '+str(e))
 
+            def _fallback_ascii_tag(text: str) -> str:
+                import re as _re_tag
+                s = str(text or '').strip().lower().replace('\u3000', ' ').replace('\u30fb', ' ')
+                s = _re_tag.sub(r'\s+', '_', s)
+                s = _re_tag.sub(r'[^a-z0-9_()]+', '_', s)
+                s = _re_tag.sub(r'_+', '_', s).strip('_')
+                return s
+
+            def _lookup_danbooru_tag(text: str) -> str:
+                q = str(text or '').strip()
+                if not q:
+                    return ''
+                from urllib.parse import quote
+                candidates = [q, q.replace(' ', '_')]
+                for cand in candidates:
+                    try:
+                        url = 'https://danbooru.donmai.us/tags.json?search[name_matches]='+quote(cand)+'*&search[order]=count&limit=10'
+                        req = _ureq.Request(url, headers={'User-Agent':'anima-pipeline/1.0'})
+                        with _ureq.urlopen(req, timeout=8) as r:
+                            arr = json.loads(r.read())
+                        if isinstance(arr, list) and arr:
+                            best = max(arr, key=lambda x: int((x or {}).get('post_count', 0) or 0))
+                            nm = str((best or {}).get('name', '') or '').strip()
+                            if _is_plausible_tag(nm):
+                                return nm
+                    except Exception:
+                        pass
+                return ''
+
+            def _is_plausible_tag(tag: str) -> bool:
+                s = str(tag or '').strip().lower()
+                if not s:
+                    return False
+                if len(s) > 48:
+                    return False
+                if s.count('_') > 5:
+                    return False
+                banned_exact = {
+                    'no_think', 'nothink', 'think', 'json', 'output', 'tag', 'english', 'japanese',
+                }
+                if s in banned_exact:
+                    return False
+                banned_fragments = (
+                    'the_user', 'wants', 'convert', 'danbooru', 'style', 'series_name', 'character_name',
+                    'one_tag', 'lower_snake_case', 'code_fence', 'explanation',
+                )
+                if any(f in s for f in banned_fragments):
+                    return False
+                # Must include ASCII letters; avoid Japanese string fallback.
+                if not re.search(r'[a-z]', s):
+                    return False
+                return True
+
+
+            def _infer_en_tag_with_llm(text: str, kind: str) -> str:
+                src = str(text or '').strip()
+                if not src:
+                    return ''
+                try:
+                    import re as _re_llm
+                    q = (
+                        f'Convert Japanese {kind} name to one Danbooru-style English tag.\n'
+                        'Return only one tag in lower_snake_case. No code fences, no explanation.\n'
+                        f'Input: {src}'
+                    )
+                    raw = str(call_llm(q, cfg) or '').strip()
+                    raw = _re_llm.sub(r'```[a-z]*|```', '', raw).strip()
+                    candidates = []
+                    for line in raw.splitlines():
+                        line = line.strip()
+                        if not line:
+                            continue
+                        for chunk in line.split(','):
+                            c = chunk.strip().lower().replace(' ', '_').strip("`\"'./")
+                            c = _re_llm.sub(r'[^a-z0-9_()]+', '', c)
+                            if c:
+                                candidates.append(c)
+                    for out in candidates:
+                        if _is_plausible_tag(out) and any(ch.isalpha() for ch in out):
+                            return out
+                except Exception:
+                    pass
+                return ''
+
+
+            inferred_name_en = (
+                chara_name_en
+                or _lookup_danbooru_tag(chara_name)
+                or _infer_en_tag_with_llm(chara_name, 'character')
+                or _fallback_ascii_tag(chara_name)
+            )
+            inferred_series_en = (
+                chara_series_en
+                or _lookup_danbooru_tag(chara_series)
+                or _infer_en_tag_with_llm(chara_series, 'series')
+                or _fallback_ascii_tag(chara_series)
+            )
+            def _normalize_en_name_series(name_tag: str, series_tag: str) -> tuple[str, str]:
+                n = str(name_tag or '').strip().lower()
+                s = str(series_tag or '').strip().lower()
+
+                # series aliases sometimes come as fate_(series)
+                ms = re.match(r'^([a-z0-9_]+)_\(series\)$', s)
+                if ms:
+                    s = ms.group(1)
+
+                # character tags can come as name_(series); split for UI fields
+                mn = re.match(r'^([a-z0-9_]+)_\(([^()]+)\)$', n)
+                if mn:
+                    n_base = mn.group(1)
+                    n_series = mn.group(2)
+                    n = n_base
+                    if not s and _is_plausible_tag(n_series):
+                        s = n_series
+
+                if not _is_plausible_tag(n):
+                    n = ''
+                if s and not _is_plausible_tag(s):
+                    s = ''
+                return n, s
+
+            inferred_name_en, inferred_series_en = _normalize_en_name_series(inferred_name_en, inferred_series_en)
             _tpl = load_preset_gen_prompt()
             preset_prompt = _tpl.replace('{chara_name}', chara_name).replace('{chara_series}', chara_series or 'unknown').replace('{wiki_text}', wiki_text or 'Not found. Use your training knowledge.')
             try:
-                result_json = call_llm(preset_prompt, cfg)
+                result_json = ''
+                for attempt in range(2):
+                    try:
+                        result_json = call_llm(preset_prompt, cfg)
+                    except Exception as e:
+                        # Retry once when model returns no content-like response.
+                        emsg = str(e or '')
+                        if attempt == 0 and ('finish_reason' in emsg or 'content' in emsg.lower()):
+                            print('[preset_gen] empty/invalid LLM response; retrying once (1/1)')
+                            continue
+                        raise
+                    if str(result_json or '').strip():
+                        break
+                    if attempt == 0:
+                        print('[preset_gen] empty LLM response; retrying once (1/1)')
+                if not str(result_json or '').strip():
+                    raise ValueError('LLM returned empty content for preset generation')
                 import re as _re
                 result_json = _re.sub(r'`[a-z]*','',result_json).strip().strip('').strip()
                 preset_data = json.loads(result_json)
+                preset_display_name = chara_name
+                if chara_name and inferred_name_en and chara_name.lower() != inferred_name_en.lower():
+                    preset_display_name = f'{chara_name}（{inferred_name_en}）'
+                elif inferred_name_en and not chara_name:
+                    preset_display_name = inferred_name_en
+
                 preset = {
-                    'name': chara_name,
+                    'name': preset_display_name,
                     'data': {
                         'name': chara_name,
+                        'name_en': inferred_name_en,
                         'series': chara_series,
+                        'series_en': inferred_series_en,
                         'gender': preset_data.get('gender','female'),
                         'age': preset_data.get('age','adult'),
                         'original': False,
@@ -604,7 +752,7 @@ def build_handler(context: dict):
                 os.makedirs(CHARA_PRESETS_DIR, exist_ok=True)
                 existing = sorted([f for f in os.listdir(CHARA_PRESETS_DIR) if f.endswith('.json')])
                 n = len(existing) + 1
-                safe_name = chara_name.replace('/','_').replace('\\','_')[:30]
+                safe_name = preset_display_name.replace('/','_').replace('\\','_')[:30]
                 filename = '{:03d}_{}'.format(n, safe_name)
                 with open(os.path.join(CHARA_PRESETS_DIR, filename),'w',encoding='utf-8') as f:
                     json.dump(preset, f, ensure_ascii=False, indent=2)
