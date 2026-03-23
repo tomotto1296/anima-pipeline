@@ -602,3 +602,8 @@
 ## Checks
 - `python -m py_compile anima_pipeline.py core/handlers.py` pass
 - `python scripts/check_frontend_syntax.py` pass
+
+### 15) guides再整備（2026-03-23）
+- `docs/guides/anima_pipeline_guide.md` をリファクタ後構成に合わせて全面更新（文字化け解消）
+- `docs/guides/anima_pipeline_guide_en.md` を同内容で再整備（構成・起動・最小配布セットを現行化）
+- クイックチェック導線を `quick_checks_and_hooks.md` 参照へ統一
