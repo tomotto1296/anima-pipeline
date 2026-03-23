@@ -86,12 +86,27 @@ python anima_pipeline.py
 4. `Negative Node ID`
 5. `KSampler Node ID`
 6. `ComfyUI URL`
+7. `History DB Path`（既定: `history/history.db`）
+8. `History Thumb Dir`（既定: `history/thumbs`）
 
 `Save Settings` で保存すると `settings/pipeline_config.json` に反映されます。
 
+
 ---
 
-## 6. スマホアクセス（同一LAN）
+## 6. 生成履歴（セッション履歴 / 全履歴）
+
+- 生成後、画面下部のギャラリーに セッション履歴 が追加されます。
+- 全履歴 タブではSQLiteに保存された履歴を参照できます。
+- 履歴DB/サムネイルの既定保存先:
+  - history/history.db`r
+  - history/thumbs/`r
+- セッション履歴 の クリア は、セッション表示のみを消します（DBの 全履歴 は消えません）。
+
+---
+
+## 7. スマホアクセス（同一LAN）
+
 
 1. PCのIPv4を確認（例: `192.168.1.103`）
 2. PC上で Anima Pipeline を起動
@@ -105,7 +120,7 @@ python anima_pipeline.py
 
 ---
 
-## 7. 配布時の最小構成
+## 8. 配布時の最小構成
 
 最小構成は次の通りです。
 
@@ -132,7 +147,7 @@ start_anima_pipeline.bat (または任意の起動手段)
 
 ---
 
-## 8. クイックチェック
+## 9. クイックチェック
 
 詳細は [quick_checks_and_hooks.md](./quick_checks_and_hooks.md) を参照してください。
 
@@ -145,9 +160,10 @@ python scripts/run_quick_checks.py --include-hooks-guard
 
 ---
 
-## 9. 既知事項
+## 10. 既知事項
 
 - 起動直後の初回生成は、進捗%表示が遅れて出るケースがあります
 - キャンセル直後に `Generating...` が短時間残るケースがあります
 
 致命的ではないため、現時点では継続観察中です。
+

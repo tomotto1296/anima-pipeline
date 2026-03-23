@@ -86,12 +86,25 @@ In `SETTINGS`, verify:
 4. `Negative Node ID`
 5. `KSampler Node ID`
 6. `ComfyUI URL`
+7. `History DB Path` (default: `history/history.db`)
+8. `History Thumb Dir` (default: `history/thumbs`)
 
 Click `Save Settings` to write values into `settings/pipeline_config.json`.
 
 ---
 
-## 6. Smartphone Access (Same LAN)
+---
+
+## 6. Generation History (Session / All History)
+
+- After generation, cards are added to the gallery as session history.
+- The `All History` tab shows records persisted in SQLite.
+- Default history storage paths:
+  - `history/history.db`
+  - `history/thumbs/`
+- `Clear` in session history clears only session cards (DB records in `All History` remain).
+
+## 7. Smartphone Access (Same LAN)
 
 1. Check your PC IPv4 address (for example, `192.168.1.103`)
 2. Start Anima Pipeline on the PC
@@ -105,7 +118,7 @@ If it fails:
 
 ---
 
-## 7. Minimal Distribution Set
+## 8. Minimal Distribution Set
 
 Minimum required files:
 
@@ -132,7 +145,7 @@ Recommended to exclude:
 
 ---
 
-## 8. Quick Checks
+## 9. Quick Checks
 
 See [quick_checks_and_hooks.md](./quick_checks_and_hooks.md) for full details.
 
@@ -145,7 +158,7 @@ python scripts/run_quick_checks.py --include-hooks-guard
 
 ---
 
-## 9. Known Behavior
+## 10. Known Behavior
 
 - Right after startup, progress % can appear late on first generation
 - After cancel, `Generating...` may remain for a short time
