@@ -8,7 +8,7 @@
 - `1.4.699x` 系は `1.4.7` として正式リリース済み
 
 ## 現在バージョン
-- `1.4.910`
+- `1.5.0`
 
 
 ## 直近追記（v1.4.910）
@@ -629,3 +629,9 @@
 ### v1.4.914
 - Updated `docs/updates/Update.md` to include v1.4.912/v1.4.913 history entries.
 - Version bump: `1.4.913` -> `1.4.914`
+
+
+### v1.5.0
+- 配布バージョンを 1.4.914 -> 1.5.0 に更新。
+- README.md / README_EN.md / docs/specs/features.md / docs/updates/roadmap.md の現在バージョン表記を `v1.5.0` に同期。
+

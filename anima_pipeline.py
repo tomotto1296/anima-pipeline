@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Anima Pipeline
 ブラウザUI → LLM → ComfyUI 自動連携スクリプト
@@ -27,7 +27,7 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
-__version__ = "1.4.914"
+__version__ = "1.5.0"
 
 
 def _sf(name):
