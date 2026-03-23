@@ -6597,9 +6597,13 @@ function initSceneButtons(){
 }
 
 document.addEventListener('DOMContentLoaded', ()=>{
+  const el = document.getElementById('versionBadge');
+  if(el && typeof __APP_VERSION__ === 'string' && __APP_VERSION__.trim()){
+    el.textContent = 'v' + __APP_VERSION__.trim();
+  }
+
   fetch('/version').then(r=>r.json()).then(d=>{
-    const el = document.getElementById('versionBadge');
-    if(el) el.textContent = 'v' + d.version;
+    if(el && d && d.version) el.textContent = 'v' + d.version;
   }).catch(()=>{});
   updateCharaBlocks();
   if(window.innerWidth <= 700){
@@ -7067,3 +7071,4 @@ document.addEventListener('keydown',e=>{
 
 </body>
 </html>
+

@@ -414,7 +414,7 @@ def build_handler(context: dict):
                 os_lang = detect_os_ui_lang()
                 injected = HTML.replace(
                     '<script>',
-                    '<script>\nconst __OPT__ = ' + json.dumps(ui_opts, ensure_ascii=False) + ';\nconst __OS_LANG__ = ' + json.dumps(os_lang) + ';\n',
+                    '<script>\nconst __OPT__ = ' + json.dumps(ui_opts, ensure_ascii=False) + ';\nconst __APP_VERSION__ = ' + json.dumps(__version__) + ';\nconst __OS_LANG__ = ' + json.dumps(os_lang) + ';\n',
                     1  # ???<script>????
                 )
                 self.wfile.write(injected.encode('utf-8'))
@@ -1825,3 +1825,4 @@ def build_handler(context: dict):
             return False
 
     return Handler
+

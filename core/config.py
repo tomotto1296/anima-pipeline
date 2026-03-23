@@ -306,6 +306,14 @@ DEFAULT_CONFIG = {
 }
 
 
+def _backfill_config(cfg: dict) -> bool:
+    changed = False
+    for k, v in DEFAULT_CONFIG.items():
+        if k not in cfg:
+            cfg[k] = v
+            changed = True
+    return changed
+
 def load_config() -> dict:
     if os.path.exists(CONFIG_FILE):
         try:
@@ -325,6 +333,9 @@ def load_config() -> dict:
                 if k not in saved:
                     saved[k] = DEFAULT_CONFIG[k]
                     migrated = True
+            if _backfill_config(saved):
+                print('[config] 不足キーを補完しました')
+                migrated = True
             cfg.update(saved)
             if str(cfg.get('output_format', 'png')).lower() not in ('png', 'webp'):
                 cfg['output_format'] = 'png'
