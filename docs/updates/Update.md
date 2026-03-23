@@ -635,3 +635,12 @@
 - 配布バージョンを 1.4.914 -> 1.5.0 に更新。
 - README.md / README_EN.md / docs/specs/features.md / docs/updates/roadmap.md の現在バージョン表記を `v1.5.0` に同期。
 
+
+### v1.5.01
+- Added startup config backfill for missing keys from `DEFAULT_CONFIG` in `load_config()`.
+- Added backfill log line: `[config] 不足キーを補完しました`.
+- Added version badge fallback display on initial page load (`__APP_VERSION__` injection + client-side fallback before `/version` response).
+- Added release notes index/file:
+  - `docs/release_notes/README.md`
+  - `docs/release_notes/release_notes_v1.5.0.md`
+- Version bump: `1.5.0` -> `1.5.01`.
