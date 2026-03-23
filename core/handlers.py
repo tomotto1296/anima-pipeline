@@ -1,4 +1,4 @@
-﻿from http.server import BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler
 
 
 def build_handler(context: dict):
@@ -523,6 +523,40 @@ def build_handler(context: dict):
             self._send_json(data)
             return True
 
+        def _extract_named_session_name(self, req_path: str) -> str:
+            from urllib.parse import unquote
+            prefix = '/sessions/'
+            if not req_path.startswith(prefix):
+                return ''
+            raw_name = req_path[len(prefix):]
+            if (not raw_name) or ('/' in raw_name):
+                return ''
+            return unquote(raw_name)
+
+        def _handle_get_named_sessions_route(self, req_path: str) -> bool:
+            if req_path == '/sessions':
+                try:
+                    self._send_json({'status': 'ok', 'sessions': list_named_sessions()})
+                except Exception as e:
+                    self._send_json({'status': 'error', 'error': str(e), 'sessions': []}, code=500)
+                return True
+
+            name = self._extract_named_session_name(req_path)
+            if not name:
+                return False
+
+            try:
+                self._send_json(load_named_session(name))
+            except FileNotFoundError:
+                self._send_json({'status': 'error', 'error': 'Session not found'}, code=404)
+            except json.JSONDecodeError:
+                self._send_json({'status': 'error', 'error': 'Session file is corrupted'}, code=500)
+            except ValueError as e:
+                self._send_json({'status': 'error', 'error': str(e)}, code=400)
+            except Exception as e:
+                self._send_json({'status': 'error', 'error': str(e)}, code=500)
+            return True
+
         def _handle_get_chara_presets_route(self, req_path: str) -> bool:
             if req_path != '/chara_presets':
                 return False
@@ -779,6 +813,9 @@ def build_handler(context: dict):
                 return
 
             if self._handle_get_session_route(req_path):
+                return
+
+            if self._handle_get_named_sessions_route(req_path):
                 return
 
             if self._handle_get_history_routes(req_path, req_qs):
@@ -1041,6 +1078,9 @@ def build_handler(context: dict):
                 self._handle_post_session(body)
                 return True
 
+            if self._handle_post_named_sessions_route(req_path, body):
+                return True
+
             if req_path == '/history_update':
                 self._handle_post_history_update(body)
                 return True
@@ -1177,6 +1217,25 @@ def build_handler(context: dict):
                 return True
 
             return False
+        def _handle_post_named_sessions_route(self, req_path: str, body: dict) -> bool:
+            name = self._extract_named_session_name(req_path)
+            if not name:
+                return False
+
+            overwrite = bool(body.get('overwrite', False))
+            data = body.get('data', body)
+            if not isinstance(data, dict):
+                data = {}
+            try:
+                result = save_named_session(name, data, overwrite=overwrite)
+                self._send_json(result)
+            except FileExistsError:
+                self._send_json({'status': 'error', 'error': 'Session already exists. Overwrite?'}, code=409)
+            except ValueError as e:
+                self._send_json({'status': 'error', 'error': str(e)}, code=400)
+            except Exception as e:
+                self._send_json({'status': 'error', 'error': str(e)}, code=500)
+            return True
         def _handle_post_config(self, body):
             save_config(body)
             self._send_json({'ok': True})
@@ -1547,12 +1606,29 @@ def build_handler(context: dict):
             from urllib.parse import unquote
             req_path, _ = self._parse_request_path_qs()
 
+            if self._handle_delete_named_session_routes(req_path):
+                return
+
             if self._handle_delete_preset_routes(req_path, unquote):
                 return
 
             self.send_response(404)
             self.end_headers()
 
+        def _handle_delete_named_session_routes(self, req_path: str) -> bool:
+            name = self._extract_named_session_name(req_path)
+            if not name:
+                return False
+            try:
+                payload = delete_named_session(name)
+                self._send_json(payload)
+            except FileNotFoundError:
+                self._send_json({'status': 'error', 'error': 'Session not found'}, code=404)
+            except ValueError as e:
+                self._send_json({'status': 'error', 'error': str(e)}, code=400)
+            except Exception as e:
+                self._send_json({'status': 'error', 'error': str(e)}, code=500)
+            return True
         def _handle_delete_preset_routes(self, req_path: str, unquote_fn) -> bool:
             if req_path.startswith('/presets/'):
                 parts = [p for p in req_path.split('/') if p]
@@ -1577,6 +1653,8 @@ def build_handler(context: dict):
             return False
 
     return Handler
+
+
 
 
 

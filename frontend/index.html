@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja" translate="no">
 <head>
 <meta charset="UTF-8">
@@ -267,6 +267,16 @@
   .sl-btn{flex:1;border:1px solid var(--border);background:var(--card);padding:0.55rem 0;
     border-radius:6px;font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);cursor:pointer;text-align:center;transition:all 0.2s;}
   .sl-btn:hover{background:var(--highlight);color:var(--multi);border-color:var(--accent);}
+  .named-sessions-body{max-height:220px;overflow-y:auto;padding-right:0.15rem;margin-top:0.35rem;}
+  .named-sessions-list{display:flex;flex-direction:column;gap:0.35rem;}
+  .named-session-row{display:flex;align-items:center;justify-content:space-between;gap:0.45rem;padding:0.35rem 0.4rem;border:1px solid #c9d9ef;border-radius:6px;background:#fff;}
+  .named-session-meta{display:flex;flex-direction:column;min-width:0;}
+  .named-session-name{font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .named-session-date{font-family:'DM Mono',monospace;font-size:0.64rem;color:var(--muted);}
+  .named-session-actions{display:flex;gap:0.3rem;flex-shrink:0;}
+  .named-session-btn{border:1px solid #9db9df;background:white;padding:0.22rem 0.45rem;border-radius:5px;font-family:'DM Mono',monospace;font-size:0.68rem;color:#2d5f99;cursor:pointer;}
+  .named-session-btn.del{border-color:#d9a6a6;color:#b03737;}
+  .named-session-empty{font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);padding:0.3rem 0.1rem;}
   .multi-btn{display:inline-flex;align-items:center;justify-content:center;
     padding:0.3rem 0.55rem;border-radius:5px;font-size:0.75rem;cursor:pointer;
     border:1.5px solid var(--border);background:white;color:var(--ink);
@@ -658,6 +668,15 @@
   <div id="loadedFileName" style="display:none;font-family:'DM Mono',monospace;font-size:0.72rem;
     color:var(--muted);margin-top:-0.6rem;margin-bottom:0.8rem;padding:0.3rem 0.5rem;
     background:#f5f5f0;border-left:2px solid var(--border);">📄 <span id="loadedFileNameText"></span></div>
+  <div id="namedSessionsPanel" data-no-i18n="1" style="margin-bottom:1rem;padding:0.6rem 0.7rem;background:#f5f9ff;border:1px solid #9db9df;border-radius:7px;">
+    <button id="namedSessionsToggle" type="button" onclick="toggleNamedSessions()" style="width:100%;display:flex;align-items:center;justify-content:space-between;font-family:'DM Mono',monospace;font-size:0.72rem;color:#2d5f99;font-weight:bold;padding:0.15rem 0.1rem;border:none;background:transparent;cursor:pointer;">
+      <span id="namedSessionsTitle">Saved Sessions</span>
+      <span id="namedSessionsArrow">v</span>
+    </button>
+    <div id="namedSessionsBody" class="named-sessions-body">
+      <div id="namedSessionsList" class="named-sessions-list"></div>
+    </div>
+  </div>
 
   <div class="scene-toggle" id="navA" onclick="toggleBlock('blockA','arrowA')" style="margin-bottom:0.5rem;">
     <span id="arrowA">▶</span> 画像設定
@@ -1672,12 +1691,14 @@ function applyI18nToElement(el){
   if(!el) return;
   if(el.nodeType === Node.TEXT_NODE){
     if(el.parentElement && !['SCRIPT','STYLE'].includes(el.parentElement.tagName)){
+      if(el.parentElement.closest && el.parentElement.closest('[data-no-i18n="1"]')) return;
       const nextText = i18nReplace(el.nodeValue);
       if(nextText !== el.nodeValue) el.nodeValue = nextText;
     }
     return;
   }
   if(el.nodeType !== Node.ELEMENT_NODE) return;
+  if(el.closest && el.closest('[data-no-i18n="1"]')) return;
   if(el.title){
     const nextTitle = i18nReplace(el.title);
     if(nextTitle !== el.title) el.title = nextTitle;
@@ -1727,6 +1748,8 @@ function setLang(lang){
   document.documentElement.lang = currentLang === 'ja' ? 'ja' : 'en';
   refreshLangButtons();
   applyI18nToElement(document.body);
+  if(typeof updateNamedSessionsTitle === 'function') updateNamedSessionsTitle();
+  if(typeof refreshNamedSessions === 'function') refreshNamedSessions();
   applyLanguageUiFixups();
   setupI18nObserver();
 }
@@ -3906,19 +3929,179 @@ async function loadLastSession(){
   }catch(e){ console.warn('セッション読み込み失敗:',e); }
 }
 
-function saveSession(){
-  const data = collectSessionData();
+function escapeHtml(v){
+  const map = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+  return String(v ?? '').replace(/[&<>"']/g, (ch)=>map[ch] || ch);
+}
+
+function formatSessionDate(iso){
+  try{
+    const d = new Date(iso);
+    if(Number.isNaN(d.getTime())) return String(iso || '');
+    const pad = n=>String(n).padStart(2,'0');
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }catch(_){
+    return String(iso || '');
+  }
+}
+
+function getDefaultSessionName(){
   const now = new Date();
   const pad = n=>String(n).padStart(2,'0');
-  const ts = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
-  const filename = `Anima Pipeline_${ts}.json`;
-  const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
-  autoSaveSession();
+  return `Anima_Pipeline_${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}`;
+}
+
+function namedSessionsTexts(){
+  const en = (typeof currentLang !== 'undefined' && currentLang === 'en');
+  return {
+    title: en ? 'Saved Sessions' : '\u4fdd\u5b58\u6e08\u307f\u30bb\u30c3\u30b7\u30e7\u30f3',
+    empty: en ? 'No saved sessions' : '\u4fdd\u5b58\u6e08\u307f\u30bb\u30c3\u30b7\u30e7\u30f3\u306f\u3042\u308a\u307e\u305b\u3093',
+    load: en ? 'Load' : '\u8aad\u8fbc',
+    del: en ? 'Delete' : '\u524a\u9664',
+    askName: en ? 'Enter session name' : '\u30bb\u30c3\u30b7\u30e7\u30f3\u540d\u3092\u5165\u529b',
+    askOverwrite: en ? 'A session with the same name already exists. Overwrite?' : '\u540c\u540d\u306e\u30bb\u30c3\u30b7\u30e7\u30f3\u304c\u5b58\u5728\u3057\u307e\u3059\u3002\u4e0a\u66f8\u304d\u3057\u307e\u3059\u304b\uff1f',
+    askDelete: en ? 'Delete this item?' : '\u524a\u9664\u3057\u307e\u3059\u304b\uff1f'
+  };
+}
+
+function updateNamedSessionsTitle(){
+  const title = document.getElementById('namedSessionsTitle');
+  if(title){
+    title.textContent = namedSessionsTexts().title;
+  }
+}
+
+function toggleNamedSessions(forceOpen){
+  const body = document.getElementById('namedSessionsBody');
+  const arrow = document.getElementById('namedSessionsArrow');
+  if(!body || !arrow) return;
+  const open = (typeof forceOpen === 'boolean') ? forceOpen : body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  arrow.textContent = open ? 'v' : '>'; 
+}
+
+function renderNamedSessions(items){
+  const el = document.getElementById('namedSessionsList');
+  if(!el) return;
+  updateNamedSessionsTitle();
+  const t = namedSessionsTexts();
+  const list = Array.isArray(items) ? items : [];
+  if(list.length === 0){
+    el.innerHTML = `<div class="named-session-empty">${escapeHtml(t.empty)}</div>`;
+    return;
+  }
+  const rows = list.map((sess)=>{
+    const name = String((sess && sess.name) || '');
+    const date = formatSessionDate((sess && sess.savedAt) || '');
+    return `<div class="named-session-row">
+      <div class="named-session-meta">
+        <div class="named-session-name" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
+        <div class="named-session-date">${escapeHtml(date)}</div>
+      </div>
+      <div class="named-session-actions">
+        <button class="named-session-btn" onclick="loadNamedSession('${encodeURIComponent(name)}')">${t.load}</button>
+        <button class="named-session-btn del" onclick="deleteNamedSession('${encodeURIComponent(name)}')">${t.del}</button>
+      </div>
+    </div>`;
+  }).join('');
+  el.innerHTML = rows;
+}
+
+async function refreshNamedSessions(){
+  try{
+    const res = await fetch('/sessions');
+    const payload = await res.json();
+    renderNamedSessions(payload && payload.sessions ? payload.sessions : []);
+  }catch(e){
+    console.warn('セッション一覧取得失敗:', e);
+    renderNamedSessions([]);
+  }
+}
+
+async function saveSession(){
+  const data = collectSessionData();
+  const t = namedSessionsTexts();
+  let name = prompt(t.askName, getDefaultSessionName());
+  if(name === null) return;
+  name = String(name || '').trim();
+  if(!name) name = getDefaultSessionName();
+
+  const req = async (overwrite)=>{
+    return fetch('/sessions/' + encodeURIComponent(name), {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({data, overwrite})
+    });
+  };
+
+  try{
+    let res = await req(false);
+    if(res.status === 409){
+      const ok = confirm(t.askOverwrite);
+      if(!ok) return;
+      res = await req(true);
+    }
+    if(!res.ok){
+      let msg = 'Failed to save session';
+      try{
+        const j = await res.json();
+        if(j && j.error) msg = j.error;
+      }catch(_){ }
+      alert(msg);
+      return;
+    }
+    autoSaveSession();
+    await refreshNamedSessions();
+  }catch(e){
+    alert('Failed to save session: ' + e.message);
+  }
+}
+
+async function loadNamedSession(encodedName){
+  const name = decodeURIComponent(encodedName || '');
+  try{
+    const res = await fetch('/sessions/' + encodeURIComponent(name));
+    if(!res.ok){
+      let msg = 'Failed to load session';
+      try{
+        const j = await res.json();
+        if(j && j.error) msg = j.error;
+      }catch(_){ }
+      alert(msg);
+      return;
+    }
+    const data = await res.json();
+    applySession(data && data.data ? data.data : data);
+    const fn = document.getElementById('loadedFileNameText');
+    const box = document.getElementById('loadedFileName');
+    if(fn && box){
+      fn.textContent = name + '.json';
+      box.style.display = 'block';
+    }
+  }catch(e){
+    alert('Failed to load session: ' + e.message);
+  }
+}
+
+async function deleteNamedSession(encodedName){
+  const name = decodeURIComponent(encodedName || '');
+  const t = namedSessionsTexts();
+  if(!confirm(t.askDelete)) return;
+  try{
+    const res = await fetch('/sessions/' + encodeURIComponent(name), {method:'DELETE'});
+    if(!res.ok){
+      let msg = 'Failed to delete session';
+      try{
+        const j = await res.json();
+        if(j && j.error) msg = j.error;
+      }catch(_){ }
+      alert(msg);
+      return;
+    }
+    await refreshNamedSessions();
+  }catch(e){
+    alert('Failed to delete session: ' + e.message);
+  }
 }
 
 async function loadSession(input){
@@ -6355,6 +6538,9 @@ document.addEventListener('DOMContentLoaded', ()=>{
   initHierarchicalPresets();
   loadWorkflowList();
   loadLastSession();
+  updateNamedSessionsTitle();
+  toggleNamedSessions(true);
+  refreshNamedSessions();
   // Ensure section toggles are ready immediately.
   initSectionToggles();
   setGalleryTab('session');
@@ -6775,6 +6961,11 @@ document.addEventListener('keydown',e=>{
 
 </body>
 </html>
+
+
+
+
+
 
 
 

@@ -1,4 +1,4 @@
-﻿const __LANG_STORAGE_KEY__ = 'anima_ui_lang_v2';
+const __LANG_STORAGE_KEY__ = 'anima_ui_lang_v2';
 const __OS_DEFAULT_LANG__ = (typeof __OS_LANG__ === 'string' && __OS_LANG__.toLowerCase().startsWith('ja')) ? 'ja' : 'en';
 let currentLang = localStorage.getItem(__LANG_STORAGE_KEY__) || __OS_DEFAULT_LANG__;
 if(currentLang !== 'ja' && currentLang !== 'en') currentLang = __OS_DEFAULT_LANG__;
@@ -21,6 +21,9 @@ const BASE_I18N_MAP_EN = {
   '設定を保存': 'Save Settings',
   'セッション保存': 'Save Session',
   '開く': 'Open',
+  '保存済みセッション': 'Saved Sessions',
+  '保存済みセッションはありません': 'No saved sessions',
+  'セッション名を入力': 'Enter session name',
   '再読み込み': 'Reload',
   '接続テスト': 'Connection Test',
   '接続テスト中...': 'Connection Test in progress...',
@@ -578,12 +581,14 @@ function applyI18nToElement(el){
   if(!el) return;
   if(el.nodeType === Node.TEXT_NODE){
     if(el.parentElement && !['SCRIPT','STYLE'].includes(el.parentElement.tagName)){
+      if(el.parentElement.closest && el.parentElement.closest('[data-no-i18n="1"]')) return;
       const nextText = i18nReplace(el.nodeValue);
       if(nextText !== el.nodeValue) el.nodeValue = nextText;
     }
     return;
   }
   if(el.nodeType !== Node.ELEMENT_NODE) return;
+  if(el.closest && el.closest('[data-no-i18n="1"]')) return;
   if(el.title){
     const nextTitle = i18nReplace(el.title);
     if(nextTitle !== el.title) el.title = nextTitle;
@@ -615,6 +620,8 @@ function setLang(lang){
   document.documentElement.lang = currentLang === 'ja' ? 'ja' : 'en';
   refreshLangButtons();
   applyI18nToElement(document.body);
+  if(typeof updateNamedSessionsTitle === 'function') updateNamedSessionsTitle();
+  if(typeof refreshNamedSessions === 'function') refreshNamedSessions();
   setupI18nObserver();
 }
 window.setLang = setLang;
@@ -662,3 +669,4 @@ document.addEventListener('DOMContentLoaded', ()=>{
   // Startup fast-path: Japanese mode skips full-DOM i18n walk.
   scheduleI18nIfNeeded();
 });
+

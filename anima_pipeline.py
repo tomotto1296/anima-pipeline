@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 Anima Pipeline
 ブラウザUI → LLM → ComfyUI 自動連携スクリプト
@@ -27,7 +27,7 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
-__version__ = "1.4.909"
+__version__ = "1.4.910"
 
 
 def _sf(name):
@@ -63,12 +63,18 @@ from core.config import (
 from core.presets import (
     CHARA_PRESETS_DIR,
     PRESET_CATEGORIES,
+    SESSIONS_DIR,
+    default_session_name,
+    delete_named_session,
     delete_preset,
+    list_named_sessions,
     list_presets,
+    load_named_session,
     load_preset,
+    sanitize_session_name,
+    save_named_session,
     save_preset,
 )
-
 _FILE_HASH_CACHE = {}
 _BASENAME_PATH_CACHE = {}
 
@@ -145,6 +151,8 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
 
 
 

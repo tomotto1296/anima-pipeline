@@ -1,4 +1,4 @@
-﻿# Update Log (from v1.4.6)
+# Update Log (from v1.4.6)
 
 ## 目的
 このドキュメントは、`v1.4.6` 以降の変更内容を次の開発者へ引き継ぐための要約です。
@@ -8,9 +8,24 @@
 - `1.4.699x` 系は `1.4.7` として正式リリース済み
 
 ## 現在バージョン
-- `1.4.743`
+- `1.4.910`
+
+## Recent Addendum (v1.4.910)
+- OUTPUT-8 follow-up fix: prevented mixed JA/EN labels in the Named Sessions panel during language toggle.
+- Added a dedicated no-auto-i18n boundary for the sessions panel (`data-no-i18n="1"`).
+- Language switch now explicitly refreshes the sessions panel title/list after global i18n pass.
+- Sessions panel UI updated to collapsible style with internal scroll (`max-height` + `overflow-y`) to avoid page overgrowth.
+- Confirm dialogs for overwrite/delete now use deterministic panel-local text selection.
 
 
+
+
+## 直近追記（v1.4.910）
+- OUTPUT-8: 名前付きセッション保存を追加（`/sessions` 一覧・`/sessions/<n>` 保存/読込/削除）
+- 同名保存時は `409 Conflict` を返し、`overwrite: true` で上書き保存
+- `sessions/` ディレクトリを自動作成し、ファイル名サニタイズを実装
+- UIに「保存済みセッション」一覧を追加し、Load/Deleteを実装
+- 既存の `/session`（`anima_session_last.json`）自動保存・復元は維持
 ## 実装サマリー（v1.4.6以降）
 
 ### 1) 起動不良・文字化け修正
@@ -571,3 +586,5 @@
 ### v1.4.909
 - Positive Preset UI 文言の文字化けを修正（選択肢・確認ダイアログ・エラーメッセージ）。
 - Positive preset の読込/保存/削除導線で表示メッセージを正常化。
+
+
