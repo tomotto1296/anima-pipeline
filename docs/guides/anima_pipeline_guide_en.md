@@ -95,7 +95,30 @@ Click `Save Settings` to write values into `settings/pipeline_config.json`.
 
 ---
 
-## 6. Generation History (Session / All History)
+## 6. Output Format and Metadata (OUTPUT-4)
+
+In `Image Settings`, you can control behavior using `Output Format` and `Embed Metadata`.
+
+- `PNG`:
+  - Saves `parameters` (plus `prompt` / `workflow`)
+  - Better for ComfyUI re-import with workflow restoration
+- `WebP`:
+  - Saves metadata into Exif UserComment + XMP
+  - Better for lightweight Civitai uploads
+- `Embed Metadata = OFF`:
+  - Image is saved normally without metadata
+
+Recommended usage:
+- Prioritize Civitai posting: `WebP`
+- Prioritize ComfyUI re-editing: `PNG`
+
+Notes:
+- If WebP conversion fails, the image is saved as PNG.
+- Civitai `Resources` detection requires model/LoRA hash matching.
+
+---
+
+## 7. Generation History (Session / All History)
 
 - After generation, cards are added to the gallery as session history.
 - The `All History` tab shows records persisted in SQLite.
@@ -104,7 +127,7 @@ Click `Save Settings` to write values into `settings/pipeline_config.json`.
   - `history/thumbs/`
 - `Clear` in session history clears only session cards (DB records in `All History` remain).
 
-## 7. Smartphone Access (Same LAN)
+## 8. Smartphone Access (Same LAN)
 
 1. Check your PC IPv4 address (for example, `192.168.1.103`)
 2. Start Anima Pipeline on the PC
@@ -118,7 +141,7 @@ If it fails:
 
 ---
 
-## 8. Minimal Distribution Set
+## 9. Minimal Distribution Set
 
 Minimum required files:
 
@@ -145,7 +168,7 @@ Recommended to exclude:
 
 ---
 
-## 9. Quick Checks
+## 10. Quick Checks
 
 See [quick_checks_and_hooks.md](./quick_checks_and_hooks.md) for full details.
 
@@ -158,9 +181,10 @@ python scripts/run_quick_checks.py --include-hooks-guard
 
 ---
 
-## 10. Known Behavior
+## 11. Known Behavior
 
 - Right after startup, progress % can appear late on first generation
 - After cancel, `Generating...` may remain for a short time
 
 These are currently tracked as non-critical issues.
+

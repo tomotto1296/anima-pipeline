@@ -94,7 +94,30 @@ python anima_pipeline.py
 
 ---
 
-## 6. 生成履歴（セッション履歴 / 全履歴）
+## 6. 出力形式とメタデータ（OUTPUT-4）
+
+`画像設定` の `保存形式` と `メタデータを埋め込む` で挙動を切り替えられます。
+
+- `PNG`:
+  - `parameters`（+ `prompt` / `workflow`）を保存
+  - ComfyUI再読込でworkflow復元しやすい
+- `WebP`:
+  - Exif UserComment + XMP にメタデータ保存
+  - Civitai投稿向けに軽量
+- `メタデータを埋め込む = OFF`:
+  - 画像は通常保存（メタデータなし）
+
+運用目安:
+- Civitai投稿優先: `WebP`
+- ComfyUI再編集優先: `PNG`
+
+補足:
+- WebP変換に失敗した場合は PNG で保存されます。
+- Civitai `Resources` 検出は、モデル/LoRAのハッシュ一致が前提です。
+
+---
+
+## 7. 生成履歴（セッション履歴 / 全履歴）
 
 - 生成後、画面下部のギャラリーに セッション履歴 が追加されます。
 - 全履歴 タブではSQLiteに保存された履歴を参照できます。
@@ -105,7 +128,7 @@ python anima_pipeline.py
 
 ---
 
-## 7. スマホアクセス（同一LAN）
+## 8. スマホアクセス（同一LAN）
 
 
 1. PCのIPv4を確認（例: `192.168.1.103`）
@@ -120,7 +143,7 @@ python anima_pipeline.py
 
 ---
 
-## 8. 配布時の最小構成
+## 9. 配布時の最小構成
 
 最小構成は次の通りです。
 
@@ -147,7 +170,7 @@ start_anima_pipeline.bat (または任意の起動手段)
 
 ---
 
-## 9. クイックチェック
+## 10. クイックチェック
 
 詳細は [quick_checks_and_hooks.md](./quick_checks_and_hooks.md) を参照してください。
 
@@ -160,10 +183,11 @@ python scripts/run_quick_checks.py --include-hooks-guard
 
 ---
 
-## 10. 既知事項
+## 11. 既知事項
 
 - 起動直後の初回生成は、進捗%表示が遅れて出るケースがあります
 - キャンセル直後に `Generating...` が短時間残るケースがあります
 
 致命的ではないため、現時点では継続観察中です。
+
 
