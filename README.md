@@ -21,7 +21,7 @@
 
 ## 現在のバージョンとドキュメント
 
-- 現在バージョン: `v1.5.0`
+- 現在バージョン: `v1.5.01`
 - 実装済み機能一覧: [docs/specs/features.md](docs/specs/features.md)
 - ロードマップ: [docs/updates/roadmap.md](docs/updates/roadmap.md)
 - 更新履歴: [docs/updates/Update.md](docs/updates/Update.md)
@@ -135,7 +135,7 @@ anima_pipeline/
 
 ## ロードマップ要約
 
-- `v1.4.8〜v1.5.0`: 基盤フェーズ（完了）
+- `v1.4.8〜v1.5.01`: 基盤フェーズ（完了）
 - `v1.5.1`: 日常利用強化（LoRA管理強化・ランダムプリセット・共有）
 - `v1.5.2`: 量産フェーズ（一括生成・生成キュー・比較生成）
 - `v1.5.x〜`: 高度化（LLM評価・自動タグ生成・再現補助）
