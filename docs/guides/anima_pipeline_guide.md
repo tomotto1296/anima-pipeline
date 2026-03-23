@@ -87,10 +87,22 @@ python anima_pipeline.py
 5. `KSampler Node ID`
 6. `ComfyUI URL`
 7. `History DB Path`（既定: `history/history.db`）
-8. `History Thumb Dir`（既定: `history/thumbs`）
+8. `History Thumb Dir`???: `history/thumbs`?
 
-`Save Settings` で保存すると `settings/pipeline_config.json` に反映されます。
+`Save Settings` ?????? `settings/pipeline_config.json` ????????
 
+### Setup Diagnostics (SETUP-2)
+
+Settings panel includes `Run Setup Diagnostics` to run checks at once.
+
+- ComfyUI connection
+- LLM connection (`SKIP` when not configured)
+- Workflow JSON existence/parse
+- `Positive/Negative/KSampler` Node ID validation
+- LoRA node count
+- `Output Directory` check (WebP mode)
+
+The result panel shows `OK / WARN / ERR / SKIP`, and `WARN / ERR` rows include hints.
 
 ---
 

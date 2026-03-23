@@ -91,6 +91,19 @@ In `SETTINGS`, verify:
 
 Click `Save Settings` to write values into `settings/pipeline_config.json`.
 
+### Setup Diagnostics (SETUP-2)
+
+In the Settings panel, click `Run Setup Diagnostics` to run all checks at once.
+
+- ComfyUI connection
+- LLM connection (`SKIP` when not configured)
+- Workflow JSON existence/parse
+- `Positive/Negative/KSampler` Node ID validation
+- LoRA node count
+- `Output Directory` check (WebP mode)
+
+The result panel shows `OK / WARN / ERR / SKIP`, and `WARN / ERR` rows include hints.
+
 ---
 
 ---
