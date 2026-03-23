@@ -379,3 +379,144 @@
   - 修正コミット: `162dda2`
 - 補足:
   - アイコン追加自体（`favicon-light/dark`, `manifest`）は白画面の直接原因ではないことを確認。
+
+---
+
+## 直近追記（v1.4.875 ～ v1.4.883）
+
+### v1.4.875
+- `core/handlers.py` 復旧。
+- `GET /chara_presets` と `POST /chara_presets` の混線を修正。
+- 壊れていた `POST` ヘルパー周辺の不要断片を除去。
+
+### v1.4.876
+- `do_POST` から `/config` と `/session` をヘルパー化。
+  - `_handle_post_config`
+  - `_handle_post_session`
+
+### v1.4.877
+- `do_POST` 先頭のプリセット系分岐をヘルパー化。
+  - `_handle_post_preset_routes`
+  - 対象: `/presets/*`, `/chara_save`, `/chara_delete`
+
+### v1.4.878
+- `do_POST` 末尾ルートをヘルパー化。
+  - `_handle_post_terminal_routes`
+  - 対象: `/get_image`, `/chara_thumb`, `/cancel`, `/generate`
+
+### v1.4.879
+- `do_POST` の `/regen` 大ブロックを関数抽出。
+  - `_handle_post_regen`
+
+### v1.4.880
+- `do_POST` 中段ルートをヘルパー化。
+  - `_handle_post_common_routes`
+  - 対象: `/config`, `/session`, `/history_update`, `/history_delete`, `/chara_presets`, `/chara_preset_thumb`, `*_tags`
+- `do_POST` の分岐整理（プリセット / 共通 / regen / 末尾ルート）。
+
+### v1.4.881
+- `do_POST` の制御フローを直列 `if/return` に統一。
+- 未対応 POST パスの `404` フォールバックを追加。
+- 分岐順を明確化（preset -> common -> regen -> terminal -> 404）。
+
+### v1.4.882
+- `do_DELETE` をヘルパー分割。
+  - `_handle_delete_preset_routes`
+- DELETE の制御フローを `if/return` 形式で整理。
+- 既存挙動（`/presets/*` の削除APIと404フォールバック）は維持。
+
+### v1.4.883
+- URL解析を共通化する `_parse_request_path_qs` を追加。
+- `do_GET` / `do_POST` / `do_DELETE` の冒頭解析を共通ヘルパー利用へ統一。
+- 解析ロジックの重複削減（挙動変更なし）。
+
+## Checks
+- `python -m py_compile core/handlers.py anima_pipeline.py` pass
+- `python scripts/run_quick_checks.py --include-hooks-guard` pass
+
+
+### v1.4.884
+- `do_GET` から `/session` と `/chara_presets` をヘルパーへ分離。
+  - `_handle_get_session_route`
+  - `_handle_get_chara_presets_route`
+- `do_GET` 分岐の短縮（挙動変更なし）。
+
+### v1.4.885
+- `GET /generate_preset` 分岐をヘルパーへ抽出。
+  - `_handle_get_generate_preset_route`
+- `do_GET` の分岐見通しを改善（挙動変更なし）。
+
+### v1.4.886
+- `do_GET` の `/session` と `/chara_presets` を既存ヘルパー呼び出しへ統一。
+- GET分岐の重複コードを削減（挙動変更なし）。
+
+### v1.4.887
+- `do_GET` を段階ディスパッチに再構成。
+  - `early -> info -> poll -> session -> history -> generate_preset -> chara_presets -> misc -> image -> 404`
+- 追加ヘルパー:
+  - `_handle_get_misc_routes`
+  - `_handle_get_terminal_image_routes`
+- GETの責務分離を強化（挙動変更なし）。
+
+### v1.4.888
+- `GET /poll_status` をルートヘルパー化。
+  - `_handle_get_poll_route`
+- `do_GET` の分岐パターンを統一（すべてヘルパー判定ベース）。
+
+## 最終GUI確認（v1.4.888）
+1. 起動してトップ表示（白画面/文字化けなし）。
+2. 言語切替: 日本語⇄英語を往復してラベル崩れなし。
+3. 生成フロー: Generate -> Cancel -> Re-Generate で状態表示が固着しない。
+4. 履歴表示: セッション履歴/全履歴の読み込み、サムネ表示、ページング。
+5. プリセット: 保存/読込/削除、サムネ作成、ハードリロード後の再表示。
+6. LoRA: 一覧取得、カード割当、サムネ表示（取得できる環境で）。
+7. 設定: `/config` 保存後に再起動して値が保持される。
+8. 404系: 存在しないパスへアクセスしてUIが壊れない。
+
+問題が出たら、再現手順（操作順）と Console/Network の赤エラーをそのまま共有。
+
+### v1.4.889
+- `GET` ルートの欠落を復旧。
+  - `/version`
+  - `/extra_tags`
+  - `/style_tags`
+  - `/neg_extra_tags`
+- 言語切替時の履歴表示崩れ・Console 404 の回帰を修正。
+
+### v1.4.890
+- 履歴セクションの言語切替ラベル崩れ（`???`）を修正。
+- `frontend/index.html` の混在フォールバック文字列を正常なJA/EN文言に置換。
+- 影響: `Generation History (Session)`, `Session History`, `All History`, `Clear`, プリセット管理ラベル。
+
+### v1.4.891
+- 初回起動時に LoRA サムネが 404 になる回帰を修正。
+- `GET /lora_thumbnail` を `core/handlers.py` の GET misc ルートに復旧。
+- サムネ未発見時は `204` を返す既存互換挙動を維持。
+
+### v1.4.892
+- 生成中の注意文「※ 起動直後は進捗%が表示されない場合があります（初回WS接続のタイミングによる）」の英訳を追加。
+- 英語UI時に該当注記が日本語のまま残る問題を修正。
+
+## 追記（2026-03-23 / REFACTOR-1 継続）
+
+### 11) モジュール分割の本体適用
+- `anima_pipeline.py` をエントリポイント中心へ整理
+- `core/` へ機能分離（config / handlers / presets / history / frontend / runtime / llm / comfyui）
+- `frontend/index.html` と `frontend/i18n.js` を外出し運用へ統一
+
+### 12) 回帰不具合の修正（今回）
+- 言語切替後に履歴見出しが `???` になる問題を修正
+- 404回帰（`/version`, `/extra_tags`, `/neg_extra_tags`, `/style_tags`）を修正
+- LoRA サムネイルの初回ロード失敗（`/lora_thumbnail`）を再接続可能に修正
+- 起動直後注意文の英訳未適用を修正
+
+### 13) 起動・検証フローの整備
+- `start_anima_pipeline - Tailscale.bat` を再作成
+- Hook/Quick Check 導線を維持（pre-commit / pre-push）
+- 実行確認:
+  - `python scripts/check_frontend_syntax.py` ✅
+  - `python scripts/run_quick_checks.py --include-hooks-guard` ✅
+
+### 14) 現在の補足
+- 既知課題として「起動直後の進捗%追従遅れ」は継続観察（致命ではないため後続対応）
+- 本追記時点の本体バージョン: `1.4.892`

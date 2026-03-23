@@ -1,15 +1,20 @@
 #!/usr/bin/env sh
-# Auto bump __version__ when Python files are staged.
+# Auto bump __version__ when Python files are staged, then run quick checks.
 
-if command -v python >/dev/null 2>&1; then
-  python scripts/bump_version_on_py_change.py
-  exit $?
-fi
+run_python() {
+  if command -v python >/dev/null 2>&1; then
+    python "$@"
+    return $?
+  fi
+  if command -v py >/dev/null 2>&1; then
+    py -3 "$@"
+    return $?
+  fi
+  echo "[pre-commit] Python runtime is required." >&2
+  return 127
+}
 
-if command -v py >/dev/null 2>&1; then
-  py -3 scripts/bump_version_on_py_change.py
-  exit $?
-fi
+run_python scripts/bump_version_on_py_change.py || exit $?
+run_python scripts/run_quick_checks.py || exit $?
 
-echo "[version-bump] Python runtime is required for pre-commit hook." >&2
-exit 1
+exit 0

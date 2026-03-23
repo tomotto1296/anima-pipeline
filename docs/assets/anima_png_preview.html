@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AnimaPipeline — PNG Export Preview</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #faf8ff;
+    background-image:
+      radial-gradient(ellipse at 15% 20%, rgba(179,136,216,0.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 85% 75%, rgba(240,168,200,0.10) 0%, transparent 50%);
+    font-family: 'DM Mono', monospace;
+    padding: 40px 24px 80px;
+    display: flex; flex-direction: column; align-items: center; gap: 36px;
+    color: #2d2640;
+  }
+  h1 { font-size: 10px; font-weight: 400; letter-spacing: 0.35em; color: #9b90b8; text-transform: uppercase; }
+  .section { width: 100%; max-width: 780px; }
+  .sec-title {
+    font-size: 9px; letter-spacing: 0.3em; color: #9b90b8; text-transform: uppercase;
+    margin-bottom: 16px; border-left: 3px solid #b388d8; padding-left: 10px;
+  }
+  .grid { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end; }
+  .item { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .item img { display: block; image-rendering: pixelated; }
+  .item img.smooth { image-rendering: auto; }
+  .lbl { font-size: 9px; color: #9b90b8; letter-spacing: 0.05em; }
+  .bg-dark {
+    background: #2d2640;
+    border-radius: 12px; padding: 24px;
+    display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end;
+  }
+  .bg-light {
+    background: #faf8ff; border: 1px solid #ddd6f0;
+    border-radius: 12px; padding: 24px;
+    display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end;
+  }
+  .bg-github {
+    background: #0d1117; border-radius: 12px; padding: 24px;
+    display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-end;
+  }
+  .item .lbl-dark { color: rgba(255,255,255,0.35); }
+</style>
+</head>
+<body>
+<h1>AnimaPipeline — PNG Export</h1>
+
+<!-- Favicon -->
+<div class="section">
+  <p class="sec-title">Favicon — ブラウザタブ</p>
+  <div class="bg-light">
+    <div class="item"><img src="anima_favicon_16.png" width="16" height="16"><span class="lbl">16px</span></div>
+    <div class="item"><img src="anima_favicon_32.png" width="32" height="32"><span class="lbl">32px</span></div>
+    <div class="item"><img src="anima_favicon_48.png" width="48" height="48"><span class="lbl">48px</span></div>
+    <div style="font-size:9px;color:#9b90b8;line-height:1.8;padding-left:8px;border-left:1px solid #ddd6f0;margin-left:8px;">
+      favicon.ico に変換して使用。<br>
+      16px: ブラウザタブ<br>
+      32px: タスクバー・ブックマーク<br>
+      48px: Windows ショートカット
+    </div>
+  </div>
+</div>
+
+<!-- App Icon -->
+<div class="section">
+  <p class="sec-title">App Icon — Windows / Mac</p>
+  <div class="bg-light">
+    <div class="item"><img src="anima_appicon_256.png" width="128" height="128" class="smooth"><span class="lbl">256px</span></div>
+    <div class="item"><img src="anima_appicon_512.png" width="256" height="256" class="smooth"><span class="lbl">512px</span></div>
+    <div style="font-size:9px;color:#9b90b8;line-height:1.8;padding-left:8px;border-left:1px solid #ddd6f0;margin-left:8px;">
+      Windows: .ico に変換 (256px)<br>
+      Mac: .icns に変換 (512px)<br>
+      bat ファイル横に置くと起動時に表示
+    </div>
+  </div>
+</div>
+
+<!-- GitHub README -->
+<div class="section">
+  <p class="sec-title">GitHub README / Social Preview</p>
+  <div class="bg-github">
+    <div class="item"><img src="anima_readme_128.png" width="64" height="64" class="smooth"><span class="lbl" style="color:rgba(255,255,255,0.35);">128px (64表示)</span></div>
+    <div class="item"><img src="anima_social_512.png" width="256" height="256" class="smooth"><span class="lbl" style="color:rgba(255,255,255,0.35);">512px (OGP用)</span></div>
+    <div style="font-size:9px;color:rgba(255,255,255,0.3);line-height:1.8;padding-left:8px;border-left:1px solid rgba(255,255,255,0.1);margin-left:8px;">
+      README の &lt;img&gt; タグ: 128px<br>
+      GitHub Social Preview: 1280×640<br>
+      　(512px をベースに横長に配置)<br>
+      OGP / Twitter Card: 512px
+    </div>
+  </div>
+</div>
+
+<!-- Dark variants -->
+<div class="section">
+  <p class="sec-title">Dark Variant</p>
+  <div class="bg-dark">
+    <div class="item"><img src="anima_dark_128.png" width="64" height="64" class="smooth"><span class="lbl lbl-dark">128px</span></div>
+    <div class="item"><img src="anima_dark_256.png" width="128" height="128" class="smooth"><span class="lbl lbl-dark">256px</span></div>
+    <div class="item"><img src="anima_dark_512.png" width="256" height="256" class="smooth"><span class="lbl lbl-dark">512px</span></div>
+  </div>
+</div>
+
+</body>
+</html>

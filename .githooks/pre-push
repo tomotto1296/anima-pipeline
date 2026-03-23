@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+# Run quick checks before pushing.
+
+run_python() {
+  if command -v python >/dev/null 2>&1; then
+    python "$@"
+    return $?
+  fi
+  if command -v py >/dev/null 2>&1; then
+    py -3 "$@"
+    return $?
+  fi
+  echo "[pre-push] Python runtime is required." >&2
+  return 127
+}
+
+run_python scripts/run_quick_checks.py --include-version-guard --include-hooks-guard || exit $?
+
+exit 0
