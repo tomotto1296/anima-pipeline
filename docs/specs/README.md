@@ -72,3 +72,17 @@ Use the dedicated template file for new spec documents.
 - `README.md` と `README_EN.md` はルート直下で維持する / Keep `README.md` and `README_EN.md` at the repository root
 - 仕様書は「実装する前」に更新する / Update specs **before** implementation
 - 英語版 API 仕様書は `feature_api_v<n>_en.md` として同フォルダに保存する / English API references are saved as `feature_api_v<n>_en.md` in the same folder
+
+---
+
+## API Spec Versioning / API仕様の版管理
+
+- v1 (`feature_api_v1.md`, `feature_api_v1_en.md`) は v1.4.7 時点の互換資料。
+- 現行実装（リファクタ後）は v2 を正本とする。
+  - `feature_api_v2.md`
+  - `feature_api_v2_en.md`
+- API仕様は **ファイル名と本文Metaの両方** で版を管理する。
+  - 例: `feature_api_v2.md` + `Version: v2`
+- API版（v1/v2/v3...）はアプリ版（v1.5.01 など）と分離して管理する。
+  - APIに互換性影響がある変更時のみ API版を更新する。
+  - 微修正や非互換性のない変更は `Last Updated` と `Target release` を更新して追跡する。
