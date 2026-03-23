@@ -10,15 +10,6 @@
 ## 現在バージョン
 - `1.4.910`
 
-## Recent Addendum (v1.4.910)
-- OUTPUT-8 follow-up fix: prevented mixed JA/EN labels in the Named Sessions panel during language toggle.
-- Added a dedicated no-auto-i18n boundary for the sessions panel (`data-no-i18n="1"`).
-- Language switch now explicitly refreshes the sessions panel title/list after global i18n pass.
-- Sessions panel UI updated to collapsible style with internal scroll (`max-height` + `overflow-y`) to avoid page overgrowth.
-- Confirm dialogs for overwrite/delete now use deterministic panel-local text selection.
-
-
-
 
 ## 直近追記（v1.4.910）
 - OUTPUT-8: 名前付きセッション保存を追加（`/sessions` 一覧・`/sessions/<n>` 保存/読込/削除）
@@ -352,8 +343,6 @@
 - 生成フローの回帰なし（生成/履歴/再生成）
 
 
-
-
 ## 直近追記（v1.4.743）
 
 ### 40) アイコン配信導線の整理（アプリ / GitHub Pages 両対応）
@@ -587,4 +576,10 @@
 - Positive Preset UI 文言の文字化けを修正（選択肢・確認ダイアログ・エラーメッセージ）。
 - Positive preset の読込/保存/削除導線で表示メッセージを正常化。
 
+## Recent Addendum (v1.4.910)
+- OUTPUT-8 follow-up fix: prevented mixed JA/EN labels in the Named Sessions panel during language toggle.
+- Added a dedicated no-auto-i18n boundary for the sessions panel (`data-no-i18n="1"`).
+- Language switch now explicitly refreshes the sessions panel title/list after global i18n pass.
+- Sessions panel UI updated to collapsible style with internal scroll (`max-height` + `overflow-y`) to avoid page overgrowth.
+- Confirm dialogs for overwrite/delete now use deterministic panel-local text selection.
 
