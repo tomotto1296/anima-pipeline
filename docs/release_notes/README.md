@@ -1,6 +1,7 @@
 ﻿# Release Notes Index
 
 ## Latest
+- [v1.5.01](./release_notes_v1.5.01.md)
 - [v1.5.0](./release_notes_v1.5.0.md)
 
 ## History
