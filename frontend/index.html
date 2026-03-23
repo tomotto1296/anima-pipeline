@@ -625,6 +625,12 @@
       <button class="sl-btn" style="flex:1" onclick="testConnection('llm')">🤖 LLM 接続テスト</button>
     </div>
     <div id="testResult" style="display:none;font-family:'DM Mono',monospace;font-size:0.75rem;margin-top:0.4rem;padding:0.4rem 0.6rem;border-radius:5px;"></div>
+    <button class="sl-btn" style="width:100%;margin-top:0.5rem;" onclick="runSetupDiagnostics()">Run Setup Diagnostics</button>
+    <div id="diagnosticsWrap" data-no-i18n="1" style="display:none;margin-top:0.5rem;background:#f9fbff;border:1px solid #d8e2f2;border-radius:6px;padding:0.55rem 0.65rem;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#2d5f99;font-weight:bold;margin-bottom:0.3rem;"><span id="diagnosticsTitle">Diagnostics Result</span></div>
+      <div id="diagnosticsSummary" style="font-family:'DM Mono',monospace;font-size:0.72rem;color:#2d5f99;margin-bottom:0.35rem;"></div>
+      <div id="diagnosticsList" style="display:flex;flex-direction:column;gap:0.28rem;"></div>
+    </div>
     <div style="margin-top:0.8rem;padding:0.6rem 0.7rem;background:#fff5f5;border:1px solid #e0779a;border-radius:7px;">
       <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#c0392b;font-weight:bold;margin-bottom:0.4rem;">📋 キャラプリセット削除</div>
       <div style="display:flex;gap:0.4rem;align-items:center;">
@@ -1750,6 +1756,7 @@ function setLang(lang){
   applyI18nToElement(document.body);
   if(typeof updateNamedSessionsTitle === 'function') updateNamedSessionsTitle();
   if(typeof refreshNamedSessions === 'function') refreshNamedSessions();
+  if(lastDiagnosticsData && typeof renderSetupDiagnostics === 'function') renderSetupDiagnostics(lastDiagnosticsData);
   applyLanguageUiFixups();
   setupI18nObserver();
 }
@@ -3724,6 +3731,105 @@ async function testConnection(target){
     resultEl.style.background = '#fff5f5';
     resultEl.style.color = '#c0392b';
     resultEl.textContent = '✗ 接続エラー: ' + e.message;
+  }
+
+}
+
+let lastDiagnosticsData = null;
+
+function _diagPick(item, key){
+  if(!item) return '';
+  if(currentLang === 'en') return String(item[key + '_en'] || item[key] || '');
+  return String(item[key] || item[key + '_en'] || '');
+}
+
+function renderSetupDiagnostics(data){
+  const wrap = document.getElementById('diagnosticsWrap');
+  const summaryEl = document.getElementById('diagnosticsSummary');
+  const listEl = document.getElementById('diagnosticsList');
+  const titleEl = document.getElementById('diagnosticsTitle');
+  if(!wrap || !summaryEl || !listEl || !titleEl) return;
+
+  wrap.style.display = 'block';
+  titleEl.textContent = 'Diagnostics Result';
+  summaryEl.textContent = '';
+  listEl.innerHTML = '';
+
+  const rows = (data && Array.isArray(data.results)) ? data.results : [];
+  const summary = (data && data.summary) ? data.summary : {errors:0, warnings:0};
+  const errors = Number(summary.errors || 0);
+  const warnings = Number(summary.warnings || 0);
+
+  if(errors === 0 && warnings === 0){
+    summaryEl.style.color = '#2d7a4f';
+    summaryEl.textContent = 'No issues found';
+  }else if(errors > 0){
+    summaryEl.style.color = '#c0392b';
+    const errorMsg = `${errors} issue(s) found`;
+    const warnMsg = warnings > 0 ? ` / ${warnings} warning(s) found` : '';
+    summaryEl.textContent = errorMsg + warnMsg;
+  }else{
+    summaryEl.style.color = '#a67c00';
+    summaryEl.textContent = `${warnings} warning(s) found`;
+  }
+
+  rows.forEach((item)=>{
+    const level = String(item.level || 'ok');
+    const icon = level === 'ok' ? 'OK' : level === 'warning' ? 'WARN' : level === 'error' ? 'ERR' : 'SKIP';
+    const color = level === 'ok' ? '#2d7a4f' : level === 'warning' ? '#a67c00' : level === 'error' ? '#c0392b' : 'var(--muted)';
+
+    const row = document.createElement('div');
+    row.style.fontFamily = "'DM Mono',monospace";
+    row.style.fontSize = '0.7rem';
+    row.style.color = color;
+    row.textContent = `${icon} ${_diagPick(item, 'label')}: ${_diagPick(item, 'message')}`;
+    listEl.appendChild(row);
+
+    const hint = _diagPick(item, 'hint').trim();
+    if(hint){
+      const hintRow = document.createElement('div');
+      hintRow.style.fontFamily = "'DM Mono',monospace";
+      hintRow.style.fontSize = '0.68rem';
+      hintRow.style.color = 'var(--muted)';
+      hintRow.style.paddingLeft = '1.1rem';
+      hintRow.textContent = `-> ${hint}`;
+      listEl.appendChild(hintRow);
+    }
+  });
+}
+
+async function runSetupDiagnostics(){
+  const wrap = document.getElementById('diagnosticsWrap');
+  const summaryEl = document.getElementById('diagnosticsSummary');
+  const listEl = document.getElementById('diagnosticsList');
+  const titleEl = document.getElementById('diagnosticsTitle');
+  if(!wrap || !summaryEl || !listEl || !titleEl) return;
+
+  wrap.style.display = 'block';
+  summaryEl.style.color = 'var(--muted)';
+  summaryEl.textContent = 'Running diagnostics...';
+  listEl.innerHTML = '';
+
+  try{
+    const res = await fetch('/diagnostics');
+    const data = await res.json();
+    lastDiagnosticsData = data;
+    renderSetupDiagnostics(data);
+  }catch(e){
+    const msg = (e && e.message) ? e.message : String(e);
+    lastDiagnosticsData = {
+      status: 'error',
+      results: [{
+        key: 'diagnostics',
+        label: 'Diagnostics',
+        label_en: 'Diagnostics',
+        level: 'error',
+        message: `Request failed: ${msg}`,
+        message_en: `Request failed: ${msg}`,
+      }],
+      summary: {errors: 1, warnings: 0},
+    };
+    renderSetupDiagnostics(lastDiagnosticsData);
   }
 }
 
@@ -6961,31 +7067,3 @@ document.addEventListener('keydown',e=>{
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

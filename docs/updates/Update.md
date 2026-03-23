@@ -583,3 +583,22 @@
 - Sessions panel UI updated to collapsible style with internal scroll (`max-height` + `overflow-y`) to avoid page overgrowth.
 - Confirm dialogs for overwrite/delete now use deterministic panel-local text selection.
 
+
+## Addendum (2026-03-23 / SETUP-2)
+
+### v1.4.911
+- SETUP-2: Added `GET /diagnostics`.
+  - Checks: `comfyui`, `llm`, `workflow`, `pos_node`, `neg_node`, `ksampler`, `lora_nodes`, `output_dir`
+  - Response: `status`, `results[]`, `summary { errors, warnings }`
+- Added `Run Setup Diagnostics` button and diagnostics panel in Settings UI.
+- Improved workflow path resolution.
+  - `workflow_file` is preferred when set.
+  - Relative `workflow_json_path` values like `image_anima_preview.json` are also resolved under `workflows/`.
+- Fixed diagnostics display mixing/garbling.
+  - Diagnostics panel is excluded from auto i18n (`data-no-i18n`) to prevent text corruption.
+  - Diagnostics strings are currently fixed to English to avoid `????` corruption.
+- Version bump: `1.4.910` -> `1.4.911`
+
+## Checks
+- `python -m py_compile anima_pipeline.py core/handlers.py` pass
+- `python scripts/check_frontend_syntax.py` pass

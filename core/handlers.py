@@ -78,6 +78,165 @@ def build_handler(context: dict):
             req_path = parsed.path
             req_qs = parse_qs(parsed.query, keep_blank_values=True)
             return req_path, req_qs
+        def _resolve_workflow_path_for_diagnostics(self, cfg: dict) -> str:
+            wf_file = str(cfg.get('workflow_file', '') or '').strip()
+            if wf_file:
+                cand = os.path.normpath(os.path.join(_workflows_dir, wf_file))
+                if os.path.isfile(cand):
+                    return cand
+            wf_path = str(cfg.get('workflow_json_path', '') or '').strip()
+            if not wf_path:
+                return ''
+            if not os.path.isabs(wf_path):
+                # Keep compatibility with both "workflows/foo.json" and "foo.json" styles.
+                cand_base = os.path.normpath(os.path.join(_base_dir, wf_path))
+                if os.path.isfile(cand_base):
+                    return cand_base
+                cand_workflows = os.path.normpath(os.path.join(_workflows_dir, wf_path))
+                if os.path.isfile(cand_workflows):
+                    return cand_workflows
+                wf_path = cand_base
+            return os.path.normpath(wf_path)
+        def _collect_workflow_node_info(self, workflow_obj) -> tuple[set[str], int]:
+            ids = set()
+            lora_count = 0
+            def add_node(node_id, node_type):
+                nonlocal lora_count
+                if node_id is None:
+                    return
+                ids.add(str(node_id))
+                if str(node_type or '').lower() == 'loraloader':
+                    lora_count += 1
+            if isinstance(workflow_obj, dict):
+                if isinstance(workflow_obj.get('nodes'), list):
+                    for node in workflow_obj.get('nodes', []):
+                        if not isinstance(node, dict):
+                            continue
+                        add_node(node.get('id'), node.get('type'))
+                elif isinstance(workflow_obj.get('prompt'), dict):
+                    for nid, node in workflow_obj.get('prompt', {}).items():
+                        if not isinstance(node, dict):
+                            continue
+                        add_node(nid, node.get('class_type') or node.get('type'))
+                else:
+                    for nid, node in workflow_obj.items():
+                        if not isinstance(node, dict):
+                            continue
+                        add_node(nid, node.get('class_type') or node.get('type'))
+            return ids, lora_count
+        def _build_diagnostics_results(self, cfg: dict) -> list[dict]:
+            import urllib.request as _ureq
+
+            results = []
+
+            def add_result(key, label, level, message, hint=''):
+                item = {
+                    'key': key,
+                    'label': label,
+                    'label_en': label,
+                    'level': level,
+                    'message': message,
+                    'message_en': message,
+                }
+                if hint:
+                    item['hint'] = hint
+                    item['hint_en'] = hint
+                results.append(item)
+
+            comfy = str(cfg.get('comfyui_url', 'http://127.0.0.1:8188') or '').rstrip('/')
+            try:
+                with _ureq.urlopen(comfy + '/system_stats', timeout=5) as r:
+                    stats = json.loads(r.read())
+                pyver = str(stats.get('system', {}).get('python_version', '?'))
+                add_result('comfyui', 'ComfyUI Connection', 'ok', f'Connected (Python {pyver})')
+            except Exception as e:
+                add_result('comfyui', 'ComfyUI Connection', 'error', f'Connection failed: {e}', 'Check that ComfyUI is running and URL is correct')
+
+            llm_platform = str(cfg.get('llm_platform', '') or '').strip()
+            llm_url = str(cfg.get('llm_url', '') or '').strip().rstrip('/')
+            llm_token = str(cfg.get('llm_token', '') or '').strip()
+            llm_default_url = str(DEFAULT_CONFIG.get('llm_url', 'http://localhost:1234') or '').strip().rstrip('/')
+            llm_unset = (not llm_platform) and (not llm_token) and (not llm_url or llm_url == llm_default_url)
+
+            if llm_unset:
+                add_result('llm', 'LLM Connection', 'skip', 'Skipped (not configured)')
+            elif not llm_url:
+                add_result('llm', 'LLM Connection', 'error', 'LLM URL is not configured', 'Set the LLM URL in settings')
+            else:
+                try:
+                    if llm_platform == 'gemini':
+                        test_url = llm_url + '/models'
+                    else:
+                        base = llm_url.removesuffix('/v1')
+                        test_url = base + '/v1/models'
+                    headers = {'Content-Type': 'application/json'}
+                    if llm_token:
+                        headers['Authorization'] = f'Bearer {llm_token}'
+                    req = _ureq.Request(test_url, headers=headers)
+                    with _ureq.urlopen(req, timeout=5) as r:
+                        r.read()
+                    disp = llm_platform or 'Custom'
+                    add_result('llm', 'LLM Connection', 'ok', f'Connected ({disp})')
+                except Exception as e:
+                    add_result('llm', 'LLM Connection', 'error', f'Connection failed: {e}', 'Check LLM URL, token, and model settings')
+
+            workflow_path = self._resolve_workflow_path_for_diagnostics(cfg)
+            workflow_obj = None
+            workflow_ok = False
+            if not workflow_path:
+                add_result('workflow', 'Workflow JSON', 'error', 'Path is not configured', 'Check workflow JSON path in settings')
+            elif not os.path.isfile(workflow_path):
+                add_result('workflow', 'Workflow JSON', 'error', f'Not found: {workflow_path}', 'Check that the file path is correct')
+            else:
+                try:
+                    with open(workflow_path, 'r', encoding='utf-8') as f:
+                        workflow_obj = json.load(f)
+                    workflow_ok = True
+                    add_result('workflow', 'Workflow JSON', 'ok', 'Loaded successfully')
+                except Exception as e:
+                    add_result('workflow', 'Workflow JSON', 'error', f'Failed to parse: {e}', 'Check JSON format and file contents')
+
+            node_ids, lora_nodes = self._collect_workflow_node_info(workflow_obj if workflow_ok else {})
+
+            def check_node(cfg_key: str, key: str, label: str):
+                raw_id = str(cfg.get(cfg_key, '') or '').strip()
+                if not raw_id:
+                    add_result(key, label, 'error', 'Not configured', 'Set the Node ID in settings')
+                    return
+                if not workflow_ok:
+                    add_result(key, label, 'error', f'Cannot verify (configured: {raw_id})', 'Fix workflow JSON error first')
+                    return
+                if raw_id in node_ids:
+                    add_result(key, label, 'ok', f'Found ({raw_id})')
+                else:
+                    add_result(key, label, 'error', f'Not found ({raw_id})', 'Make setting value match the workflow node ID')
+
+            check_node('positive_node_id', 'pos_node', 'Positive Node ID')
+            check_node('negative_node_id', 'neg_node', 'Negative Node ID')
+            check_node('ksampler_node_id', 'ksampler', 'KSampler Node ID')
+
+            expected_lora_slots = 4
+            if not workflow_ok:
+                add_result('lora_nodes', 'LoRA Nodes', 'error', 'Cannot verify', 'Fix workflow JSON error first')
+            elif lora_nodes >= expected_lora_slots:
+                add_result('lora_nodes', 'LoRA Nodes', 'ok', f'OK (LoraLoader: {lora_nodes})')
+            elif lora_nodes > 0:
+                add_result('lora_nodes', 'LoRA Nodes', 'warning', f'Potential shortage (LoraLoader: {lora_nodes}, recommended: {expected_lora_slots})', 'Use a LoRA x4-compatible workflow')
+            else:
+                add_result('lora_nodes', 'LoRA Nodes', 'warning', 'LoraLoader not found', 'Use a LoRA-capable workflow or adjust settings')
+
+            output_format = str(cfg.get('output_format', 'png') or 'png').lower()
+            output_dir = str(cfg.get('comfyui_output_dir', '') or '').strip()
+            if output_format != 'webp':
+                add_result('output_dir', 'Output Directory', 'skip', 'Not required in PNG mode')
+            elif not output_dir:
+                add_result('output_dir', 'Output Directory', 'warning', 'Not configured', 'Set ComfyUI output folder when using WebP conversion')
+            elif not os.path.isdir(output_dir):
+                add_result('output_dir', 'Output Directory', 'warning', f'Directory does not exist: {output_dir}', 'Check that the directory path is correct')
+            else:
+                add_result('output_dir', 'Output Directory', 'ok', 'Configured')
+
+            return results
 
         def _handle_get_early_routes(self, req_path: str, req_qs: dict, unquote_fn) -> bool:
             if req_path.startswith('/presets/'):
@@ -837,6 +996,19 @@ def build_handler(context: dict):
             self.end_headers()
 
         def _handle_get_misc_routes(self, req_path: str, req_qs: dict, unquote_fn) -> bool:
+            if req_path == '/diagnostics':
+                cfg = load_config()
+                results = self._build_diagnostics_results(cfg)
+                errors = sum(1 for r in results if r.get('level') == 'error')
+                warnings = sum(1 for r in results if r.get('level') == 'warning')
+                status = 'ok' if errors == 0 else 'error'
+                self._send_json({
+                    'status': status,
+                    'results': results,
+                    'summary': {'errors': errors, 'warnings': warnings},
+                })
+                return True
+
             if req_path == '/lora_list':
                 import urllib.request as _ureq
                 cfg2 = load_config()
@@ -1653,19 +1825,3 @@ def build_handler(context: dict):
             return False
 
     return Handler
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
