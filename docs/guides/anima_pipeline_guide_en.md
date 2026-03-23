@@ -129,6 +129,19 @@ Behavior notes:
 - Composite load restores from `snapshot` first (snapshot has priority over name references).
 - Camera presets store per-character values in `all[]`.
 - When loading for multiple characters, if some character slots are missing in saved data, the first camera values (`posv`/`posh`/`pos_camera`) are used as fallback.
+### Character/Series JA-EN Split (INPUT-12)
+
+- Character fields now support four inputs: Name JA / Name EN and Series JA / Series EN.
+- When LLM is disabled, tag assembly prioritizes EN fields and falls back to JA fields when EN is empty.
+- Preset auto-generation can attempt EN completion (name_en / series_en) even when only Japanese input is provided.
+- Default character preset naming uses JA（EN） when both values exist.
+
+### Positive/Negative Presets (INPUT-5)
+
+- Positive Preset at the top of the Prompt section can save/load/delete positive-tuning state.
+- Negative Preset at the top of the Negative section can save/load/delete negative-tuning state.
+- Saved state includes quality tags, helper tags, notes, and safety-related selections.
+- Last selected Positive/Negative preset is persisted in settings and restored after restart.
 
 ---
 
@@ -234,3 +247,4 @@ python scripts/run_quick_checks.py --include-hooks-guard
 - After cancel, `Generating...` may remain for a short time
 
 These are currently tracked as non-critical issues.
+

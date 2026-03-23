@@ -87,9 +87,9 @@ python anima_pipeline.py
 5. `KSampler Node ID`
 6. `ComfyUI URL`
 7. `History DB Path`（既定: `history/history.db`）
-8. `History Thumb Dir`???: `history/thumbs`?
+8. `History Thumb Dir`（既定: `history/thumbs`）
 
-`Save Settings` ?????? `settings/pipeline_config.json` ????????
+`Save Settings` を押すと `settings/pipeline_config.json` に保存されます。
 
 ### Setup Diagnostics (SETUP-2)
 
@@ -129,6 +129,19 @@ The result panel shows `OK / WARN / ERR / SKIP`, and `WARN / ERR` rows include h
 - `Composite` 読込は `snapshot` を優先して復元します（参照名より先に適用）。
 - `Camera` はキャラごとの値を `all[]` で保持します。
 - 複数キャラ読込時、保存データが不足するキャラは先頭のカメラ値（`posv`/`posh`/`pos_camera`）をフォールバックとして適用します。
+### キャラ名・作品名の日英分離（INPUT-12）
+
+- キャラ入力欄は Name JA / Name EN と Series JA / Series EN の4項目を扱えます。
+- LLM未使用時のタグ組み立ては EN 欄を優先し、空欄の場合は JA 欄をフォールバックします。
+- プリセット自動生成では、日本語のみ入力でも name_en / series_en の補完を試行します。
+- キャラプリセット保存名は、JA と EN が両方ある場合 JA（EN） 形式が既定になります。
+
+### ポジティブ/ネガティブプリセット（INPUT-5）
+
+- Prompt セクション上部の Positive Preset で、ポジティブ調整状態を保存/読込/削除できます。
+- Negative セクション上部の Negative Preset で、ネガティブ調整状態を保存/読込/削除できます。
+- 保存対象には品質タグ・補助タグ・メモ・セーフティ系の選択状態が含まれます。
+- 最後に選んだ Positive/Negative プリセットは設定に記録され、再起動後に復元されます。
 
 ---
 
@@ -160,8 +173,8 @@ The result panel shows `OK / WARN / ERR / SKIP`, and `WARN / ERR` rows include h
 - 生成後、画面下部のギャラリーに セッション履歴 が追加されます。
 - 全履歴 タブではSQLiteに保存された履歴を参照できます。
 - 履歴DB/サムネイルの既定保存先:
-  - history/history.db`r
-  - history/thumbs/`r
+  - `history/history.db`
+  - `history/thumbs/`
 - セッション履歴 の クリア は、セッション表示のみを消します（DBの 全履歴 は消えません）。
 
 ---
@@ -237,6 +250,7 @@ python scripts/run_quick_checks.py --include-hooks-guard
 - キャンセル直後に `Generating...` が短時間残るケースがあります
 
 致命的ではないため、現時点では継続観察中です。
+
 
 
 
