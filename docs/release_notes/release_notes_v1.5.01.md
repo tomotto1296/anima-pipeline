@@ -4,9 +4,9 @@
 ---
 
 ## Overview / 概要
-> v1.5.01 is a follow-up stabilization release on top of v1.5.0, and this release note includes the cumulative update scope from v1.4.7 through v1.5.0.
+> v1.5.01 is a follow-up stabilization release on top of v1.5.0, and this release note includes the cumulative update scope after the v1.4.7 release (v1.4.8 through v1.5.0).
 
-> v1.5.01 は v1.5.0 のフォローアップ安定化リリースです。本ノートには v1.4.7〜v1.5.0 の累積更新範囲もあわせて記載します。
+> v1.5.01 は v1.5.0 のフォローアップ安定化リリースです。本ノートには v1.4.7 リリース以降（v1.4.8〜v1.5.0）の累積更新範囲を記載します。
 
 ---
 
@@ -21,29 +21,23 @@
 
 ---
 
-## Cumulative Scope Included (v1.4.7 - v1.5.0) / 累積反映範囲（v1.4.7〜v1.5.0）
+## Cumulative Scope Included (After v1.4.7: v1.4.8 - v1.5.0) / 累積反映範囲（v1.4.7以降: v1.4.8〜v1.5.0）
 
-### v1.4.7 Highlights
-- JA/EN UI language switch with OS language detection
-- Logging system (`logs/`, masking, retention, export ZIP)
-- Preset thumbnail gallery + related API improvements
-- Character count minimum update (`0` allowed)
-- UTF-8/BOM mixed file read improvements
-
-### v1.5.0 Highlights
-- Module split (`anima_pipeline.py` -> `core/` + `frontend/`)
-- Generation History DB + history re-edit flow
-- Preset hierarchy (`chara/scene/camera/quality/lora/composite`)
-- Positive/Negative preset save-load support
-- Named sessions multi-save
-- Character/work name JA/EN split (`name_en`, `series_en`)
-- Setup diagnostics UI + `GET /diagnostics`
+| EN | JA |
+|----|----|
+| Module split (`anima_pipeline.py` -> `core/` + `frontend`) | モジュール分割（`anima_pipeline.py` -> `core/` + `frontend`） |
+| Generation History DB + history re-edit flow | 生成履歴DB化 + 履歴再編集フロー |
+| Preset hierarchy (`chara/scene/camera/quality/lora/composite`) | プリセット階層化（`chara/scene/camera/quality/lora/composite`） |
+| Positive/Negative preset save-load support | ポジティブ/ネガティブプリセット保存・読込対応 |
+| Named sessions multi-save | 名前付きセッション複数保存 |
+| Character/work name JA/EN split (`name_en`, `series_en`) | キャラ名・作品名の日英分離（`name_en`, `series_en`） |
+| Setup diagnostics UI + `GET /diagnostics` | セットアップ自己診断UI + `GET /diagnostics` |
+| Roadmap/docs synchronization to distribution version `v1.5.0` | roadmap / docs の配布バージョン表記を `v1.5.0` に同期 |
 
 ---
 
 ## Related Docs / 関連ドキュメント
 
-- `docs/release_notes/release_notes_v1.4.7.md`
 - `docs/release_notes/release_notes_v1.5.0.md`
 - `docs/updates/Update.md`
 - `docs/specs/features.md`
