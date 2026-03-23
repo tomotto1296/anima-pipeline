@@ -644,3 +644,16 @@
   - `docs/release_notes/README.md`
   - `docs/release_notes/release_notes_v1.5.0.md`
 - Version bump: `1.5.0` -> `1.5.01`.
+
+### 32) v1.5.02: Personal Config Split and Secret-Safe Tracking
+- Split runtime config management into shared defaults + local personal config.
+- New priority for config load:
+  - `settings/pipeline_config.local.json` (personal, preferred)
+  - `settings/pipeline_config.json` (legacy fallback)
+  - `settings/pipeline_config.default.json` (shared defaults)
+- Save target was changed to `settings/pipeline_config.local.json`.
+- Added ignore rules to prevent local secrets from being tracked:
+  - `settings/pipeline_config.local.json`
+  - `.env`
+  - `.env.local`
+- `settings/pipeline_config.json` was removed from Git tracking to avoid leaking personal values.
