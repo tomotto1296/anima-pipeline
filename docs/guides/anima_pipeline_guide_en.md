@@ -104,7 +104,31 @@ In the Settings panel, click `Run Setup Diagnostics` to run all checks at once.
 
 The result panel shows `OK / WARN / ERR / SKIP`, and `WARN / ERR` rows include hints.
 
----
+### Preset Hierarchy (INPUT-4)
+
+In `PRESETS`, the following categories can be saved/loaded/deleted independently.
+
+- `Scene`
+- `Camera`
+- `Quality`
+- `Lora`
+- `Composite`
+- `Negative`
+- `Positive`
+
+Default preset names:
+
+- `Scene_default`
+- `Camera_default`
+- `Quality_default`
+- `Lora_default`
+- `Composite_default`
+
+Behavior notes:
+
+- Composite load restores from `snapshot` first (snapshot has priority over name references).
+- Camera presets store per-character values in `all[]`.
+- When loading for multiple characters, if some character slots are missing in saved data, the first camera values (`posv`/`posh`/`pos_camera`) are used as fallback.
 
 ---
 
@@ -210,5 +234,3 @@ python scripts/run_quick_checks.py --include-hooks-guard
 - After cancel, `Generating...` may remain for a short time
 
 These are currently tracked as non-critical issues.
-
-

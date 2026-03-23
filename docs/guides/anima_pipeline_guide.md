@@ -104,6 +104,32 @@ Settings panel includes `Run Setup Diagnostics` to run checks at once.
 
 The result panel shows `OK / WARN / ERR / SKIP`, and `WARN / ERR` rows include hints.
 
+### プリセット階層（INPUT-4）
+
+`PRESETS` セクションでは、次のカテゴリを独立して保存/読込/削除できます。
+
+- `Scene`
+- `Camera`
+- `Quality`
+- `Lora`
+- `Composite`
+- `Negative`
+- `Positive`
+
+既定プリセット名は次のとおりです。
+
+- `Scene_default`
+- `Camera_default`
+- `Quality_default`
+- `Lora_default`
+- `Composite_default`
+
+挙動の要点:
+
+- `Composite` 読込は `snapshot` を優先して復元します（参照名より先に適用）。
+- `Camera` はキャラごとの値を `all[]` で保持します。
+- 複数キャラ読込時、保存データが不足するキャラは先頭のカメラ値（`posv`/`posh`/`pos_camera`）をフォールバックとして適用します。
+
 ---
 
 ## 6. 出力形式とメタデータ（OUTPUT-4）
