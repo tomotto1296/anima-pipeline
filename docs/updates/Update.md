@@ -607,3 +607,25 @@
 - `docs/guides/anima_pipeline_guide.md` をリファクタ後構成に合わせて全面更新（文字化け解消）
 - `docs/guides/anima_pipeline_guide_en.md` を同内容で再整備（構成・起動・最小配布セットを現行化）
 - クイックチェック導線を `quick_checks_and_hooks.md` 参照へ統一
+
+## Addendum (2026-03-23 / Preset Defaults + Guides)
+
+### v1.4.912
+- Updated `settings/pipeline_config.default.json` for INPUT-4 default preset pointers.
+  - Added `workflow_file` key.
+  - Set default last preset values to `Scene_default` / `Camera_default` / `Quality_default` / `Lora_default` / `Composite_default`.
+- Version bump: `1.4.911` -> `1.4.912`
+
+### v1.4.913
+- Updated guides to document INPUT-4 preset hierarchy behavior.
+  - `docs/guides/anima_pipeline_guide.md`
+  - `docs/guides/anima_pipeline_guide_en.md`
+- Added notes for:
+  - independent preset categories,
+  - composite snapshot-first restore,
+  - camera per-character `all[]` + fallback behavior.
+- Version bump: `1.4.912` -> `1.4.913`
+
+### v1.4.914
+- Updated `docs/updates/Update.md` to include v1.4.912/v1.4.913 history entries.
+- Version bump: `1.4.913` -> `1.4.914`
