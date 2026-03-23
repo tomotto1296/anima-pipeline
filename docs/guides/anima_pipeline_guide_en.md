@@ -127,7 +127,17 @@ Notes:
   - `history/thumbs/`
 - `Clear` in session history clears only session cards (DB records in `All History` remain).
 
-## 8. Smartphone Access (Same LAN)
+## 8. Named Session Save (OUTPUT-8)
+
+- Use `SAVE SESSION` to store the current input state as `sessions/<n>.json`.
+- Loading from `Open` restores key input fields (prompt and major settings).
+- If the same name already exists, a confirmation dialog appears: `OK` overwrites, `Cancel` aborts.
+- Session names are normalized to safe file names (invalid characters are replaced).
+- `Saved Sessions` shows saved entries. Use `LOAD` to restore and `DELETE` to remove.
+- Auto-updated `last session` (after generation) and manual named saves (`SAVE SESSION`) are managed separately.
+
+---
+## 9. Smartphone Access (Same LAN)
 
 1. Check your PC IPv4 address (for example, `192.168.1.103`)
 2. Start Anima Pipeline on the PC
@@ -141,7 +151,7 @@ If it fails:
 
 ---
 
-## 9. Minimal Distribution Set
+## 10. Minimal Distribution Set
 
 Minimum required files:
 
@@ -168,7 +178,7 @@ Recommended to exclude:
 
 ---
 
-## 10. Quick Checks
+## 11. Quick Checks
 
 See [quick_checks_and_hooks.md](./quick_checks_and_hooks.md) for full details.
 
@@ -181,10 +191,11 @@ python scripts/run_quick_checks.py --include-hooks-guard
 
 ---
 
-## 11. Known Behavior
+## 12. Known Behavior
 
 - Right after startup, progress % can appear late on first generation
 - After cancel, `Generating...` may remain for a short time
 
 These are currently tracked as non-critical issues.
+
 
