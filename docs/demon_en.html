@@ -208,11 +208,11 @@
             </div>
           </div>
         </div>
-        <div style="margin-top:.65rem;"><label>衣装（複数可）</label><div id="outfitButtons" class="chip-wrap"></div></div>
-        <div style="margin-top:.55rem;"><label>動作（複数可）</label><div id="actionButtons" class="chip-wrap"></div></div>
-        <div style="margin-top:.55rem;"><label>髪色（単一）</label><div id="hairButtons" class="chip-wrap"></div></div>
-        <div style="margin-top:.55rem;"><label>目色（単一）</label><div id="eyeButtons" class="chip-wrap"></div></div>
+        <div style="margin-top:.65rem;"><label for="hairColorSel">Hair Color</label><select id="hairColorSel"></select></div>
+        <div style="margin-top:.55rem;"><label for="eyeColorSel">Eye Color</label><select id="eyeColorSel"></select></div>
+        <div style="margin-top:.55rem;"><label>衣装（複数可）</label><div id="outfitButtons" class="chip-wrap"></div></div>
         <div style="margin-top:.55rem;"><label>小物（複数可）</label><div id="itemButtons" class="chip-wrap"></div></div>
+        <div style="margin-top:.55rem;"><label>動作（複数可）</label><div id="actionButtons" class="chip-wrap"></div></div>
         <div style="margin-top:.55rem;"><label>その他タグ（本番デフォルト、複数可）</label><div id="miscButtons" class="chip-wrap"></div></div>
       </div>
     </section>
@@ -240,8 +240,29 @@
     const NEGATIVE_SAFETY_TAGS = ["nsfw", "explicit", "rating_explicit", "rating_questionable"];
     const OUTFIT_OPTIONS = ["school_uniform", "dress", "suit", "kimono", "yukata", "swimsuit", "jacket", "hoodie", "t-shirt"];
     const ACTION_OPTIONS = ["standing", "sitting", "walking", "running", "jumping", "looking_at_viewer", "looking_away", "arms_crossed", "v"];
-    const HAIR_OPTIONS = ["black_hair", "brown_hair", "blonde_hair", "red_hair", "green_hair", "blue_hair", "purple_hair", "pink_hair", "white_hair", "silver_hair"];
-    const EYE_OPTIONS = ["black_eyes", "brown_eyes", "amber_eyes", "red_eyes", "green_eyes", "blue_eyes", "purple_eyes", "pink_eyes", "gold_eyes"];
+    const HAIR_OPTIONS = [
+      {v:"black_hair", label:"black_hair", bg:"#2f2f33", fg:"#f4f6ff"},
+      {v:"brown_hair", label:"brown_hair", bg:"#6c4a34", fg:"#fff8f2"},
+      {v:"blonde_hair", label:"blonde_hair", bg:"#ead37b", fg:"#2d2640"},
+      {v:"red_hair", label:"red_hair", bg:"#b64940", fg:"#fff2f1"},
+      {v:"green_hair", label:"green_hair", bg:"#4f8e5b", fg:"#f3fff4"},
+      {v:"blue_hair", label:"blue_hair", bg:"#466abf", fg:"#eef3ff"},
+      {v:"purple_hair", label:"purple_hair", bg:"#7753b3", fg:"#f6f0ff"},
+      {v:"pink_hair", label:"pink_hair", bg:"#d27ca8", fg:"#fff4fb"},
+      {v:"white_hair", label:"white_hair", bg:"#f5f7ff", fg:"#2d2640"},
+      {v:"silver_hair", label:"silver_hair", bg:"#cfd5e4", fg:"#2d2640"}
+    ];
+    const EYE_OPTIONS = [
+      {v:"black_eyes", label:"black_eyes", bg:"#31333a", fg:"#f5f7ff"},
+      {v:"brown_eyes", label:"brown_eyes", bg:"#7b5538", fg:"#fff6ef"},
+      {v:"amber_eyes", label:"amber_eyes", bg:"#c68a2f", fg:"#fff8e8"},
+      {v:"red_eyes", label:"red_eyes", bg:"#b04747", fg:"#fff1f1"},
+      {v:"green_eyes", label:"green_eyes", bg:"#4d8f67", fg:"#effff4"},
+      {v:"blue_eyes", label:"blue_eyes", bg:"#4b6dc8", fg:"#eef2ff"},
+      {v:"purple_eyes", label:"purple_eyes", bg:"#7252bb", fg:"#f4f0ff"},
+      {v:"pink_eyes", label:"pink_eyes", bg:"#d17aa8", fg:"#fff3fb"},
+      {v:"gold_eyes", label:"gold_eyes", bg:"#b78b2f", fg:"#fff8ea"}
+    ];
     const ITEM_OPTIONS = ["sword", "katana", "book", "camera", "phone", "microphone", "flower", "staff", "magic_wand", "umbrella"];
     const NAME_EN_MAP = { "初音ミク": "hatsune_miku", "ずんだもん": "zundamon" };
     const SERIES_EN_MAP = { "VOCALOID": "vocaloid", "VOICEVOX": "voicevox" };
@@ -276,6 +297,27 @@
       const btns=Array.from(q(containerId).querySelectorAll(".chip-btn"));
       btns.forEach(b=>b.classList.toggle("active",set.has(b.dataset.tag)));
       if(single){ btns.filter(b=>b.classList.contains("active")).slice(1).forEach(b=>b.classList.remove("active")); }
+    }
+    function applySelectColor(selectEl, options){
+      const found = options.find(o=>o.v===selectEl.value);
+      if(!found){ selectEl.style.backgroundColor="#fff"; selectEl.style.color="var(--ink)"; selectEl.style.borderColor="var(--border)"; return; }
+      selectEl.style.backgroundColor=found.bg||"#fff";
+      selectEl.style.color=found.fg||"var(--ink)";
+      selectEl.style.borderColor=found.bg||"var(--border)";
+    }
+    function initColorSelect(selectId, options, defaultValue){
+      const sel=q(selectId); if(!sel) return;
+      sel.innerHTML="";
+      options.forEach(o=>{
+        const opt=document.createElement("option");
+        opt.value=o.v; opt.textContent=o.label;
+        opt.style.backgroundColor=o.bg||"#fff";
+        opt.style.color=o.fg||"#111";
+        sel.appendChild(opt);
+      });
+      sel.value=defaultValue||options[0]?.v||"";
+      applySelectColor(sel,options);
+      sel.addEventListener("change",()=>applySelectColor(sel,options));
     }
 
     async function fetchWorkflowFromCandidates(){
@@ -403,8 +445,8 @@
         d.series="original";
         d.series_en="original";
       }
-      const outfit=selectedTags("outfitButtons"), action=selectedTags("actionButtons"), hair=selectedTags("hairButtons"), eyes=selectedTags("eyeButtons"), item=selectedTags("itemButtons"), misc=selectedTags("miscButtons");
-      d.outfit=outfit.join(", "); d.outfit_free=d.outfit; d.action=action.join(", "); d.haircolor=hair[0]||""; d.eyes=eyes[0]||""; d.item=item.join(", "); d.misc=misc.join(", ");
+      const outfit=selectedTags("outfitButtons"), action=selectedTags("actionButtons"), item=selectedTags("itemButtons"), misc=selectedTags("miscButtons");
+      d.outfit=outfit.join(", "); d.outfit_free=d.outfit; d.action=action.join(", "); d.haircolor=q("hairColorSel").value||""; d.eyes=q("eyeColorSel").value||""; d.item=item.join(", "); d.misc=misc.join(", ");
       return d;
     }
     function charToForm(ch){
@@ -415,8 +457,10 @@
       setOriginalValue(Boolean(d.original));
       setSelectedTags("outfitButtons",splitCsv(d.outfit||d.outfit_free));
       setSelectedTags("actionButtons",splitCsv(d.action||d.action_free));
-      setSelectedTags("hairButtons",d.haircolor?[d.haircolor]:[],true);
-      setSelectedTags("eyeButtons",d.eyes?[d.eyes]:[],true);
+      q("hairColorSel").value=d.haircolor||"black_hair";
+      q("eyeColorSel").value=d.eyes||"blue_eyes";
+      applySelectColor(q("hairColorSel"),HAIR_OPTIONS);
+      applySelectColor(q("eyeColorSel"),EYE_OPTIONS);
       setSelectedTags("itemButtons",splitCsv(d.item||d.item_free));
       setSelectedTags("miscButtons",splitCsv(d.misc));
     }
@@ -559,8 +603,8 @@
     async function init(){
       createTagButtons("outfitButtons",OUTFIT_OPTIONS,false,["school_uniform"]);
       createTagButtons("actionButtons",ACTION_OPTIONS,false,["standing"]);
-      createTagButtons("hairButtons",HAIR_OPTIONS,true,["black_hair"]);
-      createTagButtons("eyeButtons",EYE_OPTIONS,true,["blue_eyes"]);
+      initColorSelect("hairColorSel",HAIR_OPTIONS,"black_hair");
+      initColorSelect("eyeColorSel",EYE_OPTIONS,"blue_eyes");
       createTagButtons("itemButtons",ITEM_OPTIONS,false,[]);
       createTagButtons("miscButtons",DEFAULT_MISC_TAGS,false,DEFAULT_MISC_TAGS);
       bindChoiceRow("genderRow","gender");
@@ -577,4 +621,6 @@
   </script>
 </body>
 </html>
+
+
 
