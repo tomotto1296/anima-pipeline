@@ -81,6 +81,35 @@
       font-weight:800;
     }
     .critical-note strong{ color:#7a1010; }
+    .intro-panel{
+      margin:0 0 1rem;
+      border:1px solid var(--border);
+      border-radius:10px;
+      background:#ffffff;
+      padding:.9rem 1rem;
+      box-shadow:0 2px 10px rgba(124,77,191,.08);
+    }
+    .intro-title{
+      font-family:"DM Mono", monospace;
+      font-size:.82rem;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:var(--muted);
+      margin-bottom:.35rem;
+    }
+    .intro-main{
+      font-size:1rem;
+      font-weight:700;
+      color:var(--ink);
+      margin-bottom:.45rem;
+    }
+    .intro-list{
+      margin:0;
+      padding-left:1.1rem;
+      color:var(--ink);
+      font-size:.88rem;
+      line-height:1.55;
+    }
     .quick-links{
       position:fixed;
       top:12px;
@@ -143,6 +172,15 @@
     <div class="critical-note">
       <strong>Important:</strong> From GitHub Pages (HTTPS), connecting to local ComfyUI (<code>http://127.0.0.1:8188</code>) may fail due to browser security restrictions.<br />
       However, if ComfyUI is running locally, image generation works.
+    </div>
+    <div class="intro-panel">
+      <div class="intro-title">What Is This?</div>
+      <div class="intro-main">This page is a lightweight trial version of Anima Pipeline.</div>
+      <ul class="intro-list">
+        <li>What you can do: choose character conditions, generate images, save character preset as JSON</li>
+        <li>What is limited: full production features (advanced settings, detailed editing, some integrations)</li>
+        <li>How to use: 1) check ComfyUI URL 2) select character options 3) click Generate</li>
+      </ul>
     </div>
 
     <section class="section collapsed" id="sec-config">
