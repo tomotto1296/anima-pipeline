@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://tomotto1296.github.io/anima-pipeline/sitemap.xml
