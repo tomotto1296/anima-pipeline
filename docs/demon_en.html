@@ -69,6 +69,18 @@
     .choice-btn.active{ background:#2d7a4f; color:#fff; border-color:#2d7a4f; }
     .images{ margin-top:.7rem; display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:.5rem; }
     .images img{ width:100%; border:1px solid var(--border); border-radius:8px; display:block; background:#f7f4ff; }
+    .critical-note{
+      margin:.8rem 0 1rem;
+      border:2px solid #d64545;
+      background:#fff4f4;
+      border-radius:10px;
+      padding:.8rem .9rem;
+      color:#8a1f1f;
+      font-size:1rem;
+      line-height:1.5;
+      font-weight:800;
+    }
+    .critical-note strong{ color:#7a1010; }
     .quick-links{
       position:fixed;
       top:12px;
@@ -97,6 +109,24 @@
       color:var(--multi);
       border-color:var(--accent);
     }
+    .bottom-cta{
+      margin:1rem 0 0;
+      border:1px solid var(--border);
+      border-radius:10px;
+      background:#fff;
+      padding:1rem;
+      box-shadow:0 2px 10px rgba(124,77,191,.08);
+    }
+    .bottom-cta a{
+      display:block;
+      font-size:1.05rem;
+      font-weight:800;
+      line-height:1.5;
+      color:var(--multi);
+      text-decoration:none;
+      margin:.25rem 0;
+    }
+    .bottom-cta a:hover{ text-decoration:underline; }
   </style>
 </head>
 <body>
@@ -110,6 +140,10 @@
   <div class="container">
     <h1>Anima Pipeline Demo</h1>
     <h2>Character Generation (Prompt + Image) Trial</h2>
+    <div class="critical-note">
+      <strong>Important:</strong> From GitHub Pages (HTTPS), connecting to local ComfyUI (<code>http://127.0.0.1:8188</code>) may fail due to browser security restrictions.<br />
+      However, if ComfyUI is running locally, image generation works.
+    </div>
 
     <section class="section collapsed" id="sec-config">
       <button type="button" class="stoggle" data-target="box-config"><span class="tog-left"><span class="num">1</span>Settings</span><span class="tog-arrow">▼</span></button>
@@ -210,7 +244,11 @@
         </div>
         <div style="margin-top:.65rem;"><label for="hairColorSel">Hair Color</label><select id="hairColorSel"></select></div>
         <div style="margin-top:.55rem;"><label for="eyeColorSel">Eye Color</label><select id="eyeColorSel"></select></div>
-        <div style="margin-top:.55rem;"><label>Outfit (multi)</label><div id="outfitButtons" class="chip-wrap"></div></div>
+        <div style="margin-top:.55rem;"><label>Outfit</label>
+          <div id="outfitCatButtons" class="chip-wrap"></div>
+          <div style="margin-top:.45rem;"><select id="outfitColorSel"></select></div>
+          <div style="margin-top:.45rem;"><div id="outfitItemButtons" class="chip-wrap"></div></div>
+        </div>
         <div style="margin-top:.55rem;"><label>Items (multi)</label><div id="itemButtons" class="chip-wrap"></div></div>
         <div style="margin-top:.55rem;"><label>Action (multi)</label><div id="actionButtons" class="chip-wrap"></div></div>
         <div style="margin-top:.55rem;"><label>Other Tags (default + multi)</label><div id="miscButtons" class="chip-wrap"></div></div>
@@ -225,6 +263,11 @@
         <div id="images" class="images"></div>
       </div>
     </section>
+    <section class="bottom-cta">
+      <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" rel="noopener noreferrer">For full use → Download on GitHub</a>
+      <a href="./index_en.html">Local install guide → index_en.html</a>
+      <a href="https://github.com/tomotto1296/anima-pipeline/issues" target="_blank" rel="noopener noreferrer">Questions / requests → GitHub Issues</a>
+    </section>
   </div>
 
   <script>
@@ -238,7 +281,25 @@
     const ALWAYS_SAFE_TAGS = ["safe", "rating_safe"];
     const NSFW_BLOCKED_TAGS = new Set(["nsfw","explicit","rating_explicit","questionable","rating_questionable","nude","naked","sex"]);
     const NEGATIVE_SAFETY_TAGS = ["nsfw", "explicit", "rating_explicit", "rating_questionable"];
-    const OUTFIT_OPTIONS = ["school_uniform", "dress", "suit", "kimono", "yukata", "swimsuit", "jacket", "hoodie", "t-shirt"];
+    const OUTFIT_CATEGORY_OPTIONS = [
+      { v:"full", label:"Full Body" },
+      { v:"upper", label:"Upper Body" },
+      { v:"lower", label:"Lower Body" }
+    ];
+    const OUTFIT_ITEMS_BY_CATEGORY = {
+      full: ["school_uniform", "dress", "suit", "kimono", "yukata", "swimsuit"],
+      upper: ["jacket", "hoodie", "t-shirt", "shirt", "blazer"],
+      lower: ["skirt", "shorts", "pants"]
+    };
+    const OUTFIT_COLOR_OPTIONS = [
+      { v:"", label:"No color", bg:"#ffffff", fg:"#2d2640" },
+      { v:"black_clothes", label:"Black", bg:"#2f2f33", fg:"#f4f6ff" },
+      { v:"white_clothes", label:"White", bg:"#f5f7ff", fg:"#2d2640" },
+      { v:"red_clothes", label:"Red", bg:"#b64940", fg:"#fff2f1" },
+      { v:"blue_clothes", label:"Blue", bg:"#466abf", fg:"#eef3ff" },
+      { v:"green_clothes", label:"Green", bg:"#4f8e5b", fg:"#f3fff4" },
+      { v:"pink_clothes", label:"Pink", bg:"#d27ca8", fg:"#fff4fb" }
+    ];
     const ACTION_OPTIONS = ["standing", "sitting", "walking", "running", "jumping", "looking_at_viewer", "looking_away", "arms_crossed", "v"];
     const HAIR_OPTIONS = [
       {v:"black_hair", label:"black_hair", bg:"#2f2f33", fg:"#f4f6ff"},
@@ -318,6 +379,53 @@
       sel.value=defaultValue||options[0]?.v||"";
       applySelectColor(sel,options);
       sel.addEventListener("change",()=>applySelectColor(sel,options));
+    }
+    function selectedSingleTag(containerId){
+      const b=q(containerId)?.querySelector(".chip-btn.active");
+      return b?String(b.dataset.tag||""):"";
+    }
+    function initOutfitUi(){
+      const catWrap=q("outfitCatButtons");
+      if(!catWrap) return;
+      catWrap.innerHTML="";
+      OUTFIT_CATEGORY_OPTIONS.forEach((o,idx)=>{
+        const b=document.createElement("button");
+        b.type="button";
+        b.className="chip-btn single"+(idx===0?" active":"");
+        b.dataset.tag=o.v;
+        b.textContent=o.label;
+        b.addEventListener("click",()=>{
+          catWrap.querySelectorAll(".chip-btn").forEach(x=>x.classList.remove("active"));
+          b.classList.add("active");
+          renderOutfitItems(o.v, []);
+        });
+        catWrap.appendChild(b);
+      });
+      initColorSelect("outfitColorSel",OUTFIT_COLOR_OPTIONS,"");
+      renderOutfitItems("full",["school_uniform"]);
+    }
+    function renderOutfitItems(category, selected=[]){
+      const options=OUTFIT_ITEMS_BY_CATEGORY[category]||OUTFIT_ITEMS_BY_CATEGORY.full;
+      createTagButtons("outfitItemButtons",options,false,selected);
+    }
+    function getOutfitTags(){
+      const tags=[];
+      const color=q("outfitColorSel")?.value||"";
+      if(color) tags.push(color);
+      selectedTags("outfitItemButtons").forEach(t=>tags.push(t));
+      return tags;
+    }
+    function applyOutfitFromCsv(outfitCsv){
+      const tags=splitCsv(outfitCsv);
+      const colorSet=new Set(OUTFIT_COLOR_OPTIONS.map(o=>o.v).filter(Boolean));
+      const color=tags.find(t=>colorSet.has(t))||"";
+      const items=tags.filter(t=>!colorSet.has(t));
+      const score=(cat)=>items.filter(t=>(OUTFIT_ITEMS_BY_CATEGORY[cat]||[]).includes(t)).length;
+      const category=score("upper")>score("full") && score("upper")>=score("lower") ? "upper" : (score("lower")>score("full") ? "lower" : "full");
+      setSelectedTags("outfitCatButtons",[category],true);
+      renderOutfitItems(category,items);
+      q("outfitColorSel").value=color;
+      applySelectColor(q("outfitColorSel"),OUTFIT_COLOR_OPTIONS);
     }
 
     async function fetchWorkflowFromCandidates(){
@@ -445,7 +553,7 @@
         d.series="original";
         d.series_en="original";
       }
-      const outfit=selectedTags("outfitButtons"), action=selectedTags("actionButtons"), item=selectedTags("itemButtons"), misc=selectedTags("miscButtons");
+      const outfit=getOutfitTags(), action=selectedTags("actionButtons"), item=selectedTags("itemButtons"), misc=selectedTags("miscButtons");
       d.outfit=outfit.join(", "); d.outfit_free=d.outfit; d.action=action.join(", "); d.haircolor=q("hairColorSel").value||""; d.eyes=q("eyeColorSel").value||""; d.item=item.join(", "); d.misc=misc.join(", ");
       return d;
     }
@@ -455,7 +563,7 @@
       setChoiceValue("genderRow","gender",d.gender||"female");
       setChoiceValue("ageRow","age",d.age||"unset");
       setOriginalValue(Boolean(d.original));
-      setSelectedTags("outfitButtons",splitCsv(d.outfit||d.outfit_free));
+      applyOutfitFromCsv(d.outfit||d.outfit_free);
       setSelectedTags("actionButtons",splitCsv(d.action||d.action_free));
       q("hairColorSel").value=d.haircolor||"black_hair";
       q("eyeColorSel").value=d.eyes||"blue_eyes";
@@ -601,7 +709,7 @@
     }
 
     async function init(){
-      createTagButtons("outfitButtons",OUTFIT_OPTIONS,false,["school_uniform"]);
+      initOutfitUi();
       createTagButtons("actionButtons",ACTION_OPTIONS,false,["standing"]);
       initColorSelect("hairColorSel",HAIR_OPTIONS,"black_hair");
       initColorSelect("eyeColorSel",EYE_OPTIONS,"blue_eyes");
@@ -621,6 +729,7 @@
   </script>
 </body>
 </html>
+
 
 
 
