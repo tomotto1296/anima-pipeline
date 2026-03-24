@@ -1,0 +1,781 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Anima Demo | Web体験版</title>
+  <meta name="description" content="Anima Pipeline Web体験版。キャラ編集・画像生成・キャラプリセット保存のみ対応。">
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --card: #ffffff;
+      --ink: #122034;
+      --muted: #5b6b83;
+      --line: #d5deeb;
+      --accent: #0f62fe;
+      --accent-2: #0b4fd1;
+      --ok: #167a5c;
+      --warn: #8f5b00;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: radial-gradient(circle at 0% 0%, #e8efff 0, #f5f7fb 38%), var(--bg);
+      font-family: "Segoe UI", "Noto Sans JP", sans-serif;
+      line-height: 1.5;
+    }
+    .wrap {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 18px;
+      display: grid;
+      gap: 14px;
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 3px 10px rgba(16, 37, 64, 0.04);
+    }
+    .title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      margin: 0 0 8px;
+    }
+    .sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+    .grid {
+      display: grid;
+      gap: 10px;
+    }
+    .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    label { font-size: 0.82rem; color: var(--muted); display: block; margin-bottom: 4px; }
+    input, select, textarea, button {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      padding: 9px 10px;
+      font: inherit;
+      color: var(--ink);
+      background: #fff;
+    }
+    textarea { min-height: 74px; resize: vertical; }
+    button {
+      cursor: pointer;
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: 600;
+      transition: 0.12s ease;
+    }
+    button:hover { background: var(--accent-2); border-color: var(--accent-2); }
+    button.secondary {
+      background: #fff;
+      color: var(--ink);
+      border-color: var(--line);
+      font-weight: 600;
+    }
+    .row { display: flex; gap: 8px; }
+    .row > * { flex: 1; }
+    .pill {
+      display: inline-block;
+      font-size: 0.75rem;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      padding: 2px 8px;
+      margin-right: 6px;
+    }
+    .note {
+      border-left: 4px solid #f0b429;
+      background: #fff8e6;
+      color: #5a4300;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.86rem;
+    }
+    .status {
+      font-size: 0.86rem;
+      color: var(--muted);
+      min-height: 1.3em;
+      white-space: pre-wrap;
+    }
+    .status.ok { color: var(--ok); }
+    .status.warn { color: var(--warn); }
+    .images {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 10px;
+    }
+    .images img {
+      width: 100%;
+      height: auto;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #f0f3f9;
+      display: block;
+    }
+    @media (max-width: 860px) {
+      .grid.two, .grid.three { grid-template-columns: 1fr; }
+      .row { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="card">
+      <h1 class="title">Anima Web体験版</h1>
+      <p class="sub">機能を3つに限定: 画像生成 / キャラ編集 / キャラプリセット保存（本番互換JSON）。</p>
+      <p class="note">体験版ではLLM自動プロンプト生成は無効化しています。画像生成は `use_llm=false` でAPIに送信します。</p>
+      <div style="margin-top:10px;" class="grid two">
+        <div>
+          <label for="apiBase">API Base URL（空なら同一オリジン）</label>
+          <input id="apiBase" placeholder="例: https://api.example.com">
+        </div>
+        <div>
+          <label for="demoMode">モード</label>
+          <select id="demoMode">
+            <option value="local">Local only（ブラウザ保存）</option>
+            <option value="server">Server sync（/chara_presets利用）</option>
+          </select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:10px;">
+        <button id="saveConfigBtn" class="secondary">接続設定を保存</button>
+        <button id="checkApiBtn" class="secondary">API接続チェック</button>
+      </div>
+      <div id="apiStatus" class="status"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="title">キャラ</h2>
+      <div class="grid two">
+        <div>
+          <label for="name">キャラ名 (JA)</label>
+          <input id="name" placeholder="例: 初音ミク">
+        </div>
+        <div>
+          <label for="nameEn">Character Name (EN tag)</label>
+          <input id="nameEn" placeholder="例: hatsune_miku">
+        </div>
+        <div>
+          <label for="series">作品名 (JA)</label>
+          <input id="series" placeholder="例: VOCALOID">
+        </div>
+        <div>
+          <label for="seriesEn">Series (EN)</label>
+          <input id="seriesEn" placeholder="例: vocaloid">
+        </div>
+      </div>
+      <div class="grid three" style="margin-top:8px;">
+        <div>
+          <label for="gender">性別</label>
+          <select id="gender">
+            <option value="female">female</option>
+            <option value="male">male</option>
+            <option value="other">other</option>
+          </select>
+        </div>
+        <div>
+          <label for="age">年齢カテゴリ</label>
+          <select id="age">
+            <option value="unset">unset</option>
+            <option value="adult">adult</option>
+            <option value="child">child</option>
+          </select>
+        </div>
+        <div>
+          <label for="original">オリジナル</label>
+          <select id="original">
+            <option value="false">false</option>
+            <option value="true">true</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid two" style="margin-top:8px;">
+        <div>
+          <label for="outfit">衣装タグ</label>
+          <input id="outfit" placeholder="例: school_uniform">
+        </div>
+        <div>
+          <label for="action">動作タグ</label>
+          <input id="action" placeholder="例: standing, smile">
+        </div>
+        <div>
+          <label for="haircolor">髪色タグ</label>
+          <input id="haircolor" placeholder="例: aqua_hair">
+        </div>
+        <div>
+          <label for="eyes">目色タグ</label>
+          <input id="eyes" placeholder="例: blue_eyes">
+        </div>
+        <div>
+          <label for="item">小物タグ</label>
+          <input id="item" placeholder="例: headset, microphone">
+        </div>
+        <div>
+          <label for="misc">その他タグ</label>
+          <input id="misc" placeholder="例: masterpiece, best_quality">
+        </div>
+      </div>
+      <p class="sub" style="margin-top:8px;">非表示項目も保存時に本番互換キーで補完します。</p>
+    </section>
+
+    <section class="card">
+      <h2 class="title">キャラプリセット</h2>
+      <p class="sub">形式: 現行 `chara/*.json` と互換（`name`, `data`, `savedAt`）。</p>
+      <div class="grid two" style="margin-top:8px;">
+        <div>
+          <label for="presetName">保存名</label>
+          <input id="presetName" placeholder="例: ミク(制服)">
+        </div>
+        <div>
+          <label for="presetSelect">保存済みプリセット</label>
+          <select id="presetSelect"></select>
+        </div>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button id="savePresetBtn">保存</button>
+        <button id="loadPresetBtn" class="secondary">読込</button>
+        <button id="deletePresetBtn" class="secondary">削除</button>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button id="exportPresetBtn" class="secondary">JSONエクスポート</button>
+        <button id="importPresetBtn" class="secondary">JSONインポート</button>
+        <input id="importFile" type="file" accept="application/json" style="display:none;">
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <button id="syncFromServerBtn" class="secondary">サーバーから読込</button>
+        <button id="syncToServerBtn" class="secondary">選択プリセットをサーバー保存</button>
+      </div>
+      <div id="presetStatus" class="status"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="title">画像生成</h2>
+      <div class="grid three">
+        <div>
+          <label for="width">幅</label>
+          <input id="width" type="number" min="256" step="64" value="832">
+        </div>
+        <div>
+          <label for="height">高さ</label>
+          <input id="height" type="number" min="256" step="64" value="1216">
+        </div>
+        <div>
+          <label for="count">枚数（体験版上限4）</label>
+          <input id="count" type="number" min="1" max="4" value="1">
+        </div>
+      </div>
+      <div class="grid two" style="margin-top:8px;">
+        <div>
+          <label for="fmt">形式</label>
+          <select id="fmt">
+            <option value="webp">webp</option>
+            <option value="png">png</option>
+            <option value="jpeg">jpeg</option>
+          </select>
+        </div>
+        <div>
+          <label for="negative">ネガティブプロンプト</label>
+          <input id="negative" placeholder="例: lowres, blurry, bad_anatomy">
+        </div>
+      </div>
+      <div style="margin-top:10px;" class="row">
+        <button id="generateBtn">画像生成</button>
+      </div>
+      <div style="margin-top:8px;">
+        <span class="pill">LLM: OFF</span>
+        <span class="pill">Preset schema: 本番互換</span>
+      </div>
+      <div id="genStatus" class="status" style="margin-top:8px;"></div>
+      <div id="promptOut" class="status" style="margin-top:6px;"></div>
+      <div id="images" class="images" style="margin-top:10px;"></div>
+    </section>
+  </main>
+
+  <script>
+    const LS_CONFIG = "anima_demo_config_v1";
+    const LS_PRESETS = "anima_demo_chara_presets_v1";
+
+    const PRESET_TEMPLATE = {
+      series: "",
+      original: false,
+      name: "",
+      name_en: "",
+      series_en: "",
+      gender: "female",
+      age: "unset",
+      outfit: "",
+      action: "",
+      hair: "",
+      hairstyle: "",
+      hairstyle_lm: "",
+      haircolor: "",
+      eyes: "",
+      skin: "",
+      body: "",
+      misc: "",
+      bust: "",
+      face: "",
+      eyestate: "",
+      mouth: "",
+      effect: "",
+      ears: "",
+      tail: "",
+      wings: "",
+      acc: "",
+      item: "",
+      posv: "",
+      posh: "",
+      outfit_cat: "",
+      outfit_color: "",
+      outfit_item: "",
+      outfit_free: "",
+      skinOther: "",
+      hairstyle_free: "",
+      hairother: "",
+      action_free: "",
+      item_free: ""
+    };
+
+    let presets = [];
+
+    function q(id) { return document.getElementById(id); }
+    function nowIso() { return new Date().toISOString(); }
+
+    function setStatus(id, text, kind = "") {
+      const el = q(id);
+      el.textContent = text || "";
+      el.className = "status" + (kind ? " " + kind : "");
+    }
+
+    function parseJsonSafe(text, fallback) {
+      try { return JSON.parse(text); } catch { return fallback; }
+    }
+
+    function apiBase() {
+      return (q("apiBase").value || "").trim().replace(/\/$/, "");
+    }
+
+    function apiUrl(path) {
+      const base = apiBase();
+      return base ? base + path : path;
+    }
+
+    function saveConfig() {
+      const cfg = { apiBase: q("apiBase").value.trim(), mode: q("demoMode").value };
+      localStorage.setItem(LS_CONFIG, JSON.stringify(cfg));
+      setStatus("apiStatus", "接続設定を保存しました。", "ok");
+    }
+
+    function loadConfig() {
+      const cfg = parseJsonSafe(localStorage.getItem(LS_CONFIG), null);
+      if (!cfg) return;
+      q("apiBase").value = cfg.apiBase || "";
+      q("demoMode").value = cfg.mode || "local";
+    }
+
+    function normalizePreset(raw) {
+      const src = raw && typeof raw === "object" ? raw : {};
+      const data = Object.assign({}, PRESET_TEMPLATE, src.data || {});
+      return {
+        name: String(src.name || "Unnamed"),
+        data,
+        savedAt: String(src.savedAt || nowIso()),
+        _filename: src._filename || null,
+        _thumb_path: src._thumb_path || null
+      };
+    }
+
+    function loadLocalPresets() {
+      const arr = parseJsonSafe(localStorage.getItem(LS_PRESETS), []);
+      presets = Array.isArray(arr) ? arr.map(normalizePreset) : [];
+      renderPresetSelect();
+    }
+
+    function saveLocalPresets() {
+      localStorage.setItem(LS_PRESETS, JSON.stringify(presets));
+    }
+
+    function renderPresetSelect() {
+      const sel = q("presetSelect");
+      sel.innerHTML = "";
+      const empty = document.createElement("option");
+      empty.value = "";
+      empty.textContent = "-- 選択 --";
+      sel.appendChild(empty);
+      presets.forEach((p, i) => {
+        const o = document.createElement("option");
+        o.value = String(i);
+        o.textContent = `${p.name} (${(p.savedAt || "").slice(0, 19).replace("T", " ")})`;
+        sel.appendChild(o);
+      });
+    }
+
+    function collectCharacterDataFromForm() {
+      const data = Object.assign({}, PRESET_TEMPLATE);
+      data.name = q("name").value.trim();
+      data.name_en = q("nameEn").value.trim();
+      data.series = q("series").value.trim();
+      data.series_en = q("seriesEn").value.trim();
+      data.gender = q("gender").value;
+      data.age = q("age").value;
+      data.original = q("original").value === "true";
+      data.outfit = q("outfit").value.trim();
+      data.outfit_free = data.outfit;
+      data.action = q("action").value.trim();
+      data.haircolor = q("haircolor").value.trim();
+      data.eyes = q("eyes").value.trim();
+      data.item = q("item").value.trim();
+      data.misc = q("misc").value.trim();
+      return data;
+    }
+
+    function applyCharacterDataToForm(ch) {
+      const data = Object.assign({}, PRESET_TEMPLATE, ch || {});
+      q("name").value = data.name || "";
+      q("nameEn").value = data.name_en || "";
+      q("series").value = data.series || "";
+      q("seriesEn").value = data.series_en || "";
+      q("gender").value = data.gender || "female";
+      q("age").value = data.age || "unset";
+      q("original").value = String(Boolean(data.original));
+      q("outfit").value = data.outfit_free || data.outfit || "";
+      q("action").value = data.action || data.action_free || "";
+      q("haircolor").value = data.haircolor || data.hairother || "";
+      q("eyes").value = data.eyes || "";
+      q("item").value = data.item || data.item_free || "";
+      q("misc").value = data.misc || "";
+    }
+
+    function makePresetObject() {
+      const data = collectCharacterDataFromForm();
+      const fallbackName = data.name || data.name_en || "character_preset";
+      const name = (q("presetName").value || fallbackName).trim();
+      return {
+        name,
+        data,
+        savedAt: nowIso()
+      };
+    }
+
+    function selectedPresetIndex() {
+      const v = q("presetSelect").value;
+      if (v === "") return -1;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : -1;
+    }
+
+    function buildDirectTags(ch) {
+      const tags = [];
+      const pushCsv = (v) => {
+        String(v || "").split(",").map(s => s.trim()).filter(Boolean).forEach(t => tags.push(t));
+      };
+      pushCsv(ch.name_en || ch.name);
+      pushCsv(ch.series_en || "");
+      pushCsv(ch.outfit_free || ch.outfit);
+      pushCsv(ch.action || ch.action_free);
+      pushCsv(ch.haircolor || ch.hairother);
+      pushCsv(ch.eyes);
+      pushCsv(ch.item || ch.item_free);
+      pushCsv(ch.misc);
+      const uniq = [];
+      const seen = new Set();
+      for (const t of tags) {
+        const k = t.toLowerCase();
+        if (seen.has(k)) continue;
+        seen.add(k);
+        uniq.push(t);
+      }
+      return uniq;
+    }
+
+    function buildGenerateInput(ch) {
+      const gender = ch.gender || "female";
+      const summary = gender === "male" ? "1boy" : gender === "female" ? "1girl" : "1other";
+      return {
+        global_series: ch.series || "",
+        characters: [{
+          name: ch.name || "",
+          name_en: ch.name_en || "",
+          series: ch.series || "",
+          series_en: ch.series_en || "",
+          gender,
+          age: ch.age || "unset",
+          original: Boolean(ch.original)
+        }],
+        gender_summary: summary,
+        place: "",
+        mood: ""
+      };
+    }
+
+    async function checkApi() {
+      setStatus("apiStatus", "接続確認中...");
+      try {
+        const r = await fetch(apiUrl("/config"), { cache: "no-store" });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        await r.json();
+        setStatus("apiStatus", "API接続OK", "ok");
+      } catch (e) {
+        setStatus("apiStatus", `API接続NG: ${e.message}`, "warn");
+      }
+    }
+
+    async function syncFromServer() {
+      setStatus("presetStatus", "サーバーから読込中...");
+      try {
+        const r = await fetch(apiUrl("/chara_presets"), { cache: "no-store" });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const rows = await r.json();
+        const merged = new Map();
+        presets.forEach(p => merged.set(`${p.name}::${p.savedAt}`, normalizePreset(p)));
+        (rows || []).forEach(p => {
+          const np = normalizePreset(p);
+          const key = np._filename ? `file::${np._filename}` : `${np.name}::${np.savedAt}`;
+          merged.set(key, np);
+        });
+        presets = Array.from(merged.values());
+        saveLocalPresets();
+        renderPresetSelect();
+        setStatus("presetStatus", `サーバーから ${rows.length || 0} 件を取得しました。`, "ok");
+      } catch (e) {
+        setStatus("presetStatus", `サーバー読込エラー: ${e.message}`, "warn");
+      }
+    }
+
+    async function syncOneToServer() {
+      const idx = selectedPresetIndex();
+      if (idx < 0 || !presets[idx]) {
+        setStatus("presetStatus", "先にプリセットを選択してください。", "warn");
+        return;
+      }
+      const p = presets[idx];
+      setStatus("presetStatus", "サーバーへ保存中...");
+      try {
+        const body = { action: "save", preset: p, filename: p._filename || null };
+        const r = await fetch(apiUrl("/chara_presets"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        const d = await r.json();
+        if (!r.ok || !d.ok) throw new Error(d.error || `HTTP ${r.status}`);
+        p._filename = d.filename || p._filename;
+        p.savedAt = nowIso();
+        saveLocalPresets();
+        renderPresetSelect();
+        setStatus("presetStatus", "サーバー保存に成功しました。", "ok");
+      } catch (e) {
+        setStatus("presetStatus", `サーバー保存エラー: ${e.message}`, "warn");
+      }
+    }
+
+    async function generate() {
+      q("images").innerHTML = "";
+      setStatus("promptOut", "");
+
+      const ch = collectCharacterDataFromForm();
+      if (!ch.name && !ch.name_en) {
+        setStatus("genStatus", "キャラ名を入力してください。", "warn");
+        return;
+      }
+
+      const count = Math.max(1, Math.min(4, Number(q("count").value) || 1));
+      const body = {
+        input: buildGenerateInput(ch),
+        use_llm: false,
+        width: Number(q("width").value) || 832,
+        height: Number(q("height").value) || 1216,
+        fmt: q("fmt").value || "webp",
+        count,
+        embed_metadata: false,
+        extra_tags: [],
+        char_direct_tags: buildDirectTags(ch),
+        prompt_prefix: [],
+        extra_note_en: "",
+        negative_prompt: q("negative").value.trim(),
+        gen_params: {},
+        lora_slots: [],
+        workflow_file: "",
+        client_id: (window.crypto && window.crypto.randomUUID) ? window.crypto.randomUUID() : ("demo-" + Date.now())
+      };
+
+      setStatus("genStatus", "生成キュー送信中...");
+      try {
+        const r = await fetch(apiUrl("/generate"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`);
+        const prompt = d.final_prompt || d.pre_extra_prompt || "";
+        setStatus("promptOut", prompt ? `Prompt: ${prompt}` : "Prompt: (empty)");
+
+        const ids = Array.isArray(d.prompt_ids) ? d.prompt_ids.filter(Boolean) : (d.prompt_id ? [d.prompt_id] : []);
+        if (!ids.length) {
+          setStatus("genStatus", "生成キューIDが返ってきませんでした。", "warn");
+          return;
+        }
+
+        setStatus("genStatus", `生成中... (${ids.length}件)`);
+        await pollAndRender(ids);
+      } catch (e) {
+        setStatus("genStatus", `生成エラー: ${e.message}`, "warn");
+      }
+    }
+
+    function resolveImageUrl(viewUrl, filePath) {
+      if (viewUrl) {
+        if (/^https?:\/\//i.test(viewUrl)) return viewUrl;
+        return apiUrl(viewUrl);
+      }
+      if (filePath) {
+        return apiUrl("/get_image?path=" + encodeURIComponent(filePath));
+      }
+      return "";
+    }
+
+    async function pollAndRender(ids) {
+      const idsParam = encodeURIComponent(ids.join(","));
+      const limit = 180;
+      for (let i = 0; i < limit; i++) {
+        await new Promise(res => setTimeout(res, 2000));
+        const r = await fetch(apiUrl(`/poll_status?ids=${idsParam}`), { cache: "no-store" });
+        if (!r.ok) continue;
+        const d = await r.json();
+        const completed = d.completed || [];
+        const done = completed.length;
+        setStatus("genStatus", `生成中... (${done}/${ids.length})`);
+        if (done < ids.length) continue;
+
+        const imagePaths = d.image_paths || {};
+        const urls = [];
+        ids.forEach(pid => {
+          const info = imagePaths[pid] || {};
+          const views = Array.isArray(info.view_urls) ? info.view_urls : [];
+          const files = Array.isArray(info.file_paths) ? info.file_paths : [];
+          const max = Math.max(views.length, files.length);
+          for (let k = 0; k < max; k++) {
+            const u = resolveImageUrl(views[k], files[k]);
+            if (u) urls.push(u);
+          }
+        });
+
+        const box = q("images");
+        box.innerHTML = "";
+        urls.forEach((u, idx) => {
+          const img = document.createElement("img");
+          img.loading = "lazy";
+          img.alt = `generated_${idx + 1}`;
+          img.src = u;
+          box.appendChild(img);
+        });
+
+        setStatus("genStatus", `完了: ${urls.length}枚`, "ok");
+        return;
+      }
+      setStatus("genStatus", "タイムアウト: 完了まで待機できませんでした。", "warn");
+    }
+
+    function bindEvents() {
+      q("saveConfigBtn").addEventListener("click", saveConfig);
+      q("checkApiBtn").addEventListener("click", checkApi);
+
+      q("savePresetBtn").addEventListener("click", () => {
+        const p = normalizePreset(makePresetObject());
+        presets.push(p);
+        saveLocalPresets();
+        renderPresetSelect();
+        q("presetSelect").value = String(presets.length - 1);
+        setStatus("presetStatus", `保存しました: ${p.name}`, "ok");
+      });
+
+      q("loadPresetBtn").addEventListener("click", () => {
+        const idx = selectedPresetIndex();
+        if (idx < 0 || !presets[idx]) {
+          setStatus("presetStatus", "読込対象を選択してください。", "warn");
+          return;
+        }
+        applyCharacterDataToForm(presets[idx].data);
+        q("presetName").value = presets[idx].name || "";
+        setStatus("presetStatus", `読込しました: ${presets[idx].name}`, "ok");
+      });
+
+      q("deletePresetBtn").addEventListener("click", () => {
+        const idx = selectedPresetIndex();
+        if (idx < 0 || !presets[idx]) {
+          setStatus("presetStatus", "削除対象を選択してください。", "warn");
+          return;
+        }
+        const name = presets[idx].name;
+        presets.splice(idx, 1);
+        saveLocalPresets();
+        renderPresetSelect();
+        setStatus("presetStatus", `削除しました: ${name}`, "ok");
+      });
+
+      q("exportPresetBtn").addEventListener("click", () => {
+        const idx = selectedPresetIndex();
+        if (idx < 0 || !presets[idx]) {
+          setStatus("presetStatus", "エクスポート対象を選択してください。", "warn");
+          return;
+        }
+        const blob = new Blob([JSON.stringify(presets[idx], null, 2)], { type: "application/json" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `${presets[idx].name || "preset"}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
+        setStatus("presetStatus", "エクスポートしました。", "ok");
+      });
+
+      q("importPresetBtn").addEventListener("click", () => q("importFile").click());
+      q("importFile").addEventListener("change", async (ev) => {
+        const file = ev.target.files && ev.target.files[0];
+        if (!file) return;
+        try {
+          const text = await file.text();
+          const json = JSON.parse(text);
+          const p = normalizePreset(json);
+          presets.push(p);
+          saveLocalPresets();
+          renderPresetSelect();
+          q("presetSelect").value = String(presets.length - 1);
+          setStatus("presetStatus", `インポートしました: ${p.name}`, "ok");
+        } catch (e) {
+          setStatus("presetStatus", `インポート失敗: ${e.message}`, "warn");
+        } finally {
+          ev.target.value = "";
+        }
+      });
+
+      q("syncFromServerBtn").addEventListener("click", syncFromServer);
+      q("syncToServerBtn").addEventListener("click", syncOneToServer);
+      q("generateBtn").addEventListener("click", generate);
+    }
+
+    function init() {
+      loadConfig();
+      loadLocalPresets();
+      bindEvents();
+      setStatus("apiStatus", "初期化完了。必要ならAPI Base URLを設定してください。");
+      if (presets.length > 0) {
+        q("presetSelect").value = "0";
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
