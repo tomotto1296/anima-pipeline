@@ -9,7 +9,7 @@ render_with_liquid: false
 - Status: Implemented
 - Version: v2
 - Last Updated: 2026-03-24
-- Target release: v1.5.01 (post-refactor)
+- Target release: v1.5.1 (post-refactor)
 
 ---
 
@@ -218,4 +218,3 @@ The following routes remain for compatibility:
 | 404 | Resource not found |
 | 409 | Named-session save conflict |
 | 500 | Internal error |
-

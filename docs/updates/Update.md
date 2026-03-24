@@ -8,7 +8,7 @@
 - `1.4.699x` 系は `1.4.7` として正式リリース済み
 
 ## 現在バージョン
-- `1.5.03`
+- `1.5.1`
 
 
 ## 直近追記（v1.4.910）
@@ -667,3 +667,15 @@
 - Unified ignore management to `.gitignore` only (removed duplicate `gitignore`).
 - Added `.gitattributes` and normalized line endings for tracked text files.
 - Version bump: `1.5.02` -> `1.5.03`.
+
+### 34) v1.5.1: Release Preparation and Version Sync
+- Bumped application version: `anima_pipeline.py` `__version__` -> `1.5.1`.
+- Added release notes:
+  - `docs/release_notes/release_notes_v1.5.1.md`
+  - Updated `docs/release_notes/README.md` latest index.
+- Synchronized version labels in key docs:
+  - `README.md` / `README_EN.md`
+  - `docs/specs/features.md`
+  - `docs/updates/roadmap.md`
+  - API v2 metadata (`feature_api_v2*.md`) target release
+- Version bump: `1.5.03` -> `1.5.1`.

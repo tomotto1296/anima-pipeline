@@ -9,7 +9,7 @@ render_with_liquid: false
 - Status: Implemented
 - Version: v2
 - Last Updated: 2026-03-24
-- 対象リリース: v1.5.01（リファクタ後）
+- 対象リリース: v1.5.1（リファクタ後）
 
 ---
 
@@ -218,4 +218,3 @@ v1（`feature_api_v1.md`）は v1.4.7 時点の互換資料として残し、現
 | 404 | リソース未検出 |
 | 409 | 名前付きセッション保存時の競合 |
 | 500 | 内部エラー |
-
