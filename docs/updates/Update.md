@@ -8,7 +8,7 @@
 - `1.4.699x` 系は `1.4.7` として正式リリース済み
 
 ## 現在バージョン
-- `1.5.0`
+- `1.5.03`
 
 
 ## 直近追記（v1.4.910）
@@ -657,3 +657,13 @@
   - `.env`
   - `.env.local`
 - `settings/pipeline_config.json` was removed from Git tracking to avoid leaking personal values.
+
+### 33) v1.5.03: Docs/API Governance and Repository Hygiene
+- Updated API documentation strategy:
+  - Added `docs/specs/feature_api_v2.md`
+  - Added `docs/specs/feature_api_v2_en.md`
+  - Clarified API spec versioning policy in `docs/specs/README.md`
+- Aligned public docs to released version `v1.5.01` (README/features).
+- Unified ignore management to `.gitignore` only (removed duplicate `gitignore`).
+- Added `.gitattributes` and normalized line endings for tracked text files.
+- Version bump: `1.5.02` -> `1.5.03`.
