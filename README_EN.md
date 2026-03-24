@@ -1,17 +1,18 @@
-# Anima Pipeline
+﻿# Anima Pipeline
 
 <p align="center">
   <img src="images/hero-ui-and-result.jpg" alt="Anima Pipeline UI + Generated Image" width="800">
   <br>
-  <em>Enter character name → LLM auto-generates Danbooru tags → One-click to stunning Anima images!</em>
+  <em>Enter character name 竊・LLM auto-generates Danbooru tags 竊・One-click to stunning Anima images!</em>
 </p>
 Browser UI + LLM automation for the Anima workflow.
 
-[Back to Japanese README → README.md](README.md)
+[Back to Japanese README 竊・README.md](README.md)
 
-## 🌐 Live Demo / Landing Page
+## 倹 Live Demo / Landing Page
 - [Japanese Site](https://tomotto1296.github.io/anima-pipeline/index.html)
 - [English Version](https://tomotto1296.github.io/anima-pipeline/index_en.html)
+- [Try Demo (Lite)](https://tomotto1296.github.io/anima-pipeline/demo_en.html)
 
 <p align="center">
   <img src="demo/demo-flow.gif" alt="Demo GIF" width="600">
@@ -43,8 +44,8 @@ Browser UI + LLM automation for the Anima workflow.
 `workflows/image_anima_preview.json` is not included in the repository. Please obtain it with the steps below.
 
 1. Launch ComfyUI
-2. Top-right menu → "Browse Templates" → Select **Anima**
-3. Menu → "Save (API Format)" and save it as `image_anima_preview.json`
+2. Top-right menu 竊・"Browse Templates" 竊・Select **Anima**
+3. Menu 竊・"Save (API Format)" and save it as `image_anima_preview.json`
 4. Place it in the `workflows/` folder
 
 > **You can also use your own workflow JSON.** Any JSON exported from ComfyUI using "Save (API Format)" can be placed in `workflows/` and selected from the dropdown.
@@ -53,7 +54,7 @@ Browser UI + LLM automation for the Anima workflow.
 
 **Windows:** Double-click `start_anima_pipeline.bat` (installs `requests` automatically on first run)
 
-> If the batch file opens in VS Code, right-click it and choose "Open with" → "Command Prompt".
+> If the batch file opens in VS Code, right-click it and choose "Open with" 竊・"Command Prompt".
 
 **Other platforms:**
 ```bash
@@ -65,7 +66,7 @@ Open http://localhost:7860 in your browser.
 
 ### 3. Initial Setup
 
-Open "▶ Settings" at the top, check the ComfyUI URL, and click "💾 Save Settings".
+Open "笆ｶ Settings" at the top, check the ComfyUI URL, and click "沈 Save Settings".
 
 If using an LLM, choose platform (LM Studio / Gemini / Custom), then set URL, API key, and model name.
 
@@ -83,17 +84,17 @@ If you want smartphone access or LoRA thumbnails, add this option when starting 
 
 | Status | Feature |
 |---|---|
-| ☑ | JA/EN split fields for character/work name (`name_en` / `series_en`) |
-| ☑ | Positive/Negative preset save and load |
-| ☑ | Preset hierarchy (`chara / scene / camera / quality / lora / composite`) |
-| ☑ | Generation History DB (all-history UI + re-edit) |
-| ☑ | Named sessions (multi-slot save/load with overwrite handling) |
-| ☑ | Setup diagnostics UI (`/diagnostics`) |
-| ☑ | Metadata embedding (PNG/WebP, LoRA hash metadata) |
-| ☑ | LoRA injection (card-grid UI, thumbnails, up to 4 slots) |
-| ☑ | Workflow switching (select from `workflows/`, auto-detect Node IDs) |
-| ☑ | UI language switch (Japanese / English) |
-| ☑ | Logging (save, secret masking, ZIP export) |
+| 笘・| JA/EN split fields for character/work name (`name_en` / `series_en`) |
+| 笘・| Positive/Negative preset save and load |
+| 笘・| Preset hierarchy (`chara / scene / camera / quality / lora / composite`) |
+| 笘・| Generation History DB (all-history UI + re-edit) |
+| 笘・| Named sessions (multi-slot save/load with overwrite handling) |
+| 笘・| Setup diagnostics UI (`/diagnostics`) |
+| 笘・| Metadata embedding (PNG/WebP, LoRA hash metadata) |
+| 笘・| LoRA injection (card-grid UI, thumbnails, up to 4 slots) |
+| 笘・| Workflow switching (select from `workflows/`, auto-detect Node IDs) |
+| 笘・| UI language switch (Japanese / English) |
+| 笘・| Logging (save, secret masking, ZIP export) |
 
 > For the full feature list with versions, see [docs/specs/features.md](docs/specs/features.md).
 
@@ -141,3 +142,4 @@ anima_pipeline/
 - `v1.5.x+`: Advanced phase (LLM scoring, auto-tagging, workflow reconstruction assist)
 
 See [docs/updates/roadmap.md](docs/updates/roadmap.md) for details.
+
