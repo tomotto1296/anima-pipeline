@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>キャラクター生成（プロンプト+画像） 体験版</title>
   <meta name="description" content="Anima Pipeline体験版。ComfyUIへ直接送信する最小デモ。" />
+  <!-- Google Analytics (GA4): configured -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-JPMJG9G12Q"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-JPMJG9G12Q');
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -128,6 +136,26 @@
           <div><label for="height">高さ</label><input id="height" type="number" min="256" step="64" value="1024" /></div>
           <div><label for="count">枚数</label><input id="count" type="number" min="1" max="4" value="1" /></div>
         </div>
+        <p class="desc" style="margin-top:.65rem;">生成パラメータ</p>
+        <div class="grid three" style="margin-top:.6rem;">
+          <div>
+            <label for="seedMode">Seed</label>
+            <select id="seedMode">
+              <option value="random" selected>ランダム（毎回変える）</option>
+              <option value="fixed">固定</option>
+            </select>
+          </div>
+          <div><label for="seed">Seed値</label><input id="seed" type="number" min="0" step="1" value="123456789" /></div>
+          <div><label for="steps">Steps</label><input id="steps" type="number" min="1" max="150" step="1" value="30" /></div>
+        </div>
+        <div class="grid three" style="margin-top:.6rem;">
+          <div><label for="cfg">CFG</label><input id="cfg" type="number" min="1" max="30" step="0.5" value="4" /></div>
+          <div><label for="sampler">Sampler</label><input id="sampler" value="euler" /></div>
+          <div><label for="scheduler">Scheduler</label><input id="scheduler" value="normal" /></div>
+        </div>
+        <div class="grid three" style="margin-top:.6rem;">
+          <div><label for="denoise">Denoise</label><input id="denoise" type="number" min="0" max="1" step="0.05" value="1" /></div>
+        </div>
         <div style="margin-top:.55rem;"><label for="negative">ネガティブプロンプト（本番初期値・固定）</label><input id="negative" readonly /></div>
       </div>
     </section>
@@ -135,15 +163,12 @@
     <section class="section collapsed" id="sec-preset">
       <button type="button" class="stoggle" data-target="box-preset"><span class="tog-left"><span class="num">3</span>キャラプリセット</span><span class="tog-arrow">▼</span></button>
       <div class="box" id="box-preset">
-        <p class="desc">保存時点でJSON化され、`localStorage` に保持されます。デモでは「保存/読込/削除」だけにして混乱を減らしています。</p>
-        <div class="grid two">
+        <p class="desc">保存するとJSONファイルをダウンロードします（保存先はブラウザの既定フォルダ）。</p>
+        <div class="grid">
           <div><label for="presetName">保存名</label><input id="presetName" placeholder="例: ミク_制服" /></div>
-          <div><label for="presetSel">保存済みプリセット</label><select id="presetSel"></select></div>
         </div>
         <div class="btn-row">
           <button id="savePresetBtn">保存</button>
-          <button id="loadPresetBtn" class="secondary">読込</button>
-          <button id="deletePresetBtn" class="secondary">削除</button>
         </div>
         <div id="presetStatus" class="status"></div>
       </div>
@@ -203,7 +228,6 @@
   </div>
 
   <script>
-    const LS_PRESETS = "anima_demo_chara_presets_v3";
     const LS_WORKFLOW = "anima_demo_fixed_workflow_v1";
     const WORKFLOW_URLS = [
       "https://raw.githubusercontent.com/tomotto1296/anima-pipeline/main/workflows/image_anima_preview.json",
@@ -211,6 +235,9 @@
       "./workflows/image_anima_preview.json"
     ];
     const DEFAULT_MISC_TAGS = ["masterpiece", "best quality", "score_9", "score_8", "score_7", "highres", "absurdres"];
+    const ALWAYS_SAFE_TAGS = ["safe", "rating_safe"];
+    const NSFW_BLOCKED_TAGS = new Set(["nsfw","explicit","rating_explicit","questionable","rating_questionable","nude","naked","sex"]);
+    const NEGATIVE_SAFETY_TAGS = ["nsfw", "explicit", "rating_explicit", "rating_questionable"];
     const OUTFIT_OPTIONS = ["school_uniform", "dress", "suit", "kimono", "yukata", "swimsuit", "jacket", "hoodie", "t-shirt"];
     const ACTION_OPTIONS = ["standing", "sitting", "walking", "running", "jumping", "looking_at_viewer", "looking_away", "arms_crossed", "v"];
     const HAIR_OPTIONS = ["black_hair", "brown_hair", "blonde_hair", "red_hair", "green_hair", "blue_hair", "purple_hair", "pink_hair", "white_hair", "silver_hair"];
@@ -220,7 +247,6 @@
     const SERIES_EN_MAP = { "VOCALOID": "vocaloid", "VOICEVOX": "voicevox" };
     const PRESET_TEMPLATE = { series:"", original:false, name:"", name_en:"", series_en:"", gender:"female", age:"unset", outfit:"", action:"", hair:"", hairstyle:"", hairstyle_lm:"", haircolor:"", eyes:"", skin:"", body:"", misc:"", bust:"", face:"", eyestate:"", mouth:"", effect:"", ears:"", tail:"", wings:"", acc:"", item:"", posv:"", posh:"", outfit_cat:"", outfit_color:"", outfit_item:"", outfit_free:"", skinOther:"", hairstyle_free:"", hairother:"", action_free:"", item_free:"" };
 
-    let presets = [];
     let fixedApiPrompt = null;
     let fixedNegDefault = "worst quality, low quality, score_1, score_2, score_3, blurry, jpeg artifacts, sepia";
 
@@ -286,11 +312,11 @@
     async function loadFixedWorkflow(force=false){
       if(!force){
         const cached=jparse(localStorage.getItem(LS_WORKFLOW),null);
-        if(cached&&Array.isArray(cached.nodes)){ fixedApiPrompt=workflowToApi(cached); fixedNegDefault=extractNegativeDefault(fixedApiPrompt); if(!q("negative").value.trim()) q("negative").value=fixedNegDefault; setStatus("cfgStatus","固定Workflowを読み込みました（cache）。","ok"); return; }
+        if(cached&&Array.isArray(cached.nodes)){ fixedApiPrompt=workflowToApi(cached); fixedNegDefault=extractNegativeDefault(fixedApiPrompt); if(!q("negative").value.trim()) q("negative").value=buildNegativePrompt(fixedNegDefault); setStatus("cfgStatus","固定Workflowを読み込みました（cache）。","ok"); return; }
       }
       const wf=await fetchWorkflowFromCandidates();
       if(!wf){ setStatus("cfgStatus","固定Workflowを取得できませんでした。","warn"); return; }
-      fixedApiPrompt=workflowToApi(wf); fixedNegDefault=extractNegativeDefault(fixedApiPrompt); q("negative").value=fixedNegDefault; localStorage.setItem(LS_WORKFLOW,JSON.stringify(wf)); setStatus("cfgStatus","固定Workflowを読み込みました。","ok");
+      fixedApiPrompt=workflowToApi(wf); fixedNegDefault=extractNegativeDefault(fixedApiPrompt); q("negative").value=buildNegativePrompt(fixedNegDefault); localStorage.setItem(LS_WORKFLOW,JSON.stringify(wf)); setStatus("cfgStatus","固定Workflowを読み込みました。","ok");
     }
 
     async function checkComfy(){
@@ -300,9 +326,20 @@
     }
 
     function normalizePreset(src){ const p=src&&typeof src==="object"?src:{}; return { name:String(p.name||"Unnamed"), data:Object.assign({},PRESET_TEMPLATE,p.data||{}), savedAt:String(p.savedAt||nowIso()) }; }
-    function presetLoadLocal(){ const arr=jparse(localStorage.getItem(LS_PRESETS),[]); presets=Array.isArray(arr)?arr.map(normalizePreset):[]; presetRender(); }
-    function presetSaveLocal(){ localStorage.setItem(LS_PRESETS,JSON.stringify(presets)); }
-    function presetRender(){ const sel=q("presetSel"); sel.innerHTML=""; const e=document.createElement("option"); e.value=""; e.textContent="-- 選択 --"; sel.appendChild(e); presets.forEach((p,i)=>{ const o=document.createElement("option"); o.value=String(i); o.textContent=p.name+" ("+p.savedAt.slice(0,19).replace("T"," ")+")"; sel.appendChild(o); }); }
+    function safeFilename(name){
+      return String(name||"character_preset").trim().replace(/[\\/:*?"<>|]/g,"_").replace(/\s+/g,"_");
+    }
+    function downloadJson(filename,obj){
+      const blob = new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+    }
     const splitCsv=(v)=>String(v||"").split(",").map(s=>s.trim()).filter(Boolean);
     function bindChoiceRow(rowId,inputId){
       const row=q(rowId), hid=q(inputId);
@@ -383,12 +420,16 @@
       setSelectedTags("itemButtons",splitCsv(d.item||d.item_free));
       setSelectedTags("miscButtons",splitCsv(d.misc));
     }
-    const selectedPresetIndex=()=>{ const v=q("presetSel").value; if(v==="") return -1; const n=Number(v); return Number.isFinite(n)?n:-1; };
-    function presetSave(){ const d=charFromForm(); const fallback=d.name||d.name_en||"character_preset"; const p=normalizePreset({name:(q("presetName").value||fallback).trim(),data:d,savedAt:nowIso()}); presets.push(p); presetSaveLocal(); presetRender(); q("presetSel").value=String(presets.length-1); setStatus("presetStatus","保存しました: "+p.name,"ok"); }
-    function presetLoad(){ const i=selectedPresetIndex(); if(i<0||!presets[i]){ setStatus("presetStatus","読込対象を選択してください。","warn"); return; } charToForm(presets[i].data); q("presetName").value=presets[i].name; setStatus("presetStatus","読込しました: "+presets[i].name,"ok"); }
-    function presetDelete(){ const i=selectedPresetIndex(); if(i<0||!presets[i]){ setStatus("presetStatus","削除対象を選択してください。","warn"); return; } const name=presets[i].name; presets.splice(i,1); presetSaveLocal(); presetRender(); setStatus("presetStatus","削除しました: "+name,"ok"); }
+    function presetSave(){
+      const d=charFromForm();
+      const fallback=d.name||d.name_en||"character_preset";
+      const p=normalizePreset({name:(q("presetName").value||fallback).trim(),data:d,savedAt:nowIso()});
+      const filename=safeFilename(p.name||fallback)+"_"+p.savedAt.slice(0,19).replace(/[:T]/g,"-")+".json";
+      downloadJson(filename,p);
+      setStatus("presetStatus","JSONをダウンロードしました: "+filename,"ok");
+    }
     function buildPositivePrompt(ch){
-      const tags=[]; DEFAULT_MISC_TAGS.forEach(t=>tags.push(t));
+      const tags=[]; DEFAULT_MISC_TAGS.forEach(t=>tags.push(t)); ALWAYS_SAFE_TAGS.forEach(t=>tags.push(t));
       const addCsv=(v)=>splitCsv(v).forEach(t=>tags.push(t));
       if(ch.original){
         tags.push("original_character");
@@ -399,11 +440,41 @@
       addCsv(ch.outfit); addCsv(ch.action); addCsv(ch.haircolor); addCsv(ch.eyes); addCsv(ch.item); addCsv(ch.misc);
       if(ch.gender==="male") tags.unshift("1boy"); else if(ch.gender==="female") tags.unshift("1girl"); else tags.unshift("1other");
       const uniq=[], seen=new Set();
-      tags.forEach(t=>{ const k=String(t).trim().toLowerCase(); if(!k||seen.has(k)) return; seen.add(k); uniq.push(String(t).trim()); });
+      tags.forEach(t=>{ const raw=String(t).trim(); const k=raw.toLowerCase(); if(!k||NSFW_BLOCKED_TAGS.has(k)||seen.has(k)) return; seen.add(k); uniq.push(raw); });
       return uniq.join(", ");
     }
+    function buildNegativePrompt(baseNegative){
+      const merged = [];
+      splitCsv(baseNegative).forEach(t=>merged.push(t));
+      NEGATIVE_SAFETY_TAGS.forEach(t=>merged.push(t));
+      const uniq = [], seen = new Set();
+      merged.forEach(t=>{ const raw=String(t).trim(); const k=raw.toLowerCase(); if(!k||seen.has(k)) return; seen.add(k); uniq.push(raw); });
+      return uniq.join(", ");
+    }
+    function randomSeedInt(){
+      if(self.crypto&&crypto.getRandomValues){
+        const a=new Uint32Array(1); crypto.getRandomValues(a); return Number(a[0]);
+      }
+      return Math.floor(Math.random()*4294967295);
+    }
+    function getGenerationParams(){
+      const seedMode=q("seedMode").value;
+      const fixedSeed=Math.max(0,Math.floor(Number(q("seed").value)||0));
+      const steps=Math.max(1,Math.min(150,Math.floor(Number(q("steps").value)||30)));
+      const cfg=Math.max(1,Math.min(30,Number(q("cfg").value)||4));
+      const sampler=(q("sampler").value||"euler").trim()||"euler";
+      const scheduler=(q("scheduler").value||"normal").trim()||"normal";
+      const denoise=Math.max(0,Math.min(1,Number(q("denoise").value)||1));
+      const seed=seedMode==="random"?randomSeedInt():fixedSeed;
+      if(seedMode==="random") q("seed").value=String(seed);
+      return { seed, steps, cfg, sampler, scheduler, denoise };
+    }
+    function syncSeedInputState(){
+      const fixed=q("seedMode").value==="fixed";
+      q("seed").disabled=!fixed;
+    }
     const deepClone=(obj)=>JSON.parse(JSON.stringify(obj));
-    function applyInputsToApiPrompt(apiPrompt,positive,negative,width,height,count){
+    function applyInputsToApiPrompt(apiPrompt,positive,negative,width,height,count,gen){
       const p=deepClone(apiPrompt);
       if(!p["11"]||!p["12"]) throw new Error("固定WorkflowのノードID(11/12)が見つかりません");
       p["11"].inputs=p["11"].inputs||{}; p["11"].inputs.text=positive;
@@ -414,6 +485,15 @@
           if("width" in n.inputs) n.inputs.width=width;
           if("height" in n.inputs) n.inputs.height=height;
           if("batch_size" in n.inputs) n.inputs.batch_size=count;
+        }
+        if(["KSampler","KSamplerAdvanced","SamplerCustom"].includes(n.class_type)){
+          if("seed" in n.inputs) n.inputs.seed=gen.seed;
+          if("steps" in n.inputs) n.inputs.steps=gen.steps;
+          if("cfg" in n.inputs) n.inputs.cfg=gen.cfg;
+          if("sampler_name" in n.inputs) n.inputs.sampler_name=gen.sampler;
+          if("scheduler" in n.inputs) n.inputs.scheduler=gen.scheduler;
+          if("denoise" in n.inputs) n.inputs.denoise=gen.denoise;
+          if("noise_seed" in n.inputs) n.inputs.noise_seed=gen.seed;
         }
         if(["SaveImage","SaveImageExtended","Image Save","WAS_Save_Images"].includes(n.class_type)){
           const dt=new Date(); const d=dt.toISOString().slice(0,10); const t=dt.toTimeString().slice(0,8).replace(/:/g,"")+String(dt.getMilliseconds()).padStart(3,"0");
@@ -452,11 +532,12 @@
       const width=Math.max(256,Number(q("width").value)||1024);
       const height=Math.max(256,Number(q("height").value)||1024);
       const count=Math.max(1,Math.min(4,Number(q("count").value)||1));
-      const negative=fixedNegDefault;
+      const gen=getGenerationParams();
+      const negative=buildNegativePrompt(fixedNegDefault);
       const positive=buildPositivePrompt(ch);
-      setStatus("promptStatus","Prompt: "+positive);
+      setStatus("promptStatus","Prompt: "+positive+"\nseed="+gen.seed+", steps="+gen.steps+", cfg="+gen.cfg+", sampler="+gen.sampler+", scheduler="+gen.scheduler+", denoise="+gen.denoise);
       try{
-        const prompt=applyInputsToApiPrompt(fixedApiPrompt,positive,negative,width,height,count);
+        const prompt=applyInputsToApiPrompt(fixedApiPrompt,positive,negative,width,height,count,gen);
         setStatus("genStatus","ComfyUIに送信中...");
         const promptId=await submitComfy(prompt);
         setStatus("genStatus","生成中... prompt_id="+promptId);
@@ -471,8 +552,7 @@
       q("checkComfyBtn").addEventListener("click",checkComfy);
       q("reloadWfBtn").addEventListener("click",()=>loadFixedWorkflow(true));
       q("savePresetBtn").addEventListener("click",presetSave);
-      q("loadPresetBtn").addEventListener("click",presetLoad);
-      q("deletePresetBtn").addEventListener("click",presetDelete);
+      q("seedMode").addEventListener("change",syncSeedInputState);
       q("generateBtn").addEventListener("click",generate);
     }
 
@@ -487,11 +567,11 @@
       bindChoiceRow("ageRow","age");
       bindOriginalToggle();
       setOriginalValue(false);
+      syncSeedInputState();
       initSectionToggles();
       bindEvents();
-      presetLoadLocal();
       await loadFixedWorkflow(false);
-      q("negative").value=fixedNegDefault;
+      q("negative").value=buildNegativePrompt(fixedNegDefault);
     }
     init();
   </script>
