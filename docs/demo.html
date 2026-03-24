@@ -186,18 +186,18 @@
             <label>性別</label>
             <input id="gender" type="hidden" value="female" />
             <div class="choice-row" id="genderRow">
-              <button type="button" class="choice-btn active" data-value="female">female</button>
-              <button type="button" class="choice-btn" data-value="male">male</button>
-              <button type="button" class="choice-btn" data-value="other">other</button>
+              <button type="button" class="choice-btn active" data-value="female">女性</button>
+              <button type="button" class="choice-btn" data-value="male">男性</button>
+              <button type="button" class="choice-btn" data-value="other">その他</button>
             </div>
           </div>
           <div>
             <label>年齢カテゴリ</label>
             <input id="age" type="hidden" value="unset" />
             <div class="choice-row" id="ageRow">
-              <button type="button" class="choice-btn active" data-value="unset">unset</button>
-              <button type="button" class="choice-btn" data-value="adult">adult</button>
-              <button type="button" class="choice-btn" data-value="child">child</button>
+              <button type="button" class="choice-btn active" data-value="unset">未設定</button>
+              <button type="button" class="choice-btn" data-value="adult">大人</button>
+              <button type="button" class="choice-btn" data-value="child">子供</button>
             </div>
           </div>
           <div>
@@ -210,7 +210,11 @@
         </div>
         <div style="margin-top:.65rem;"><label for="hairColorSel">髪色（単一）</label><select id="hairColorSel"></select></div>
         <div style="margin-top:.55rem;"><label for="eyeColorSel">目色（単一）</label><select id="eyeColorSel"></select></div>
-        <div style="margin-top:.55rem;"><label>衣装（複数可）</label><div id="outfitButtons" class="chip-wrap"></div></div>
+        <div style="margin-top:.55rem;"><label>衣装</label>
+          <div id="outfitCatButtons" class="chip-wrap"></div>
+          <div style="margin-top:.45rem;"><select id="outfitColorSel"></select></div>
+          <div style="margin-top:.45rem;"><div id="outfitItemButtons" class="chip-wrap"></div></div>
+        </div>
         <div style="margin-top:.55rem;"><label>小物（複数可）</label><div id="itemButtons" class="chip-wrap"></div></div>
         <div style="margin-top:.55rem;"><label>動作（複数可）</label><div id="actionButtons" class="chip-wrap"></div></div>
         <div style="margin-top:.55rem;"><label>その他タグ（本番デフォルト、複数可）</label><div id="miscButtons" class="chip-wrap"></div></div>
@@ -238,12 +242,32 @@
     const ALWAYS_SAFE_TAGS = ["safe", "rating_safe"];
     const NSFW_BLOCKED_TAGS = new Set(["nsfw","explicit","rating_explicit","questionable","rating_questionable","nude","naked","sex"]);
     const NEGATIVE_SAFETY_TAGS = ["nsfw", "explicit", "rating_explicit", "rating_questionable"];
-    const OUTFIT_OPTIONS = ["school_uniform", "dress", "suit", "kimono", "yukata", "swimsuit", "jacket", "hoodie", "t-shirt"];
+    const OUTFIT_CATEGORY_OPTIONS = [
+      { v:"full", label:"全身" },
+      { v:"upper", label:"上半身" },
+      { v:"lower", label:"下半身" }
+    ];
+    const OUTFIT_ITEMS_BY_CATEGORY = {
+      full: ["school_uniform", "dress", "suit", "kimono", "yukata", "swimsuit"],
+      upper: ["jacket", "hoodie", "t-shirt", "shirt", "blazer"],
+      lower: ["skirt", "shorts", "pants"]
+    };
+    const OUTFIT_COLOR_OPTIONS = [
+      { v:"", label:"色指定なし", bg:"#ffffff", fg:"#2d2640" },
+      { v:"black_clothes", label:"黒", bg:"#2f2f33", fg:"#f4f6ff" },
+      { v:"white_clothes", label:"白", bg:"#f5f7ff", fg:"#2d2640" },
+      { v:"red_clothes", label:"赤", bg:"#b64940", fg:"#fff2f1" },
+      { v:"blue_clothes", label:"青", bg:"#466abf", fg:"#eef3ff" },
+      { v:"green_clothes", label:"緑", bg:"#4f8e5b", fg:"#f3fff4" },
+      { v:"pink_clothes", label:"桃", bg:"#d27ca8", fg:"#fff4fb" }
+    ];
     const ACTION_OPTIONS = ["standing", "sitting", "walking", "running", "jumping", "looking_at_viewer", "looking_away", "arms_crossed", "v"];
     const DISPLAY_LABEL_MAP = {
       school_uniform:"制服", dress:"ドレス", suit:"スーツ", kimono:"着物", yukata:"浴衣", swimsuit:"水着", jacket:"ジャケット", hoodie:"パーカー", "t-shirt":"Tシャツ",
+      shirt:"シャツ", blazer:"ブレザー", skirt:"スカート", shorts:"ショートパンツ", pants:"パンツ",
       standing:"立ち", sitting:"座り", walking:"歩く", running:"走る", jumping:"跳ぶ", looking_at_viewer:"カメラ目線", looking_away:"目線外し", arms_crossed:"腕組み", v:"ピース",
-      sword:"剣", katana:"刀", book:"本", camera:"カメラ", phone:"スマホ", microphone:"マイク", flower:"花", staff:"杖", magic_wand:"魔法の杖", umbrella:"傘"
+      sword:"剣", katana:"刀", book:"本", camera:"カメラ", phone:"スマホ", microphone:"マイク", flower:"花", staff:"杖", magic_wand:"魔法の杖", umbrella:"傘",
+      black_clothes:"黒", white_clothes:"白", red_clothes:"赤", blue_clothes:"青", green_clothes:"緑", pink_clothes:"桃"
     };
     const HAIR_OPTIONS = [
       {v:"black_hair", label:"黒", bg:"#2f2f33", fg:"#f4f6ff"},
@@ -323,6 +347,53 @@
       sel.value=defaultValue||options[0]?.v||"";
       applySelectColor(sel,options);
       sel.addEventListener("change",()=>applySelectColor(sel,options));
+    }
+    function selectedSingleTag(containerId){
+      const b=q(containerId)?.querySelector(".chip-btn.active");
+      return b?String(b.dataset.tag||""):"";
+    }
+    function initOutfitUi(){
+      const catWrap=q("outfitCatButtons");
+      if(!catWrap) return;
+      catWrap.innerHTML="";
+      OUTFIT_CATEGORY_OPTIONS.forEach((o,idx)=>{
+        const b=document.createElement("button");
+        b.type="button";
+        b.className="chip-btn single"+(idx===0?" active":"");
+        b.dataset.tag=o.v;
+        b.textContent=o.label;
+        b.addEventListener("click",()=>{
+          catWrap.querySelectorAll(".chip-btn").forEach(x=>x.classList.remove("active"));
+          b.classList.add("active");
+          renderOutfitItems(o.v, []);
+        });
+        catWrap.appendChild(b);
+      });
+      initColorSelect("outfitColorSel",OUTFIT_COLOR_OPTIONS,"");
+      renderOutfitItems("full",["school_uniform"]);
+    }
+    function renderOutfitItems(category, selected=[]){
+      const options=OUTFIT_ITEMS_BY_CATEGORY[category]||OUTFIT_ITEMS_BY_CATEGORY.full;
+      createTagButtons("outfitItemButtons",options,false,selected);
+    }
+    function getOutfitTags(){
+      const tags=[];
+      const color=q("outfitColorSel")?.value||"";
+      if(color) tags.push(color);
+      selectedTags("outfitItemButtons").forEach(t=>tags.push(t));
+      return tags;
+    }
+    function applyOutfitFromCsv(outfitCsv){
+      const tags=splitCsv(outfitCsv);
+      const colorSet=new Set(OUTFIT_COLOR_OPTIONS.map(o=>o.v).filter(Boolean));
+      const color=tags.find(t=>colorSet.has(t))||"";
+      const items=tags.filter(t=>!colorSet.has(t));
+      const score=(cat)=>items.filter(t=>(OUTFIT_ITEMS_BY_CATEGORY[cat]||[]).includes(t)).length;
+      const category=score("upper")>score("full") && score("upper")>=score("lower") ? "upper" : (score("lower")>score("full") ? "lower" : "full");
+      setSelectedTags("outfitCatButtons",[category],true);
+      renderOutfitItems(category,items);
+      q("outfitColorSel").value=color;
+      applySelectColor(q("outfitColorSel"),OUTFIT_COLOR_OPTIONS);
     }
 
     async function fetchWorkflowFromCandidates(){
@@ -450,7 +521,7 @@
         d.series="original";
         d.series_en="original";
       }
-      const outfit=selectedTags("outfitButtons"), action=selectedTags("actionButtons"), item=selectedTags("itemButtons"), misc=selectedTags("miscButtons");
+      const outfit=getOutfitTags(), action=selectedTags("actionButtons"), item=selectedTags("itemButtons"), misc=selectedTags("miscButtons");
       d.outfit=outfit.join(", "); d.outfit_free=d.outfit; d.action=action.join(", "); d.haircolor=q("hairColorSel").value||""; d.eyes=q("eyeColorSel").value||""; d.item=item.join(", "); d.misc=misc.join(", ");
       return d;
     }
@@ -460,7 +531,7 @@
       setChoiceValue("genderRow","gender",d.gender||"female");
       setChoiceValue("ageRow","age",d.age||"unset");
       setOriginalValue(Boolean(d.original));
-      setSelectedTags("outfitButtons",splitCsv(d.outfit||d.outfit_free));
+      applyOutfitFromCsv(d.outfit||d.outfit_free);
       setSelectedTags("actionButtons",splitCsv(d.action||d.action_free));
       q("hairColorSel").value=d.haircolor||"black_hair";
       q("eyeColorSel").value=d.eyes||"blue_eyes";
@@ -606,7 +677,7 @@
     }
 
     async function init(){
-      createTagButtons("outfitButtons",OUTFIT_OPTIONS,false,["school_uniform"]);
+      initOutfitUi();
       createTagButtons("actionButtons",ACTION_OPTIONS,false,["standing"]);
       initColorSelect("hairColorSel",HAIR_OPTIONS,"black_hair");
       initColorSelect("eyeColorSel",EYE_OPTIONS,"blue_eyes");

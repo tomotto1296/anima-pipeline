@@ -101,10 +101,10 @@
 </head>
 <body>
   <div class="quick-links">
-    <a href="#top">Topに戻る</a>
-    <a href="./demo.html">日本語</a>
-    <a href="https://tomotto1296.github.io/anima-pipeline/" target="_blank" rel="noopener noreferrer">プロジェクトに戻る</a>
-    <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" rel="noopener noreferrer">ダウンロードはこちら</a>
+    <a href="#top">Back to Top</a>
+    <a href="./demo.html">Japanese</a>
+    <a href="https://tomotto1296.github.io/anima-pipeline/" target="_blank" rel="noopener noreferrer">Back to Project</a>
+    <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" rel="noopener noreferrer">Download</a>
   </div>
   <div id="top"></div>
   <div class="container">
@@ -112,40 +112,40 @@
     <h2>Character Generation (Prompt + Image) Trial</h2>
 
     <section class="section collapsed" id="sec-config">
-      <button type="button" class="stoggle" data-target="box-config"><span class="tog-left"><span class="num">1</span>設定</span><span class="tog-arrow">▼</span></button>
+      <button type="button" class="stoggle" data-target="box-config"><span class="tog-left"><span class="num">1</span>Settings</span><span class="tog-arrow">▼</span></button>
       <div class="box" id="box-config">
-        <p class="desc">ワークフローは固定 (`image_anima_preview.json`) です。JSONカスタマイズは不可にしています。</p>
+        <p class="desc">Workflow is fixed to `image_anima_preview.json`. JSON customization is disabled.</p>
         <div class="grid two">
           <div><label for="comfyUrl">ComfyUI URL</label><input id="comfyUrl" value="http://127.0.0.1:8188" /></div>
           <div><label>Workflow</label><input value="workflows/image_anima_preview.json (fixed)" readonly /></div>
         </div>
         <div class="btn-row">
-          <button id="checkComfyBtn" class="secondary">接続チェック</button>
-          <button id="reloadWfBtn" class="secondary">Workflow再読込</button>
+          <button id="checkComfyBtn" class="secondary">Check Connection</button>
+          <button id="reloadWfBtn" class="secondary">Reload Workflow</button>
         </div>
-        <div class="hint">GitHub Pages (HTTPS) から `http://127.0.0.1:8188` へはブラウザ制約で失敗します。`https`で公開したComfyUIか同一LAN内HTTPページで使ってください。</div>
+        <div class="hint">From GitHub Pages (HTTPS), requests to `http://127.0.0.1:8188` are blocked by browser rules. Use ComfyUI over HTTPS or run this page from the same local network over HTTP.</div>
         <div id="cfgStatus" class="status"></div>
       </div>
     </section>
 
     <section class="section collapsed" id="sec-image">
-      <button type="button" class="stoggle" data-target="box-image"><span class="tog-left"><span class="num">2</span>画像設定</span><span class="tog-arrow">▼</span></button>
+      <button type="button" class="stoggle" data-target="box-image"><span class="tog-left"><span class="num">2</span>Image Settings</span><span class="tog-arrow">▼</span></button>
       <div class="box" id="box-image">
         <div class="grid three">
-          <div><label for="width">幅</label><input id="width" type="number" min="256" step="64" value="1024" /></div>
-          <div><label for="height">高さ</label><input id="height" type="number" min="256" step="64" value="1024" /></div>
-          <div><label for="count">枚数</label><input id="count" type="number" min="1" max="4" value="1" /></div>
+          <div><label for="width">Width</label><input id="width" type="number" min="256" step="64" value="1024" /></div>
+          <div><label for="height">Height</label><input id="height" type="number" min="256" step="64" value="1024" /></div>
+          <div><label for="count">Images</label><input id="count" type="number" min="1" max="4" value="1" /></div>
         </div>
         <p class="desc" style="margin-top:.65rem;">Generation Parameters</p>
         <div class="grid three" style="margin-top:.6rem;">
           <div>
             <label for="seedMode">Seed</label>
             <select id="seedMode">
-              <option value="random" selected>ランダム（毎回変える）</option>
-              <option value="fixed">固定</option>
+              <option value="random" selected>Random (change every run)</option>
+              <option value="fixed">Fixed</option>
             </select>
           </div>
-          <div><label for="seed">Seed値</label><input id="seed" type="number" min="0" step="1" value="123456789" /></div>
+          <div><label for="seed">Seed Value</label><input id="seed" type="number" min="0" step="1" value="123456789" /></div>
           <div><label for="steps">Steps</label><input id="steps" type="number" min="1" max="150" step="1" value="30" /></div>
         </div>
         <div class="grid three" style="margin-top:.6rem;">
@@ -156,34 +156,34 @@
         <div class="grid three" style="margin-top:.6rem;">
           <div><label for="denoise">Denoise</label><input id="denoise" type="number" min="0" max="1" step="0.05" value="1" /></div>
         </div>
-        <div style="margin-top:.55rem;"><label for="negative">ネガティブプロンプト（本番初期値・固定）</label><input id="negative" readonly /></div>
+        <div style="margin-top:.55rem;"><label for="negative">Negative Prompt (fixed default)</label><input id="negative" readonly /></div>
       </div>
     </section>
 
     <section class="section collapsed" id="sec-preset">
-      <button type="button" class="stoggle" data-target="box-preset"><span class="tog-left"><span class="num">3</span>キャラプリセット</span><span class="tog-arrow">▼</span></button>
+      <button type="button" class="stoggle" data-target="box-preset"><span class="tog-left"><span class="num">3</span>Character Preset</span><span class="tog-arrow">▼</span></button>
       <div class="box" id="box-preset">
         <p class="desc">Save downloads a JSON file to your browser default folder.</p>
         <div class="grid">
           <div><label for="presetName">Name</label><input id="presetName" placeholder="e.g. miku_uniform" /></div>
         </div>
         <div class="btn-row">
-          <button id="savePresetBtn">保存</button>
+          <button id="savePresetBtn">Save</button>
         </div>
         <div id="presetStatus" class="status"></div>
       </div>
     </section>
 
     <section class="section" id="sec-chara">
-      <button type="button" class="stoggle" data-target="box-chara"><span class="tog-left"><span class="num">4</span>キャラ入力</span><span class="tog-arrow">▼</span></button>
+      <button type="button" class="stoggle" data-target="box-chara"><span class="tog-left"><span class="num">4</span>Character Input</span><span class="tog-arrow">▼</span></button>
       <div class="box" id="box-chara">
         <div class="grid two">
-          <div><label for="name">キャラ名</label><select id="name" class="inp-ja"><option value="初音ミク">初音ミク</option><option value="ずんだもん">ずんだもん</option><option value="original">original</option></select></div>
-          <div><label for="series">作品名</label><select id="series" class="inp-en"><option value="VOCALOID">VOCALOID</option><option value="VOICEVOX">VOICEVOX</option><option value="original">original</option></select></div>
+          <div><label for="name">Character Name</label><select id="name" class="inp-ja"><option value="初音ミク">Hatsune Miku</option><option value="ずんだもん">Zundamon</option><option value="original">original</option></select></div>
+          <div><label for="series">Series</label><select id="series" class="inp-en"><option value="VOCALOID">VOCALOID</option><option value="VOICEVOX">VOICEVOX</option><option value="original">original</option></select></div>
         </div>
         <div class="grid three" style="margin-top:.55rem;">
           <div>
-            <label>性別</label>
+            <label>Gender</label>
             <input id="gender" type="hidden" value="female" />
             <div class="choice-row" id="genderRow">
               <button type="button" class="choice-btn active" data-value="female">female</button>
@@ -192,7 +192,7 @@
             </div>
           </div>
           <div>
-            <label>年齢カテゴリ</label>
+            <label>Age Category</label>
             <input id="age" type="hidden" value="unset" />
             <div class="choice-row" id="ageRow">
               <button type="button" class="choice-btn active" data-value="unset">unset</button>
@@ -201,25 +201,25 @@
             </div>
           </div>
           <div>
-            <label>オリジナル</label>
+            <label>Original</label>
             <input id="original" type="hidden" value="false" />
             <div class="choice-row">
-              <button type="button" class="choice-btn" id="origBtn">オリジナル</button>
+              <button type="button" class="choice-btn" id="origBtn">Original</button>
             </div>
           </div>
         </div>
         <div style="margin-top:.65rem;"><label for="hairColorSel">Hair Color</label><select id="hairColorSel"></select></div>
         <div style="margin-top:.55rem;"><label for="eyeColorSel">Eye Color</label><select id="eyeColorSel"></select></div>
-        <div style="margin-top:.55rem;"><label>衣装（複数可）</label><div id="outfitButtons" class="chip-wrap"></div></div>
-        <div style="margin-top:.55rem;"><label>小物（複数可）</label><div id="itemButtons" class="chip-wrap"></div></div>
-        <div style="margin-top:.55rem;"><label>動作（複数可）</label><div id="actionButtons" class="chip-wrap"></div></div>
-        <div style="margin-top:.55rem;"><label>その他タグ（本番デフォルト、複数可）</label><div id="miscButtons" class="chip-wrap"></div></div>
+        <div style="margin-top:.55rem;"><label>Outfit (multi)</label><div id="outfitButtons" class="chip-wrap"></div></div>
+        <div style="margin-top:.55rem;"><label>Items (multi)</label><div id="itemButtons" class="chip-wrap"></div></div>
+        <div style="margin-top:.55rem;"><label>Action (multi)</label><div id="actionButtons" class="chip-wrap"></div></div>
+        <div style="margin-top:.55rem;"><label>Other Tags (default + multi)</label><div id="miscButtons" class="chip-wrap"></div></div>
       </div>
     </section>
 
     <section class="section" id="sec-generate">
       <div class="box">
-        <div class="btn-row"><button id="generateBtn">ComfyUIに送信して生成</button></div>
+        <div class="btn-row"><button id="generateBtn">Send to ComfyUI and Generate</button></div>
         <div id="genStatus" class="status"></div>
         <div id="promptStatus" class="status"></div>
         <div id="images" class="images"></div>
@@ -354,17 +354,17 @@
     async function loadFixedWorkflow(force=false){
       if(!force){
         const cached=jparse(localStorage.getItem(LS_WORKFLOW),null);
-        if(cached&&Array.isArray(cached.nodes)){ fixedApiPrompt=workflowToApi(cached); fixedNegDefault=extractNegativeDefault(fixedApiPrompt); if(!q("negative").value.trim()) q("negative").value=buildNegativePrompt(fixedNegDefault); setStatus("cfgStatus","固定Workflowを読み込みました（cache）。","ok"); return; }
+        if(cached&&Array.isArray(cached.nodes)){ fixedApiPrompt=workflowToApi(cached); fixedNegDefault=extractNegativeDefault(fixedApiPrompt); if(!q("negative").value.trim()) q("negative").value=buildNegativePrompt(fixedNegDefault); setStatus("cfgStatus","Loaded fixed workflow (cache).","ok"); return; }
       }
       const wf=await fetchWorkflowFromCandidates();
-      if(!wf){ setStatus("cfgStatus","固定Workflowを取得できませんでした。","warn"); return; }
-      fixedApiPrompt=workflowToApi(wf); fixedNegDefault=extractNegativeDefault(fixedApiPrompt); q("negative").value=buildNegativePrompt(fixedNegDefault); localStorage.setItem(LS_WORKFLOW,JSON.stringify(wf)); setStatus("cfgStatus","固定Workflowを読み込みました。","ok");
+      if(!wf){ setStatus("cfgStatus","Failed to fetch fixed workflow.","warn"); return; }
+      fixedApiPrompt=workflowToApi(wf); fixedNegDefault=extractNegativeDefault(fixedApiPrompt); q("negative").value=buildNegativePrompt(fixedNegDefault); localStorage.setItem(LS_WORKFLOW,JSON.stringify(wf)); setStatus("cfgStatus","Loaded fixed workflow.","ok");
     }
 
     async function checkComfy(){
-      setStatus("cfgStatus","接続確認中...");
-      try{ const r=await fetch(comfyBase()+"/system_stats",{cache:"no-store"}); if(!r.ok) throw new Error("HTTP "+r.status); await r.json(); setStatus("cfgStatus","ComfyUI接続OK","ok"); }
-      catch(e){ setStatus("cfgStatus","接続失敗: "+e.message,"warn"); }
+      setStatus("cfgStatus","Checking connection...");
+      try{ const r=await fetch(comfyBase()+"/system_stats",{cache:"no-store"}); if(!r.ok) throw new Error("HTTP "+r.status); await r.json(); setStatus("cfgStatus","ComfyUI connection OK","ok"); }
+      catch(e){ setStatus("cfgStatus","Connection failed: "+e.message,"warn"); }
     }
 
     function normalizePreset(src){ const p=src&&typeof src==="object"?src:{}; return { name:String(p.name||"Unnamed"), data:Object.assign({},PRESET_TEMPLATE,p.data||{}), savedAt:String(p.savedAt||nowIso()) }; }
@@ -520,7 +520,7 @@
     const deepClone=(obj)=>JSON.parse(JSON.stringify(obj));
     function applyInputsToApiPrompt(apiPrompt,positive,negative,width,height,count,gen){
       const p=deepClone(apiPrompt);
-      if(!p["11"]||!p["12"]) throw new Error("固定WorkflowのノードID(11/12)が見つかりません");
+      if(!p["11"]||!p["12"]) throw new Error("Required workflow node IDs (11/12) were not found.");
       p["11"].inputs=p["11"].inputs||{}; p["11"].inputs.text=positive;
       p["12"].inputs=p["12"].inputs||{}; p["12"].inputs.text=negative;
       Object.keys(p).forEach(id=>{
@@ -549,7 +549,7 @@
     async function submitComfy(apiPrompt){
       const body={ prompt:apiPrompt, client_id:(self.crypto&&crypto.randomUUID)?crypto.randomUUID():("demo-"+Date.now()) };
       const r=await fetch(comfyBase()+"/prompt",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
-      const d=await r.json(); if(!r.ok) throw new Error(d.error||("HTTP "+r.status)); if(!d.prompt_id) throw new Error("prompt_id が返ってきませんでした"); return d.prompt_id;
+      const d=await r.json(); if(!r.ok) throw new Error(d.error||("HTTP "+r.status)); if(!d.prompt_id) throw new Error("prompt_id was not returned."); return d.prompt_id;
     }
     function comfyViewUrl(base,img){
       const filename=encodeURIComponent(String(img.filename||"")); const sub=encodeURIComponent(String(img.subfolder||"")); const type=encodeURIComponent(String(img.type||"output"));
@@ -567,12 +567,12 @@
         Object.keys(outputs).forEach(nodeId=>{ const out=outputs[nodeId]||{}; const imgs=Array.isArray(out.images)?out.images:[]; imgs.forEach(img=>urls.push(comfyViewUrl(base,img))); });
         return urls;
       }
-      throw new Error("履歴ポーリングがタイムアウトしました");
+      throw new Error("History polling timed out.");
     }
     async function generate(){
-      q("images").innerHTML=""; setStatus("genStatus","生成準備中..."); setStatus("promptStatus","");
-      if(!fixedApiPrompt){ setStatus("genStatus","固定Workflowが未読込です。","warn"); return; }
-      const ch=charFromForm(); if(!ch.name&&!ch.name_en){ setStatus("genStatus","キャラ名を入力してください。","warn"); return; }
+      q("images").innerHTML=""; setStatus("genStatus","Preparing generation..."); setStatus("promptStatus","");
+      if(!fixedApiPrompt){ setStatus("genStatus","Fixed workflow is not loaded.","warn"); return; }
+      const ch=charFromForm(); if(!ch.name&&!ch.name_en){ setStatus("genStatus","Please select a character name.","warn"); return; }
       const width=Math.max(256,Number(q("width").value)||1024);
       const height=Math.max(256,Number(q("height").value)||1024);
       const count=Math.max(1,Math.min(4,Number(q("count").value)||1));
@@ -582,14 +582,14 @@
       setStatus("promptStatus","Prompt: "+positive+"\nseed="+gen.seed+", steps="+gen.steps+", cfg="+gen.cfg+", sampler="+gen.sampler+", scheduler="+gen.scheduler+", denoise="+gen.denoise);
       try{
         const prompt=applyInputsToApiPrompt(fixedApiPrompt,positive,negative,width,height,count,gen);
-        setStatus("genStatus","ComfyUIに送信中...");
+        setStatus("genStatus","Sending to ComfyUI...");
         const promptId=await submitComfy(prompt);
-        setStatus("genStatus","生成中... prompt_id="+promptId);
+        setStatus("genStatus","Generating... prompt_id="+promptId);
         const urls=await pollHistory(promptId);
         const box=q("images"); box.innerHTML="";
         urls.forEach((u,i)=>{ const img=document.createElement("img"); img.src=u; img.alt="generated_"+(i+1); img.loading="lazy"; box.appendChild(img); });
-        setStatus("genStatus","完了: "+urls.length+" 枚","ok");
-      }catch(e){ setStatus("genStatus","生成エラー: "+e.message,"warn"); }
+        setStatus("genStatus","Done: "+urls.length+" image(s)","ok");
+      }catch(e){ setStatus("genStatus","Generation error: "+e.message,"warn"); }
     }
 
     function bindEvents(){
