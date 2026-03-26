@@ -228,6 +228,17 @@ Recommended to exclude:
 - `logs/`, `history/`, `__pycache__/`, `.tmp*`
 - personal/local `settings/pipeline_config.json`
 
+For users already on `v1.5.11`, it is recommended to ship an upgrade ZIP alongside the minimal ZIP.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/build_release_zips.ps1 -Version 1.5.12 -BaseVersion 1.5.11
+```
+
+This generates both files in `dist/`:
+
+- `anima-pipeline_v<version>_minimal.zip`
+- `anima-pipeline_v<version>_upgrade_from_v1.5.11.zip`
+
 ---
 
 ## 11. Quick Checks

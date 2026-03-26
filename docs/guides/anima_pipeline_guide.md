@@ -231,6 +231,17 @@ start_anima_pipeline.bat (または任意の起動手段)
 - `logs/`, `history/`, `__pycache__/`, `.tmp*`
 - 個人環境の `settings/pipeline_config.json`
 
+`v1.5.11` 以降の既存ユーザー向けには、差分上書き用ZIPの併配布を推奨します。
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/build_release_zips.ps1 -Version 1.5.12 -BaseVersion 1.5.11
+```
+
+上記で次の2つが `dist/` に生成されます。
+
+- `anima-pipeline_v<version>_minimal.zip`
+- `anima-pipeline_v<version>_upgrade_from_v1.5.11.zip`
+
 ---
 
 ## 11. クイックチェック
