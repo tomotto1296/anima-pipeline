@@ -15,6 +15,9 @@
   - README requirements clarified (bundled Python behavior).
   - User guides' requirements updated for portable usage and bundled workflows.
 - Release notes added: `docs/release_notes/release_notes_v1.5.11.md`.
+- Release notes updated with Japanese details for reflected changes and compatibility.
+- Prepared minimal package zip for v1.5.11 release asset:
+  - `dist/anima-pipeline_v1.5.11_minimal.zip`
 
 ## 逶ｮ逧・縺薙・繝峨く繝･繝｡繝ｳ繝医・縲～v1.4.6` 莉･髯阪・螟画峩蜀・ｮｹ繧呈ｬ｡縺ｮ髢狗匱閠・∈蠑輔″邯吶＄縺溘ａ縺ｮ隕∫ｴ・〒縺吶・
 ## 繝舌・繧ｸ繝ｧ繝ｳ驕狗畑繝ｫ繝ｼ繝ｫ
