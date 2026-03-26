@@ -325,17 +325,17 @@
   <div class="inner">
     <div class="sec-label">Requirements</div>
     <h2 class="sec-title">必要環境</h2>
-    <p class="sec-sub">最低構成はPythonとComfyUIのみ。LLMは任意です。</p>
+    <p class="sec-sub">最低構成はComfyUIと、システムPythonまたは同梱Pythonのいずれか。LLMは任意です。</p>
     <div class="req-grid">
       <div class="req-card">
         <div class="req-name">Python</div>
-        <div class="req-ver">3.10 以上</div>
-        <div class="req-desc"><code>pip install requests</code> で依存を導入し、すぐ実行できます。</div>
+        <div class="req-ver">3.10+（または同梱）</div>
+        <div class="req-desc"><code>python_embeded/python.exe</code> が同梱されている構成では、システムPythonは不要です。</div>
       </div>
       <div class="req-card">
         <div class="req-name">ComfyUI</div>
-        <div class="req-ver">0.16.4 以上</div>
-        <div class="req-desc">Animaワークフローが動作する環境。スマホ操作時は <code>--listen</code> を推奨。</div>
+        <div class="req-ver">0.16.4+</div>
+        <div class="req-desc">Animaワークフローが動作する環境。Anima1/2 × LoRAあり/なし の4テンプレートを同梱。スマホ操作時は <code>--listen --enable-cors-header</code> を推奨。</div>
       </div>
       <div class="req-card">
         <div class="req-name">LLMサービス</div>

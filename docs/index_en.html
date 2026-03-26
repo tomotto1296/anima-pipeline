@@ -325,17 +325,17 @@
   <div class="inner">
     <div class="sec-label">Requirements</div>
     <h2 class="sec-title">What you need</h2>
-    <p class="sec-sub">Minimum setup is Python and ComfyUI. LLM is optional.</p>
+    <p class="sec-sub">Minimum setup is ComfyUI plus either system Python or bundled Python. LLM is optional.</p>
     <div class="req-grid">
       <div class="req-card">
         <div class="req-name">Python</div>
-        <div class="req-ver">3.10 or later</div>
-        <div class="req-desc">Only <code>pip install requests</code> needed. No frameworks, minimal dependencies.</div>
+        <div class="req-ver">3.10+ (or bundled)</div>
+        <div class="req-desc">If <code>python_embeded/python.exe</code> is bundled, system Python is not required.</div>
       </div>
       <div class="req-card">
         <div class="req-name">ComfyUI</div>
         <div class="req-ver">0.16.4 or later</div>
-        <div class="req-desc">Requires a working Anima workflow. Add <code>--listen</code> flag for mobile access.</div>
+        <div class="req-desc">Requires a working Anima workflow. Four workflow templates are bundled (Anima1/2 with/without LoRA x4). Add <code>--listen --enable-cors-header</code> for mobile access.</div>
       </div>
       <div class="req-card">
         <div class="req-name">LLM service</div>
@@ -392,5 +392,4 @@
 
 </body>
 </html>
-
 
