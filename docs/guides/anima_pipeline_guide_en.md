@@ -12,10 +12,10 @@ After refactoring, `anima_pipeline.py` remains the entry point, while most logic
 
 | Item | Recommended |
 |------|-------------|
-| Python | 3.10+ |
+| Python | 3.10+ (launcher prioritizes `python_embeded/python.exe` when present) |
 | Dependency | `requests` (and `Pillow` recommended for history thumbnail generation) |
-| ComfyUI | Running (default: `http://127.0.0.1:8188`) |
-| Workflow JSON | At least one file in `workflows/` |
+| ComfyUI | Running (default: `http://127.0.0.1:8188`; `--listen --enable-cors-header` recommended for mobile access) |
+| Workflow JSON | At least one file in `workflows/` (four templates are bundled: Anima1/Anima2 with/without LoRA x4) |
 
 Install minimum dependencies:
 

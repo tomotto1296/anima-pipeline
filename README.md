@@ -22,7 +22,7 @@
 
 ## 現在のバージョンとドキュメント
 
-- 現在バージョン: `v1.5.1`
+- 現在バージョン: `v1.5.11`
 - 実装済み機能一覧: [docs/specs/features.md](docs/specs/features.md)
 - ロードマップ: [docs/updates/roadmap.md](docs/updates/roadmap.md)
 - 更新履歴: [docs/updates/Update.md](docs/updates/Update.md)

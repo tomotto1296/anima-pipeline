@@ -22,7 +22,7 @@ Browser UI + LLM automation for the Anima workflow.
 
 ## Current Version & Docs
 
-- Current version: `v1.5.1`
+- Current version: `v1.5.11`
 - Implemented features: [docs/specs/features.md](docs/specs/features.md)
 - Roadmap: [docs/updates/roadmap.md](docs/updates/roadmap.md)
 - Update log: [docs/updates/Update.md](docs/updates/Update.md)
@@ -32,7 +32,11 @@ Browser UI + LLM automation for the Anima workflow.
 ## Requirements
 
 - Python 3.10 or later
-- ComfyUI 0.16.4 or later + Anima workflow
+  - If `python_embeded/python.exe` exists, launcher uses it first (Portable-style).
+- ComfyUI (Anima workflow available)
+  - Recommended launch option: `--listen --enable-cors-header` when using mobile clients.
+- Workflow JSON
+  - Four templates are bundled by default (Anima1/Anima2, with/without LoRA x4).
 - LLM server (LM Studio / Gemini API, etc.) *Optional*
 
 ---
@@ -41,14 +45,21 @@ Browser UI + LLM automation for the Anima workflow.
 
 ### 1. Prepare the Workflow JSON
 
-`workflows/image_anima_preview.json` is not included in the repository. Please obtain it with the steps below.
+The repository includes four ready-to-use workflow JSON files:
+
+- `image_anima_preview.json` (Anima1, no LoRA)
+- `image_anima_preview_Lora4.json` (Anima1, LoRA x4)
+- `image_anima2_preview.json` (Anima2, no LoRA)
+- `image_anima2_preview_Lora4.json` (Anima2, LoRA x4)
+
+You can use these as-is, or export your own workflow from ComfyUI:
 
 1. Launch ComfyUI
 2. Top-right menu 竊・"Browse Templates" 竊・Select **Anima**
 3. Menu 竊・"Save (API Format)" and save it as `image_anima_preview.json`
 4. Place it in the `workflows/` folder
 
-> **You can also use your own workflow JSON.** Any JSON exported from ComfyUI using "Save (API Format)" can be placed in `workflows/` and selected from the dropdown.
+> Any JSON exported from ComfyUI using "Save (API Format)" can be placed in `workflows/` and selected from the dropdown.
 
 ### 2. Launch
 
@@ -142,4 +153,3 @@ anima_pipeline/
 - `v1.5.x+`: Advanced phase (LLM scoring, auto-tagging, workflow reconstruction assist)
 
 See [docs/updates/roadmap.md](docs/updates/roadmap.md) for details.
-

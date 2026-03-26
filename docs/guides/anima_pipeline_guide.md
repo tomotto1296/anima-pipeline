@@ -12,10 +12,10 @@ Anima Pipeline はブラウザUIから入力した情報を元に、必要に応
 
 | 項目 | 推奨 |
 |------|------|
-| Python | 3.10 以上 |
+| Python | 3.10 以上（`python_embeded/python.exe` がある場合はランチャーが優先使用） |
 | 依存ライブラリ | `requests`（+ 履歴サムネ利用時は `Pillow` 推奨） |
-| ComfyUI | 起動済み（既定: `http://127.0.0.1:8188`） |
-| ワークフローJSON | `workflows/` に最低1つ |
+| ComfyUI | 起動済み（既定: `http://127.0.0.1:8188`、モバイル利用時は `--listen --enable-cors-header` 推奨） |
+| ワークフローJSON | `workflows/` に最低1つ（同梱4種: Anima1/Anima2 + LoRAあり/なし） |
 
 `requirements.txt` の最小依存:
 
