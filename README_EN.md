@@ -31,7 +31,7 @@ Browser UI + LLM automation for the Anima workflow.
 
 ## Requirements
 
-- Python 3.10 or later
+- Python 3.10 or later (not required when bundled `python_embeded/python.exe` is available)
   - If `python_embeded/python.exe` exists, launcher uses it first (Portable-style).
 - ComfyUI (Anima workflow available)
   - Recommended launch option: `--listen --enable-cors-header` when using mobile clients.
@@ -153,3 +153,4 @@ anima_pipeline/
 - `v1.5.x+`: Advanced phase (LLM scoring, auto-tagging, workflow reconstruction assist)
 
 See [docs/updates/roadmap.md](docs/updates/roadmap.md) for details.
+

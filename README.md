@@ -31,7 +31,7 @@
 
 ## 必要なもの
 
-- Python 3.10以上
+- Python 3.10以上（同梱 `python_embeded/python.exe` がある場合はシステムPython不要）
 - ComfyUI 0.16.4以上 + Animaワークフロー
 - LLMサーバー（LM Studio / Gemini API など）※オプション
 
