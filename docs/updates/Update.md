@@ -1,148 +1,194 @@
 ﻿# Update Log (from v1.4.6)
 
-## 2026-03-26 - v1.5.11
+## 目的
+このドキュメントは、`v1.4.6` 以降の変更内容を次の開発者へ引き継ぐための要約です。
 
-- Release version updated to `v1.5.11`.
-- Launcher updated for portable-first behavior:
-  - Prefer bundled `python_embeded/python.exe`.
-  - Fallback to system `python` / `py` only when bundled Python is unavailable.
-- Workflow bundle policy updated to include four templates:
-  - `image_anima_preview.json`
-  - `image_anima_preview_Lora4.json`
-  - `image_anima2_preview.json`
-  - `image_anima2_preview_Lora4.json`
-- Documentation updated:
-  - README requirements clarified (bundled Python behavior).
-  - User guides' requirements updated for portable usage and bundled workflows.
-- Release notes added: `docs/release_notes/release_notes_v1.5.11.md`.
-- Release notes updated with Japanese details for reflected changes and compatibility.
-- Prepared minimal package zip for v1.5.11 release asset:
-  - `dist/anima-pipeline_v1.5.11_minimal.zip`
+## バージョン運用ルール
+- 細かい修正ごとに小数点以下を増分（例: `1.4.7 -> 1.4.71 -> 1.4.72`）
+- `1.4.699x` 系は `1.4.7` として正式リリース済み
 
-## 逶ｮ逧・縺薙・繝峨く繝･繝｡繝ｳ繝医・縲～v1.4.6` 莉･髯阪・螟画峩蜀・ｮｹ繧呈ｬ｡縺ｮ髢狗匱閠・∈蠑輔″邯吶＄縺溘ａ縺ｮ隕∫ｴ・〒縺吶・
-## 繝舌・繧ｸ繝ｧ繝ｳ驕狗畑繝ｫ繝ｼ繝ｫ
-- 邏ｰ縺九＞菫ｮ豁｣縺斐→縺ｫ蟆乗焚轤ｹ莉･荳九ｒ蠅怜・・井ｾ・ `1.4.7 -> 1.4.71 -> 1.4.72`・・- `1.4.699x` 邉ｻ縺ｯ `1.4.7` 縺ｨ縺励※豁｣蠑上Μ繝ｪ繝ｼ繧ｹ貂医∩
-
-## 迴ｾ蝨ｨ繝舌・繧ｸ繝ｧ繝ｳ
+## 現在バージョン
 - `1.5.1`
 
 
-## 逶ｴ霑題ｿｽ險假ｼ・1.4.910・・- OUTPUT-8: 蜷榊燕莉倥″繧ｻ繝・す繝ｧ繝ｳ菫晏ｭ倥ｒ霑ｽ蜉・・/sessions` 荳隕ｧ繝ｻ`/sessions/<n>` 菫晏ｭ・隱ｭ霎ｼ/蜑企勁・・- 蜷悟錐菫晏ｭ俶凾縺ｯ `409 Conflict` 繧定ｿ斐＠縲～overwrite: true` 縺ｧ荳頑嶌縺堺ｿ晏ｭ・- `sessions/` 繝・ぅ繝ｬ繧ｯ繝医Μ繧定・蜍穂ｽ懈・縺励√ヵ繧｡繧､繝ｫ蜷阪し繝九ち繧､繧ｺ繧貞ｮ溯｣・- UI縺ｫ縲御ｿ晏ｭ俶ｸ医∩繧ｻ繝・す繝ｧ繝ｳ縲堺ｸ隕ｧ繧定ｿｽ蜉縺励´oad/Delete繧貞ｮ溯｣・- 譌｢蟄倥・ `/session`・・anima_session_last.json`・芽・蜍穂ｿ晏ｭ倥・蠕ｩ蜈・・邯ｭ謖・## 螳溯｣・し繝槭Μ繝ｼ・・1.4.6莉･髯搾ｼ・
-### 1) 襍ｷ蜍穂ｸ崎憶繝ｻ譁・ｭ怜喧縺台ｿｮ豁｣
-- `SyntaxError`・域枚蟄怜・邨らｫｯ荳肴ｭ｣・峨ｒ菫ｮ豁｣
-- UTF-8/BOM豺ｷ蝨ｨ縺ｫ繧医ｋ隱ｭ縺ｿ霎ｼ縺ｿ繧ｨ繝ｩ繝ｼ繧剃ｿｮ豁｣
-- BAT襍ｷ蜍墓凾縺ｮ譁・ｭ怜喧縺代ｒ謚大宛縺吶ｋ譁ｹ蜷代〒隱ｿ謨ｴ
+## 直近追記（v1.4.910）
+- OUTPUT-8: 名前付きセッション保存を追加（`/sessions` 一覧・`/sessions/<n>` 保存/読込/削除）
+- 同名保存時は `409 Conflict` を返し、`overwrite: true` で上書き保存
+- `sessions/` ディレクトリを自動作成し、ファイル名サニタイズを実装
+- UIに「保存済みセッション」一覧を追加し、Load/Deleteを実装
+- 既存の `/session`（`anima_session_last.json`）自動保存・復元は維持
+## 実装サマリー（v1.4.6以降）
 
-### 2) 繝励Μ繧ｻ繝・ヨ隱ｭ縺ｿ霎ｼ縺ｿ螳牙ｮ壼喧
-- `000_default.json` 縺悟・縺ｪ縺・ｸ榊・蜷医ｒ菫ｮ豁｣
-- `/chara_presets` 縺ｧ `utf-8-sig` 隱ｭ縺ｿ霎ｼ縺ｿ蟇ｾ蠢・
-### 3) UI險隱槫・譖ｿ・域律譛ｬ隱・闍ｱ隱橸ｼ・- 蛻晄悄陦ｨ遉ｺ險隱槭ｒOS險隱槭・繝ｼ繧ｹ縺ｧ閾ｪ蜍墓ｱｺ螳・- UI繝懊ち繝ｳ縺ｧ譌･譛ｬ隱・闍ｱ隱槭ｒ蛻・崛蜿ｯ閭ｽ
-- `localStorage` 縺ｫ險隱櫁ｨｭ螳壹ｒ菫晏ｭ・- 陦ｨ遉ｺ繝・く繧ｹ繝医ｒ蜍慕噪縺ｫ鄂ｮ謠帙☆繧喫18n繝ｭ繧ｸ繝・け繧定ｿｽ蜉
-- 豁｣隕丞喧鄂ｮ謠幢ｼ亥・隗・蜊願ｧ偵き繝・さ縲～+`縲∫ｩｺ逋ｽ蟾ｮ・峨↓蟇ｾ蠢・- 闍ｱ隱・>譌･譛ｬ隱槭∈謌ｻ縺励◆髫帙↓谿九ｋ譁・ｨ縺ｮ蜿悶ｊ縺薙⊂縺励ｒ邯咏ｶ壻ｿｮ豁｣
+### 1) 起動不良・文字化け修正
+- `SyntaxError`（文字列終端不正）を修正
+- UTF-8/BOM混在による読み込みエラーを修正
+- BAT起動時の文字化けを抑制する方向で調整
 
-### 4) UI繝ｩ繝吶Ν隱ｿ謨ｴ・育洒邵ｮ/邨ｱ荳・・- 逕ｻ髱｢蟷・↓蜷医ｏ縺帙※闍ｱ隱槭Λ繝吶Ν繧堤洒邵ｮ
-- 萓・
+### 2) プリセット読み込み安定化
+- `000_default.json` が出ない不具合を修正
+- `/chara_presets` で `utf-8-sig` 読み込み対応
+
+### 3) UI言語切替（日本語/英語）
+- 初期表示言語をOS言語ベースで自動決定
+- UIボタンで日本語/英語を切替可能
+- `localStorage` に言語設定を保存
+- 表示テキストを動的に置換するi18nロジックを追加
+- 正規化置換（全角/半角カッコ、`+`、空白差）に対応
+- 英語->日本語へ戻した際に残る文言の取りこぼしを継続修正
+
+### 4) UIラベル調整（短縮/統一）
+- 画面幅に合わせて英語ラベルを短縮
+- 例:
   - `Open Eyes -> Open`
   - `Half-Closed Eyes -> Half-Closed`
   - `Closed Eyes -> Closed`
   - `DELETE -> DEL`
-- Bust/Height/Legs/Tail/Wings/View 遲峨・陦ｨ險倥ｒUI險ｭ險医↓蜷医ｏ縺帙※隱ｿ謨ｴ
+- Bust/Height/Legs/Tail/Wings/View 等の表記をUI設計に合わせて調整
 
-### 5) STATUS/騾ｲ謐玲枚險縺ｮ螟夊ｨ隱槫ｯｾ蠢・- 繧ｹ繝・・繧ｿ繧ｹ陦ｨ遉ｺ繧定ｨ隱槫・譖ｿ縺ｫ霑ｽ蠕・- 萓・
+### 5) STATUS/進捗文言の多言語対応
+- ステータス表示を言語切替に追従
+- 例:
   - `LLM: Done`
   - `ComfyUI: 1 queued`
   - `ComfyUI: Generating... 7%`
-- 蜍慕噪逕滓・譁・ｨ・域焚蛟､蜷ｫ繧・峨・譌･譛ｬ隱槫喧繝代ち繝ｼ繝ｳ繧定ｿｽ蜉
+- 動的生成文言（数値含む）の日本語化パターンを追加
 
-### 6) 繧ｳ繝ｳ繧ｽ繝ｼ繝ｫ陦ｨ遉ｺ險隱・- 繧ｳ繝ｳ繧ｽ繝ｼ繝ｫ縺ｮ `[謗･邯夂｢ｺ隱江` 莉･髯阪・OS險隱槭↓霑ｽ蠕薙☆繧倶ｻ墓ｧ倥∈螟画峩
-- UI險隱槭→繧ｳ繝ｳ繧ｽ繝ｼ繝ｫ險隱槭・逕ｨ騾比ｸ雁・髮｢蜿ｯ閭ｽ縺縺後∫樟陦後・OS蝓ｺ貅悶〒邨ｱ荳蟇・ｊ
+### 6) コンソール表示言語
+- コンソールの `[接続確認]` 以降はOS言語に追従する仕様へ変更
+- UI言語とコンソール言語は用途上分離可能だが、現行はOS基準で統一寄り
 
-### 7) 繝ｭ繧ｰ讖溯・・磯・蟶・・繧ｨ繝ｩ繝ｼ蝗槫庶蜷代￠・・- 繝ｭ繧ｰ蜃ｺ蜉帙ｒ霑ｽ蜉・磯・蟶・・繝医Λ繝悶Ν縺ｮ蝗槫庶逕ｨ騾費ｼ・- 譌｢螳壹Ο繧ｰ菫晏ｭ伜・: `anima-pipeline/logs/`
-- 繝槭せ繧ｯ蟇ｾ雎｡:
+### 7) ログ機能（配布先エラー回収向け）
+- ログ出力を追加（配布先トラブルの回収用途）
+- 既定ログ保存先: `anima-pipeline/logs/`
+- マスク対象:
   - `token`
   - `api key`
   - `authorization`
   - `Bearer ...`
-- 菫晄戟譛滄俣縺ｫ繧医ｋ閾ｪ蜍募炎髯､繧貞ｮ溯｣・ｼ亥・譛溷､30譌･・・- 繝ｭ繧ｰ繝ｬ繝吶Ν繧定ｿｽ蜉・・normal` / `debug`・・- 萓句､悶ヵ繝・け縺ｧ譛ｪ蜃ｦ逅・ｾ句､悶ｒ繝ｭ繧ｰ蛹・- API霑ｽ蜉:
+- 保持期間による自動削除を実装（初期値30日）
+- ログレベルを追加（`normal` / `debug`）
+- 例外フックで未処理例外をログ化
+- API追加:
   - `GET /logs_info`
   - `GET /logs_zip`
-- UI霑ｽ蜉:
+- UI追加:
   - `LOG DIRECTORY`
   - `LOG RETENTION DAYS`
   - `LOG LEVEL`
   - `OPEN LOGS`
   - `EXPORT LOGS ZIP`
 
-### 8) 險ｭ螳壹ョ繝輔か繝ｫ繝医・譖ｴ譁ｰ
-`settings/pipeline_config.default.json` 縺ｫ霑ｽ蜉:
+### 8) 設定デフォルトの更新
+`settings/pipeline_config.default.json` に追加:
 - `console_lang`
 - `log_dir`
-- `log_retention_days`・亥・譛溷､30・・- `log_level`
+- `log_retention_days`（初期値30）
+- `log_level`
 
-### 9) 繝峨く繝･繝｡繝ｳ繝域紛蛯呻ｼ亥ｼ輔″邯吶℃/蜈ｬ髢句髄縺托ｼ・- `README.md` 繧旦TF-8縺ｧ蜀肴紛逅・ｼ育樟陦梧ｩ溯・繝ｻ繝ｭ繧ｰ讖溯・繝ｻv1.4.7貅門ｙ繧貞渚譏・・- `README_EN.md` 繧貞・謨ｴ蛯呻ｼ域律譛ｬ隱樒沿縺ｨ蜷檎ｭ峨・讒区・縺ｫ邨ｱ荳・・- `release_notes_v1.4.699999.md` 繧剃ｽ懈・縺励∵律譛ｬ隱・闍ｱ隱樔ｽｵ險伜喧
-- `note_article_draft.md` 繧偵悟､画峩萓｡蛟､荳ｭ蠢・+ 謇矩・・繧ｬ繧､繝牙盾辣ｧ縲肴婿驥昴〒譖ｴ譁ｰ
-- 髢｢騾｣繝輔ぃ繧､繝ｫ縺ｨ縺励※ `note_article_draft_v1.4.699999.md` / `anima_pipeline_guide_addendum_v1.4.699999.md` 繧剃ｽ懈・
-- 繝・ヰ繝・げ逕ｨ遨ｺ繝輔ぃ繧､繝ｫ `_debug_page.html` 繧貞炎髯､
+### 9) ドキュメント整備（引き継ぎ/公開向け）
+- `README.md` をUTF-8で再整理（現行機能・ログ機能・v1.4.7準備を反映）
+- `README_EN.md` を再整備（日本語版と同等の構成に統一）
+- `release_notes_v1.4.699999.md` を作成し、日本語/英語併記化
+- `note_article_draft.md` を「変更価値中心 + 手順はガイド参照」方針で更新
+- 関連ファイルとして `note_article_draft_v1.4.699999.md` / `anima_pipeline_guide_addendum_v1.4.699999.md` を作成
+- デバッグ用空ファイル `_debug_page.html` を削除
 
-## 荳ｻ縺ｪ螟画峩繝輔ぃ繧､繝ｫ
+## 主な変更ファイル
 - `anima_pipeline.py`
 - `start_anima_pipeline.bat`
 - `start_anima_pipeline - Tailscale.bat`
 - `settings/pipeline_config.default.json`
 - `README.md`
 - `README_EN.md`
-- `release_notes_v1.4.699999.md`・郁ｿｽ蜉・・- `note_article_draft.md`
-- `note_article_draft_v1.4.699999.md`・郁ｿｽ蜉・・- `anima_pipeline_guide_addendum_v1.4.699999.md`・郁ｿｽ蜉・・- `LLM_candidates.md`・郁ｿｽ蜉・・- `docs/updates/Update.md`
+- `release_notes_v1.4.699999.md`（追加）
+- `note_article_draft.md`
+- `note_article_draft_v1.4.699999.md`（追加）
+- `anima_pipeline_guide_addendum_v1.4.699999.md`（追加）
+- `LLM_candidates.md`（追加）
+- `docs/updates/Update.md`
 
-## 驕狗畑荳翫・豕ｨ諢・- `releases` 縺ｯ驟榊ｸ・畑繝・せ繝育腸蠅・・縺溘ａ縲∽ｻ雁ｾ後・邱ｨ髮・＠縺ｪ縺・- UI縺ｯ隕九◆逶ｮ縺縺代〒縺ｪ縺上∬ｨ隱槫・譖ｿ縺ｮ蠕蠕ｩ・・A->EN->JA / EN->JA->EN・峨〒遒ｺ隱阪☆繧・
-## 谿九ち繧ｹ繧ｯ・域ｬ｡髢狗匱閠・髄縺托ｼ・- 繧ｳ繝ｳ繧ｽ繝ｼ繝ｫ縺ｮ蜈ｨ繝｡繝・そ繝ｼ繧ｸ繧旦I險隱槭→螳悟・騾｣蜍輔＆縺帙ｋ縺九＾S騾｣蜍募崋螳壹↓縺吶ｋ縺倶ｻ墓ｧ倡｢ｺ螳・- i18n繧ｭ繝ｼ縺ｮ邯ｲ鄒・ユ繧ｹ繝茨ｼ育音縺ｫ蜍慕噪逕滓・繝ｩ繝吶Ν・・- 驟榊ｸ・ン繝ｫ繝峨〒縺ｮ繝ｭ繧ｰZIP蜿門ｾ怜ｰ守ｷ壹・譛邨６X隱ｿ謨ｴ
+## 運用上の注意
+- `releases` は配布用テスト環境のため、今後は編集しない
+- UIは見た目だけでなく、言語切替の往復（JA->EN->JA / EN->JA->EN）で確認する
 
-## 逶ｴ霑題ｿｽ險假ｼ・1.4.6999991 ・・v1.4.6999996・・
-### 10) 襍ｷ蜍稗AT縺ｮ螳牙ｮ壼喧・磯壼ｸｸ迚・+ Tailscale迚茨ｼ・- `start_anima_pipeline.bat` / `start_anima_pipeline - Tailscale.bat` 繧呈峩譁ｰ
-- UTF-8繧ｳ繝ｳ繧ｽ繝ｼ繝ｫ蟇ｾ遲悶ｒ霑ｽ蜉・・chcp 65001` / `PYTHONUTF8=1`・・- `setlocal/endlocal` 繧定ｿｽ蜉縺礼腸蠅・､画焚縺ｮ蠖ｱ髻ｿ繧貞ｱ謇蛹・- `py` 蜻ｼ縺ｳ蜃ｺ縺励ｒ `py -3` 縺ｫ蝗ｺ螳・- Tailscale迚医↓ `tailscale ip -4` 讀懷・縺ｨURL陦ｨ遉ｺ繧定ｿｽ蜉
+## 残タスク（次開発者向け）
+- コンソールの全メッセージをUI言語と完全連動させるか、OS連動固定にするか仕様確定
+- i18nキーの網羅テスト（特に動的生成ラベル）
+- 配布ビルドでのログZIP取得導線の最終UX調整
 
-### 11) README/README_EN 謨ｴ蛯・- `README.md` 繧貞・髱｢謨ｴ逅・ｼ域枚蟄怜喧縺鷹勁蜴ｻ縲∫樟陦梧ｩ溯・縺ｨv1.4.7貅門ｙ繧貞渚譏・・- `README_EN.md` 繧貞酔遲画ｧ区・縺ｧ蜀肴紛蛯・- `README.md` 縺ｮ髢｢騾｣險倅ｺ玖｡ｨ險倥ｒ邨ｱ荳・・zenn:` 蠖｢蠑擾ｼ・
-### 12) UI譁・ｨ遏ｭ邵ｮ・郁恭隱櫁｡ｨ遉ｺ・・- `Bird's-Eye View` / `Worm's-Eye View` 竊・`Bird's-Eye` / `Worm's-Eye`
-- `Large Frame` 竊・`Large`
-- `Very Long` / `Bob Cut` 竊・`VLong` / `Bob`
+## 直近追記（v1.4.6999991 ～ v1.4.6999996）
 
-### 13) 鬮ｪ蝙九・繧ｿ繝ｳ縺ｮ隕冶ｪ肴ｧ謾ｹ蝟・- 鬮ｪ蝙九げ繝ｫ繝ｼ繝・`蜈ｨ菴伝 繧・谿ｵ繝ｬ繧､繧｢繧ｦ繝亥喧
-- 鬮ｪ蝙九げ繝ｫ繝ｼ繝・`蠕後ｍ` 繧・谿ｵ繝ｬ繧､繧｢繧ｦ繝亥喧
-- 譌･譛ｬ隱朸I/闍ｱ隱朸I縺ｮ荳｡譁ｹ縺ｧ蜷梧ｧ倥↓驕ｩ逕ｨ
+### 10) 起動BATの安定化（通常版 + Tailscale版）
+- `start_anima_pipeline.bat` / `start_anima_pipeline - Tailscale.bat` を更新
+- UTF-8コンソール対策を追加（`chcp 65001` / `PYTHONUTF8=1`）
+- `setlocal/endlocal` を追加し環境変数の影響を局所化
+- `py` 呼び出しを `py -3` に固定
+- Tailscale版に `tailscale ip -4` 検出とURL表示を追加
 
-## 逶ｴ霑題ｿｽ險假ｼ・1.4.69999961 ・・v1.4.69999977・・
-### 14) Issue #2 逹謇具ｼ医・繝ｪ繧ｻ繝・ヨ荳隕ｧ・九し繝繝榊渕逶､・・- `繧ｭ繝｣繝ｩ` 繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ蜀・↓縲後・繝ｪ繧ｻ繝・ヨ荳隕ｧ・医し繝繝阪う繝ｫ・峨攻I繧剃ｻｮ螳溯｣・- 繧ｮ繝｣繝ｩ繝ｪ繝ｼ繝｢繝ｼ繝繝ｫ縺ｫ縲後・繝ｪ繧ｻ繝・ヨ縺ｮ繧ｵ繝繝阪う繝ｫ菴懈・縲阪・繧ｿ繝ｳ繧定ｿｽ蜉
-- API霑ｽ蜉:
-  - `POST /chara_preset_thumb`・医ぐ繝｣繝ｩ繝ｪ繝ｼ逕ｻ蜒・-> `chara/<preset>.webp` 逕滓・・・  - `GET /chara_thumb?file=...`・医・繝ｪ繧ｻ繝・ヨ繧ｵ繝繝埼・菫｡・・- `/chara_presets` 蠢懃ｭ斐↓ `_thumb_path` 繧定ｿｽ蜉
-- 繝励Μ繧ｻ繝・ヨ蜑企勁譎ゅ↓蜷悟錐 `.webp` 繧ょ炎髯､
+### 11) README/README_EN 整備
+- `README.md` を全面整理（文字化け除去、現行機能とv1.4.7準備を反映）
+- `README_EN.md` を同等構成で再整備
+- `README.md` の関連記事表記を統一（`zenn:` 形式）
 
-### 15) 繧ｵ繝繝咲函謌舌・陦ｨ遉ｺ荳榊・蜷医・菫ｮ豁｣
-- `source image not found` 縺ｮ蜴溷屏繧剃ｿｮ豁｣
-  - `view URL` 隗｣譫仙燕縺ｫ繝代せ螟画鋤縺励※縺・◆荳榊・蜷医ｒ隗｣豸・  - `view URL` / 繝ｭ繝ｼ繧ｫ繝ｫ繝代せ荳｡蟇ｾ蠢・- 繧ｮ繝｣繝ｩ繝ｪ繝ｼ髱櫁｡ｨ遉ｺ蛹紋ｸ榊・蜷医ｒ菫ｮ豁｣・・view_urls` 蜆ｪ蜈医↓蠕ｩ蟶ｰ・・- `/chara_presets?_ts=...` 縺ｫ繧医ｋ404繧剃ｿｮ豁｣・亥ｮ悟・荳閾ｴ繝ｫ繝ｼ繝亥ｯｾ蠢懶ｼ・- `/chara_thumb` 404縺ｮ蜴溷屏・・ET繝ｫ繝ｼ繝域悴驟咲ｽｮ・峨ｒ菫ｮ豁｣
+### 12) UI文言短縮（英語表示）
+- `Bird's-Eye View` / `Worm's-Eye View` → `Bird's-Eye` / `Worm's-Eye`
+- `Large Frame` → `Large`
+- `Very Long` / `Bob Cut` → `VLong` / `Bob`
 
-### 16) 繝励Μ繧ｻ繝・ヨ荳隕ｧUI縺ｮ譛驕ｩ蛹厄ｼ医せ繝槭・雋闕ｷ蟇ｾ遲厄ｼ・- 繝励Μ繧ｻ繝・ヨ荳隕ｧ繧帝幕髢牙ｼ上↓螟画峩・亥・譛溘・髢会ｼ・- 繧ｵ繝繝咲判蜒上・荳隕ｧ繧帝幕縺・◆譎ゅ□縺大叙蠕・- 繧ｹ繝槭・襍ｷ蜍墓凾縺ｫ `loadCharaPresets()` 繧帝≦蟒ｶ縺怜・譛滓緒逕ｻ繧定ｻｽ驥丞喧
-- 逶ｮ讓・ 逋ｽ逕ｻ髱｢蠕・■譎る俣縺ｮ遏ｭ邵ｮ
+### 13) 髪型ボタンの視認性改善
+- 髪型グループ `全体` を2段レイアウト化
+- 髪型グループ `後ろ` も2段レイアウト化
+- 日本語UI/英語UIの両方で同様に適用
 
-### 17) LoRA繧ｵ繝繝堺ｸ隕ｧ縺ｫ蟇・○縺溘ョ繧ｶ繧､繝ｳ隱ｿ謨ｴ
-- 繧ｰ繝ｪ繝・ラ蟇・ｺｦ繝ｻ繧ｫ繝ｼ繝画ｯ皮紫繝ｻ繝ｩ繝吶Ν蟶ｯ繝ｻ譫邱壹ｒLoRA蛛ｴ縺ｸ邨ｱ荳
-- 繧ｵ繝繝肴悴菴懈・繧ｫ繝ｼ繝峨・螟ｧ驥剰｡ｨ遉ｺ繧貞ｻ・ｭ｢縺励∽ｽ懈・貂医∩縺ｮ縺ｿ繧ｰ繝ｪ繝・ラ陦ｨ遉ｺ
-- 縲梧峩譁ｰ蜈医阪・蛻･繧ｻ繝ｬ繧ｯ繝医〒蜈ｨ繝励Μ繧ｻ繝・ヨ縺九ｉ驕ｸ謚槫庄閭ｽ縺ｫ縺励※驕狗畑諤ｧ繧堤ｶｭ謖・
-### 18) 繝励Μ繧ｻ繝・ヨ襍ｷ轤ｹ縺ｮ繧ｭ繝｣繝ｩ霑ｽ蜉讖溯・
-- 縲梧峩譁ｰ蜈医肴ｨｪ縺ｫ `・・繧ｭ繝｣繝ｩ霑ｽ蜉` 繝懊ち繝ｳ繧定ｿｽ蜉
-- 莉墓ｧ・
-  - 驕ｸ謚樔ｸｭ繝励Μ繧ｻ繝・ヨ繧貞ｯｾ雎｡縺ｫ繧ｭ繝｣繝ｩ謨ｰ繧・1・域怙螟ｧ6・・  - 霑ｽ蜉縺輔ｌ縺・`繧ｭ繝｣繝ｩ1縲・` 蛛ｴ縺ｮ繝励Μ繧ｻ繝・ヨ驕ｸ謚槭↓閾ｪ蜍輔そ繝・ヨ
-  - **隱ｭ霎ｼ・・oad・峨・陦後ｏ縺ｪ縺・*
+## 直近追記（v1.4.69999961 ～ v1.4.69999977）
 
-### 19) 繧ｭ繝｣繝ｩ謨ｰ `0` 險ｱ蜿ｯ縺ｸ縺ｮ莉墓ｧ伜､画峩
-- `B. 繧ｭ繝｣繝ｩ謨ｰ` 縺ｮ `min` 繧・`0` 縺ｫ螟画峩
-- 蜷・Ο繧ｸ繝・け縺ｮ荳矩剞繧・`1` -> `0` 縺ｫ邨ｱ荳
+### 14) Issue #2 着手（プリセット一覧＋サムネ基盤）
+- `キャラ` セクション内に「プリセット一覧（サムネイル）」UIを仮実装
+- ギャラリーモーダルに「プリセットのサムネイル作成」ボタンを追加
+- API追加:
+  - `POST /chara_preset_thumb`（ギャラリー画像 -> `chara/<preset>.webp` 生成）
+  - `GET /chara_thumb?file=...`（プリセットサムネ配信）
+- `/chara_presets` 応答に `_thumb_path` を追加
+- プリセット削除時に同名 `.webp` も削除
+
+### 15) サムネ生成・表示不具合の修正
+- `source image not found` の原因を修正
+  - `view URL` 解析前にパス変換していた不具合を解消
+  - `view URL` / ローカルパス両対応
+- ギャラリー非表示化不具合を修正（`view_urls` 優先に復帰）
+- `/chara_presets?_ts=...` による404を修正（完全一致ルート対応）
+- `/chara_thumb` 404の原因（GETルート未配置）を修正
+
+### 16) プリセット一覧UIの最適化（スマホ負荷対策）
+- プリセット一覧を開閉式に変更（初期は閉）
+- サムネ画像は一覧を開いた時だけ取得
+- スマホ起動時に `loadCharaPresets()` を遅延し初期描画を軽量化
+- 目標: 白画面待ち時間の短縮
+
+### 17) LoRAサムネ一覧に寄せたデザイン調整
+- グリッド密度・カード比率・ラベル帯・枠線をLoRA側へ統一
+- サムネ未作成カードの大量表示を廃止し、作成済みのみグリッド表示
+- 「更新先」は別セレクトで全プリセットから選択可能にして運用性を維持
+
+### 18) プリセット起点のキャラ追加機能
+- 「更新先」横に `＋ キャラ追加` ボタンを追加
+- 仕様:
+  - 選択中プリセットを対象にキャラ数を+1（最大6）
+  - 追加された `キャラ1〜6` 側のプリセット選択に自動セット
+  - **読込（Load）は行わない**
+
+### 19) キャラ数 `0` 許可への仕様変更
+- `B. キャラ数` の `min` を `0` に変更
+- 各ロジックの下限を `1` -> `0` に統一
   - `updateCharaBlocks`
   - `collectInput`
   - `collectSessionData`
-  - 繧ｻ繝・す繝ｧ繝ｳ蠕ｩ蜈・・逅・- 0菴薙せ繧ｿ繝ｼ繝医°繧牙ｿ・ｦ√↓蠢懊§縺ｦ霑ｽ蜉縺ｧ縺阪ｋ驕狗畑縺ｫ螟画峩
+  - セッション復元処理
+- 0体スタートから必要に応じて追加できる運用に変更
 
-### 20) 繧ｹ繝槭・UI蟠ｩ繧御ｿｮ豁｣・域峩譁ｰ蜈医そ繝ｬ繧ｯ繝茨ｼ・- `譖ｴ譁ｰ蜈・ 繧ｻ繝ｬ繧ｯ繝医→ `・九く繝｣繝ｩ霑ｽ蜉` 縺ｮ謚倥ｊ霑斐＠/蜈ｨ蟷・宛蠕｡繧定ｿｽ蜉
-- 繧ｹ繝槭・縺ｧ繧ｻ繝ｬ繧ｯ繝医′讌ｵ邏ｰ陦ｨ遉ｺ縺ｫ縺ｪ繧句ｴｩ繧後ｒ菫ｮ豁｣
+### 20) スマホUI崩れ修正（更新先セレクト）
+- `更新先` セレクトと `＋キャラ追加` の折り返し/全幅制御を追加
+- スマホでセレクトが極細表示になる崩れを修正
 
 ## Recent Additions (v1.4.69999978 - v1.4.69999983)
 
@@ -182,202 +228,354 @@
 - Included spec template, naming rule, and update workflow.
 
 
-## 逶ｴ霑題ｿｽ險假ｼ・1.4.71 ・・v1.4.718・・
-### 27) OUTPUT-4: 繝｡繧ｿ繝・・繧ｿ蝓九ａ霎ｼ縺ｿ蝓ｺ逶､繧貞ｮ溯｣・- `output_format`・・png`/`webp`・峨→ `embed_metadata` 繧定ｨｭ螳壹↓霑ｽ蜉縲・- 襍ｷ蜍墓凾遘ｻ陦悟・逅・ｒ霑ｽ蜉縺励∵里蟄・`pipeline_config.json` 縺ｫ荳崎ｶｳ繧ｭ繝ｼ縺後≠繧句ｴ蜷医・閾ｪ蜍戊｣懷ｮ後・- 逕ｻ蜒剰ｨｭ螳啅I縺ｫ `繝｡繧ｿ繝・・繧ｿ繧貞沂繧∬ｾｼ繧` 繝医げ繝ｫ繧定ｿｽ蜉・郁ｨｭ螳壻ｿ晏ｭ・蠕ｩ蜈・√そ繝・す繝ｧ繝ｳ蠕ｩ蜈・ｯｾ蠢懶ｼ峨・
-### 28) PNG / WebP 縺ｮ繝｡繧ｿ繝・・繧ｿ譖ｸ縺崎ｾｼ縺ｿ繧貞ｮ溯｣・- PNG:
-  - `parameters` 繧・`tEXt` 縺ｸ菫晏ｭ倥・  - 霑ｽ蜉縺ｧ `prompt` / `workflow` 繧ゆｿ晏ｭ假ｼ・omfyUI蠕ｩ蜈・畑騾費ｼ峨・- WebP:
-  - Exif `UserComment` 縺ｨ XMP 縺ｮ荳｡譁ｹ縺ｸ菫晏ｭ倥・  - WebP螟画鋤螟ｱ謨玲凾縺ｯPNG縺ｸ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ縺励∝・逅・ｶ咏ｶ壹・
-### 29) Civitai莠呈鋤繝輔か繝ｼ繝槭ャ繝郁ｪｿ謨ｴ・域ｮｵ髫守噪・・- `Model hash` / `Lora hashes` 繧貞沂繧∬ｾｼ縺ｿ縲・- LoRA繧ｿ繧ｰ `<lora:name:weight>` 繧偵Γ繧ｿ繝・・繧ｿ蛛ｴ繝励Ο繝ｳ繝励ヨ縺ｸ莉倅ｸ弱・- `parameters` 繧但1111譛蟆丈ｺ呈鋤縺ｮ3陦梧ｧ区・縺ｸ謨ｴ逅・
+## 直近追記（v1.4.71 ～ v1.4.718）
+
+### 27) OUTPUT-4: メタデータ埋め込み基盤を実装
+- `output_format`（`png`/`webp`）と `embed_metadata` を設定に追加。
+- 起動時移行処理を追加し、既存 `pipeline_config.json` に不足キーがある場合は自動補完。
+- 画像設定UIに `メタデータを埋め込む` トグルを追加（設定保存/復元、セッション復元対応）。
+
+### 28) PNG / WebP のメタデータ書き込みを実装
+- PNG:
+  - `parameters` を `tEXt` へ保存。
+  - 追加で `prompt` / `workflow` も保存（ComfyUI復元用途）。
+- WebP:
+  - Exif `UserComment` と XMP の両方へ保存。
+  - WebP変換失敗時はPNGへフォールバックし、処理継続。
+
+### 29) Civitai互換フォーマット調整（段階的）
+- `Model hash` / `Lora hashes` を埋め込み。
+- LoRAタグ `<lora:name:weight>` をメタデータ側プロンプトへ付与。
+- `parameters` をA1111最小互換の3行構成へ整理:
   - Positive prompt
   - Negative prompt
   - `Steps, Sampler, CFG, Seed, Size, Model hash, Model, Lora hashes, Version`
-- 繝上ャ繧ｷ繝･縺ｯAutoV2莠呈鋤・・0譯√・螟ｧ譁・ｭ暦ｼ峨ｒ蜆ｪ蜈医＠縺ｦ蜃ｺ蜉帙・
-### 30) 繝｢繝・Ν/LoRA繝上ャ繧ｷ繝･隗｣豎ｺ縺ｮ蠑ｷ蛹・- `comfyui_output_dir` / `workflow_json_path` 縺九ｉComfyUI繝ｫ繝ｼ繝亥呵｣懊ｒ謗ｨ螳壹・- `models/checkpoints` / `models/unet` / `models/diffusion_models` / `models/loras` 繧貞・蟶ｰ謗｢邏｢縲・- basename荳閾ｴ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ縺ｨ邁｡譏薙く繝｣繝・す繝･繧定ｿｽ蜉縲・
-### 31) 驕狗畑荳翫・邨占ｫ厄ｼ亥ｮ滓ｩ滓､懆ｨｼ邨先棡・・- Civitai `Resources`:
-  - PNG: 讀懷・OK
-  - WebP: 讀懷・OK
-- `embed_metadata = OFF`: 豁｣蟶ｸ
-- 隍・焚LoRA: 豁｣蟶ｸ
-- ComfyUI蜀崎ｪｭ霎ｼ:
-  - PNG縺ｯworkflow蠕ｩ蜈グK
-  - WebP縺ｯworkflow蠕ｩ蜈・↑縺暦ｼ育樟迥ｶ莉墓ｧ・莠呈鋤蟾ｮ縺ｨ縺励※謇ｱ縺・ｼ・
-### 32) 迚井ｸ翫￡螻･豁ｴ・育ｴｰ菫ｮ豁｣・・- `1.4.71` 竊・`1.4.711` 竊・`1.4.712` 竊・`1.4.713` 竊・`1.4.714` 竊・`1.4.715` 竊・`1.4.716` 竊・`1.4.717` 竊・`1.4.718`
+- ハッシュはAutoV2互換（10桁・大文字）を優先して出力。
+
+### 30) モデル/LoRAハッシュ解決の強化
+- `comfyui_output_dir` / `workflow_json_path` からComfyUIルート候補を推定。
+- `models/checkpoints` / `models/unet` / `models/diffusion_models` / `models/loras` を再帰探索。
+- basename一致フォールバックと簡易キャッシュを追加。
+
+### 31) 運用上の結論（実機検証結果）
+- Civitai `Resources`:
+  - PNG: 検出OK
+  - WebP: 検出OK
+- `embed_metadata = OFF`: 正常
+- 複数LoRA: 正常
+- ComfyUI再読込:
+  - PNGはworkflow復元OK
+  - WebPはworkflow復元なし（現状仕様/互換差として扱う）
+
+### 32) 版上げ履歴（細修正）
+- `1.4.71` → `1.4.711` → `1.4.712` → `1.4.713` → `1.4.714` → `1.4.715` → `1.4.716` → `1.4.717` → `1.4.718`
 
 
-## 逶ｴ霑題ｿｽ險假ｼ・1.4.72 ・・v1.4.742・・
-### 33) OUTPUT-3: 逕滓・螻･豁ｴDB + 蜈ｨ螻･豁ｴUI 縺ｮ蛻晄悄螳溯｣・- `generation_history` 繧担QLite縺ｧ豌ｸ邯壼喧・・history/history.db`・峨・- 險ｭ螳壹く繝ｼ繧定ｿｽ蜉:
+## 直近追記（v1.4.72 ～ v1.4.742）
+
+### 33) OUTPUT-3: 生成履歴DB + 全履歴UI の初期実装
+- `generation_history` をSQLiteで永続化（`history/history.db`）。
+- 設定キーを追加:
   - `history_db_path`
   - `history_thumb_dir`
-- API繧定ｿｽ蜉:
+- APIを追加:
   - `GET /history_list`
   - `GET /history_detail`
   - `POST /history_update`
   - `POST /history_delete`
-- 譌｢蟄倥ぐ繝｣繝ｩ繝ｪ繝ｼ縺ｫ繧ｿ繝悶ｒ霑ｽ蜉:
-  - `繧ｻ繝・す繝ｧ繝ｳ螻･豁ｴ`
-  - `蜈ｨ螻･豁ｴ`
+- 既存ギャラリーにタブを追加:
+  - `セッション履歴`
+  - `全履歴`
 
-### 34) 譌｢蟄魯B蜷代￠繝槭う繧ｰ繝ｬ繝ｼ繧ｷ繝ｧ繝ｳ菫ｮ豁｣
-- 譌｢蟄倥ユ繝ｼ繝悶Ν縺ｫ荳崎ｶｳ繧ｫ繝ｩ繝縺後≠繧狗腸蠅・〒 `no such column` 縺悟・繧句撫鬘後ｒ菫ｮ豁｣縲・- 襍ｷ蜍墓凾/菫晏ｭ俶凾縺ｫ `PRAGMA table_info` 繧堤畑縺・◆荳崎ｶｳ繧ｫ繝ｩ繝閾ｪ蜍戊ｿｽ蜉繧貞ｮ溯｣・・
-### 35) 繧ｮ繝｣繝ｩ繝ｪ繝ｼ逕ｻ蜒・繝｢繝ｼ繝繝ｫ螳牙ｮ壼喧・医そ繝・す繝ｧ繝ｳ + 蜈ｨ螻･豁ｴ・・- `/poll_status` 縺ｧ `file_paths` 繧貞━蜈医＠縲～png -> webp` 鄂ｮ謠帙ｒ閠・・縲・- `/get_image` 縺ｫ譖ｸ縺崎ｾｼ縺ｿ荳ｭ繝輔ぃ繧､繝ｫ蝗樣∩・医し繧､繧ｺ螳牙ｮ夂｢ｺ隱搾ｼ峨ｒ霑ｽ蜉縲・- 繝｢繝ｼ繝繝ｫ陦ｨ遉ｺ縺ｧ逕ｻ蜒丞呵｣懊ヵ繧ｩ繝ｼ繝ｫ繝舌ャ繧ｯ・亥・逕ｻ蜒丞､ｱ謨玲凾縺ｫ繧ｵ繝繝咲ｭ峨∈蛻・崛・峨・- `get_image 404` 蟇ｾ遲悶→縺励※ `png` 荳榊惠譎ゅ・ `webp` 閾ｪ蜍輔ヵ繧ｩ繝ｼ繝ｫ繝舌ャ繧ｯ繧定ｿｽ蜉縲・
-### 36) 騾ｲ謐・陦ｨ遉ｺ縺ｮ蠕ｩ譌ｧ縺ｨ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ
-- WebSocket騾ｲ謐怜女菫｡縺ｮ閠先ｧ繧貞ｼｷ蛹厄ｼ域枚蟄怜・/Blob荳｡蟇ｾ蠢懶ｼ峨・- WS譛ｪ謗･邯壹・騾ｲ謐玲悴蜿嶺ｿ｡譎ゅ〒繧ゅ√・繝ｼ繝ｪ繝ｳ繧ｰ繝吶・繧ｹ縺ｮ逍台ｼｼ%陦ｨ遉ｺ繧定ｿｽ蜉縲・- 逕滓・荳ｭ `%` 陦ｨ遉ｺ縺悟・縺ｪ縺・こ繝ｼ繧ｹ繧貞屓驕ｿ縲・
-### 37) 迚井ｸ翫￡螻･豁ｴ・育ｴｰ菫ｮ豁｣・・- `1.4.72` 竊・`1.4.721` 竊・`1.4.722` 竊・`1.4.723` 竊・`1.4.724` 竊・`1.4.725` 竊・`1.4.726` 竊・`1.4.727` 竊・`1.4.728` 竊・`1.4.729` 竊・`1.4.730` 竊・`1.4.731` 竊・`1.4.732` 竊・`1.4.733` 竊・`1.4.734` 竊・`1.4.735` 竊・`1.4.736` 竊・`1.4.737` 竊・`1.4.738` 竊・`1.4.739` 竊・`1.4.740` 竊・`1.4.741` 竊・`1.4.742`
-### 38) INPUT-4・亥ｾ御ｻ倥￠險倬鹸・・ 繝励Μ繧ｻ繝・ヨ髫主ｱ､蛹・- 譛ｬ鬆・岼縺ｯ `v1.4.740` 譎らせ縺ｧ螳溯｣・ｸ医∩讖溯・繧貞ｾ御ｻ倥￠縺ｧ險倬鹸縺励◆繧ゅ・縲・- API:
+### 34) 既存DB向けマイグレーション修正
+- 既存テーブルに不足カラムがある環境で `no such column` が出る問題を修正。
+- 起動時/保存時に `PRAGMA table_info` を用いた不足カラム自動追加を実装。
+
+### 35) ギャラリー画像/モーダル安定化（セッション + 全履歴）
+- `/poll_status` で `file_paths` を優先し、`png -> webp` 置換を考慮。
+- `/get_image` に書き込み中ファイル回避（サイズ安定確認）を追加。
+- モーダル表示で画像候補フォールバック（元画像失敗時にサムネ等へ切替）。
+- `get_image 404` 対策として `png` 不在時の `webp` 自動フォールバックを追加。
+
+### 36) 進捗%表示の復旧とフォールバック
+- WebSocket進捗受信の耐性を強化（文字列/Blob両対応）。
+- WS未接続・進捗未受信時でも、ポーリングベースの疑似%表示を追加。
+- 生成中 `%` 表示が出ないケースを回避。
+
+### 37) 版上げ履歴（細修正）
+- `1.4.72` → `1.4.721` → `1.4.722` → `1.4.723` → `1.4.724` → `1.4.725` → `1.4.726` → `1.4.727` → `1.4.728` → `1.4.729` → `1.4.730` → `1.4.731` → `1.4.732` → `1.4.733` → `1.4.734` → `1.4.735` → `1.4.736` → `1.4.737` → `1.4.738` → `1.4.739` → `1.4.740` → `1.4.741` → `1.4.742`
+### 38) INPUT-4（後付け記録）: プリセット階層化
+- 本項目は `v1.4.740` 時点で実装済み機能を後付けで記録したもの。
+- API:
   - `GET /presets/<category>`
   - `GET /presets/<category>/<name>`
   - `POST /presets/<category>/<name>`
   - `DELETE /presets/<category>/<name>`
-- 蟇ｾ蠢懊き繝・ざ繝ｪ:
+- 対応カテゴリ:
   - `chara / scene / camera / quality / lora / composite`
-- 譌｢蟄倅ｺ呈鋤繝ｩ繝・ヱ繝ｼ:
+- 既存互換ラッパー:
   - `GET /chara_list`
   - `GET /chara_load?name=...`
   - `POST /chara_save`
   - `POST /chara_delete`
-- 譌｢螳壹・繝ｪ繧ｻ繝・ヨ:
+- 既定プリセット:
   - `Scene_default.json`
   - `Camera_default.json`
   - `Quality_default.json`
   - `Lora_default.json`
   - `Composite_default.json`
-- Composite隱ｭ霎ｼ蜆ｪ蜈磯・ｽ・
-  - 繧ｹ繝翫ャ繝励す繝ｧ繝・ヨ蜆ｪ蜈茨ｼ亥錐蜑榊盾辣ｧ縺ｯ陬懷勧諠・ｱ縺ｨ縺励※菫晄戟・・
-### 39) INPUT-4 螳溯｣・ｿｮ豁｣・・1.4.740 譎らせ・・- Scene繧ｫ繝・ざ繝ｪ・亥ｱ句､・螻句・/迚ｹ谿奇ｼ峨→ sub・亥ｱ句､・螻倶ｸ・螻句・・峨・菫晄戟繝ｻ蠕ｩ蜈・ｒ菫ｮ豁｣縲・- `collectCheckedNeg is not defined` 縺ｫ繧医ｋQuality菫晏ｭ倥お繝ｩ繝ｼ繧剃ｿｮ豁｣縲・- 隱ｭ霎ｼ陦ｨ遉ｺ譁・ｨ繧・`隱ｭ霎ｼ謌仙粥: <name>` 縺ｫ邨ｱ荳縲・- 螳溯｣・せ繧ｭ繝ｼ繝槫ｷｮ蛻・
-  - Scene: `scene_place` / `scene_outdoor` / `scene_place_category` 繧剃ｿ晄戟縲・  - Camera: `posv` / `posh` / `pos_camera` / `camera_free` 縺ｨ `all[*].posc` 繧剃ｿ晄戟縲・
-### INPUT-4 蜍穂ｽ懃｢ｺ隱搾ｼ亥ｮ御ｺ・ｼ・- Scene / Camera / Quality / Lora / Composite 縺ｮ菫晏ｭ倥・隱ｭ霎ｼ繝ｻ蜑企勁
-- Composite 縺ｮ菫晄戟・・cene/camera/quality/lora/chara snapshot・・- 譌｢蟄倥く繝｣繝ｩ繝励Μ繧ｻ繝・ヨ縺ｮ莠呈鋤蜍穂ｽ懶ｼ郁ｪｭ霎ｼ/菫晏ｭ・蜑企勁・・- 蜀崎ｵｷ蜍募ｾ後・繝励Μ繧ｻ繝・ヨ荳隕ｧ菫晄戟
-- 逕滓・繝輔Ο繝ｼ縺ｮ蝗槫ｸｰ縺ｪ縺暦ｼ育函謌・螻･豁ｴ/蜀咲函謌撰ｼ・
+- Composite読込優先順位:
+  - スナップショット優先（名前参照は補助情報として保持）
 
-## 逶ｴ霑題ｿｽ險假ｼ・1.4.743・・
-### 40) 繧｢繧､繧ｳ繝ｳ驟堺ｿ｡蟆守ｷ壹・謨ｴ逅・ｼ医い繝励Μ / GitHub Pages 荳｡蟇ｾ蠢懶ｼ・- 繝ｫ繝ｼ繝磯・菫｡逕ｨ繧｢繧ｻ繝・ヨ繧定ｿｽ蜉: `assets/icons/*`縲・- GitHub Pages驟堺ｿ｡逕ｨ繧｢繧ｻ繝・ヨ繧定ｿｽ蜉: `docs/assets/*` + `docs/manifest.json`縲・- `docs/index.html` / `docs/index_en.html` 縺ｮ `<head>` 縺ｫ莉･荳九ｒ險ｭ螳・
+### 39) INPUT-4 実装修正（v1.4.740 時点）
+- Sceneカテゴリ（屋外/屋内/特殊）と sub（屋外/屋上/屋内）の保持・復元を修正。
+- `collectCheckedNeg is not defined` によるQuality保存エラーを修正。
+- 読込表示文言を `読込成功: <name>` に統一。
+- 実装スキーマ差分:
+  - Scene: `scene_place` / `scene_outdoor` / `scene_place_category` を保持。
+  - Camera: `posv` / `posh` / `pos_camera` / `camera_free` と `all[*].posc` を保持。
+
+### INPUT-4 動作確認（完了）
+- Scene / Camera / Quality / Lora / Composite の保存・読込・削除
+- Composite の保持（scene/camera/quality/lora/chara snapshot）
+- 既存キャラプリセットの互換動作（読込/保存/削除）
+- 再起動後のプリセット一覧保持
+- 生成フローの回帰なし（生成/履歴/再生成）
+
+
+## 直近追記（v1.4.743）
+
+### 40) アイコン配信導線の整理（アプリ / GitHub Pages 両対応）
+- ルート配信用アセットを追加: `assets/icons/*`。
+- GitHub Pages配信用アセットを追加: `docs/assets/*` + `docs/manifest.json`。
+- `docs/index.html` / `docs/index_en.html` の `<head>` に以下を設定:
   - `favicon-light.ico`
-  - `favicon-dark.ico`・・prefers-color-scheme: dark`・・  - `apple-touch-icon.png`
+  - `favicon-dark.ico`（`prefers-color-scheme: dark`）
+  - `apple-touch-icon.png`
   - `manifest.json`
 
-### 41) favicon 縺ｮ繝ｩ繧､繝・繝繝ｼ繧ｯ蛻・屬
-- 逕滓・繝輔ぃ繧､繝ｫ繧・`favicon-light.ico` / `favicon-dark.ico` 縺ｫ蛻・屬縲・- SVG驕狗畑繧貞ｻ・ｭ｢縺励￣NG/ICO驕狗畑縺ｸ邨ｱ荳縲・
-### 42) 繧｢繝励Μ蜀・TTP驟堺ｿ｡縺ｫ髱咏噪繧｢繧､繧ｳ繝ｳ繝ｫ繝ｼ繝医ｒ霑ｽ蜉
-- `anima_pipeline.py` 蛛ｴ縺ｧ莉･荳九ｒ驟堺ｿ｡:
+### 41) favicon のライト/ダーク分離
+- 生成ファイルを `favicon-light.ico` / `favicon-dark.ico` に分離。
+- SVG運用を廃止し、PNG/ICO運用へ統一。
+
+### 42) アプリ内HTTP配信に静的アイコンルートを追加
+- `anima_pipeline.py` 側で以下を配信:
   - `GET /assets/...`
   - `GET /manifest.json`
   - `GET /favicon.ico` / `GET /favicon-light.ico` / `GET /favicon-dark.ico`
-- 繧｢繝励ΜUI (`/`) 縺ｮ `<head>` 縺ｫ favicon / manifest 蜿ら・繧定ｿｽ蜉縲・
-### 43) Version Guard 縺ｮ菫ｮ豁｣
-- `scripts/check_version_bump.py` 縺ｮ蟾ｮ蛻・愛螳壹ｒ菫ｮ豁｣・・git diff` 蠑墓焚鬆・ｼ峨・- 譁・ｭ励さ繝ｼ繝牙叙繧頑桶縺・ｒ螳牙ｮ壼喧・・utf-8` + `errors=replace`・峨・- `scripts/check_version_bump.py` 閾ｪ霄ｫ縺ｮ螟画峩縺ｯ迚井ｸ翫￡蠢・亥愛螳壹°繧蛾勁螟悶・
-### 44) 迚井ｸ翫￡螻･豁ｴ
+- アプリUI (`/`) の `<head>` に favicon / manifest 参照を追加。
+
+### 43) Version Guard の修正
+- `scripts/check_version_bump.py` の差分判定を修正（`git diff` 引数順）。
+- 文字コード取り扱いを安定化（`utf-8` + `errors=replace`）。
+- `scripts/check_version_bump.py` 自身の変更は版上げ必須判定から除外。
+
+### 44) 版上げ履歴
 - `1.4.742` -> `1.4.743`
 
-### 45) GitHub Pages逋ｽ逕ｻ髱｢縺ｮ蠕ｩ譌ｧ
-- 莠玖ｱ｡:
-  - `docs/index.html` / `docs/index_en.html` 縺ｫ譁・ｭ怜喧縺醍罰譚･縺ｮHTML遐ｴ謳搾ｼ磯哩縺倥ち繧ｰ蟠ｩ繧鯉ｼ峨′豺ｷ蜈･縺励；itHub Pages縺ｧ逋ｽ逕ｻ髱｢蛹悶・- 蜴溷屏:
-  - 騾比ｸｭ邱ｨ髮・凾縺ｮ譁・ｭ励さ繝ｼ繝・鄂ｮ謠帛・逅・〒譌･譛ｬ隱曰TML譛ｬ譁・′遐ｴ謳阪・- 蟇ｾ蠢・
-  - 逶ｴ霑第ｭ｣蟶ｸ繧ｳ繝溘ャ繝医・ `index` 2繝輔ぃ繧､繝ｫ縺ｸ蠕ｩ蜈・＠縺滉ｸ翫〒縲’avicon/manifest繝ｪ繝ｳ繧ｯ縺ｮ縺ｿ螳牙・縺ｫ蜀埼←逕ｨ縲・  - 菫ｮ豁｣繧ｳ繝溘ャ繝・ `162dda2`
-- 陬懆ｶｳ:
-  - 繧｢繧､繧ｳ繝ｳ霑ｽ蜉閾ｪ菴難ｼ・favicon-light/dark`, `manifest`・峨・逋ｽ逕ｻ髱｢縺ｮ逶ｴ謗･蜴溷屏縺ｧ縺ｯ縺ｪ縺・％縺ｨ繧堤｢ｺ隱阪・
+### 45) GitHub Pages白画面の復旧
+- 事象:
+  - `docs/index.html` / `docs/index_en.html` に文字化け由来のHTML破損（閉じタグ崩れ）が混入し、GitHub Pagesで白画面化。
+- 原因:
+  - 途中編集時の文字コード/置換処理で日本語HTML本文が破損。
+- 対応:
+  - 直近正常コミットの `index` 2ファイルへ復元した上で、favicon/manifestリンクのみ安全に再適用。
+  - 修正コミット: `162dda2`
+- 補足:
+  - アイコン追加自体（`favicon-light/dark`, `manifest`）は白画面の直接原因ではないことを確認。
+
 ---
 
-## 逶ｴ霑題ｿｽ險假ｼ・1.4.875 ・・v1.4.883・・
+## 直近追記（v1.4.875 ～ v1.4.883）
+
 ### v1.4.875
-- `core/handlers.py` 蠕ｩ譌ｧ縲・- `GET /chara_presets` 縺ｨ `POST /chara_presets` 縺ｮ豺ｷ邱壹ｒ菫ｮ豁｣縲・- 螢翫ｌ縺ｦ縺・◆ `POST` 繝倥Ν繝代・蜻ｨ霎ｺ縺ｮ荳崎ｦ∵妙迚・ｒ髯､蜴ｻ縲・
+- `core/handlers.py` 復旧。
+- `GET /chara_presets` と `POST /chara_presets` の混線を修正。
+- 壊れていた `POST` ヘルパー周辺の不要断片を除去。
+
 ### v1.4.876
-- `do_POST` 縺九ｉ `/config` 縺ｨ `/session` 繧偵・繝ｫ繝代・蛹悶・  - `_handle_post_config`
+- `do_POST` から `/config` と `/session` をヘルパー化。
+  - `_handle_post_config`
   - `_handle_post_session`
 
 ### v1.4.877
-- `do_POST` 蜈磯ｭ縺ｮ繝励Μ繧ｻ繝・ヨ邉ｻ蛻・ｲ舌ｒ繝倥Ν繝代・蛹悶・  - `_handle_post_preset_routes`
-  - 蟇ｾ雎｡: `/presets/*`, `/chara_save`, `/chara_delete`
+- `do_POST` 先頭のプリセット系分岐をヘルパー化。
+  - `_handle_post_preset_routes`
+  - 対象: `/presets/*`, `/chara_save`, `/chara_delete`
 
 ### v1.4.878
-- `do_POST` 譛ｫ蟆ｾ繝ｫ繝ｼ繝医ｒ繝倥Ν繝代・蛹悶・  - `_handle_post_terminal_routes`
-  - 蟇ｾ雎｡: `/get_image`, `/chara_thumb`, `/cancel`, `/generate`
+- `do_POST` 末尾ルートをヘルパー化。
+  - `_handle_post_terminal_routes`
+  - 対象: `/get_image`, `/chara_thumb`, `/cancel`, `/generate`
 
 ### v1.4.879
-- `do_POST` 縺ｮ `/regen` 螟ｧ繝悶Ο繝・け繧帝未謨ｰ謚ｽ蜃ｺ縲・  - `_handle_post_regen`
+- `do_POST` の `/regen` 大ブロックを関数抽出。
+  - `_handle_post_regen`
 
 ### v1.4.880
-- `do_POST` 荳ｭ谿ｵ繝ｫ繝ｼ繝医ｒ繝倥Ν繝代・蛹悶・  - `_handle_post_common_routes`
-  - 蟇ｾ雎｡: `/config`, `/session`, `/history_update`, `/history_delete`, `/chara_presets`, `/chara_preset_thumb`, `*_tags`
-- `do_POST` 縺ｮ蛻・ｲ先紛逅・ｼ医・繝ｪ繧ｻ繝・ヨ / 蜈ｱ騾・/ regen / 譛ｫ蟆ｾ繝ｫ繝ｼ繝茨ｼ峨・
+- `do_POST` 中段ルートをヘルパー化。
+  - `_handle_post_common_routes`
+  - 対象: `/config`, `/session`, `/history_update`, `/history_delete`, `/chara_presets`, `/chara_preset_thumb`, `*_tags`
+- `do_POST` の分岐整理（プリセット / 共通 / regen / 末尾ルート）。
+
 ### v1.4.881
-- `do_POST` 縺ｮ蛻ｶ蠕｡繝輔Ο繝ｼ繧堤峩蛻・`if/return` 縺ｫ邨ｱ荳縲・- 譛ｪ蟇ｾ蠢・POST 繝代せ縺ｮ `404` 繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ繧定ｿｽ蜉縲・- 蛻・ｲ宣・ｒ譏守｢ｺ蛹厄ｼ・reset -> common -> regen -> terminal -> 404・峨・
+- `do_POST` の制御フローを直列 `if/return` に統一。
+- 未対応 POST パスの `404` フォールバックを追加。
+- 分岐順を明確化（preset -> common -> regen -> terminal -> 404）。
+
 ### v1.4.882
-- `do_DELETE` 繧偵・繝ｫ繝代・蛻・牡縲・  - `_handle_delete_preset_routes`
-- DELETE 縺ｮ蛻ｶ蠕｡繝輔Ο繝ｼ繧・`if/return` 蠖｢蠑上〒謨ｴ逅・・- 譌｢蟄俶嫌蜍包ｼ・/presets/*` 縺ｮ蜑企勁API縺ｨ404繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ・峨・邯ｭ謖√・
+- `do_DELETE` をヘルパー分割。
+  - `_handle_delete_preset_routes`
+- DELETE の制御フローを `if/return` 形式で整理。
+- 既存挙動（`/presets/*` の削除APIと404フォールバック）は維持。
+
 ### v1.4.883
-- URL隗｣譫舌ｒ蜈ｱ騾壼喧縺吶ｋ `_parse_request_path_qs` 繧定ｿｽ蜉縲・- `do_GET` / `do_POST` / `do_DELETE` 縺ｮ蜀帝ｭ隗｣譫舌ｒ蜈ｱ騾壹・繝ｫ繝代・蛻ｩ逕ｨ縺ｸ邨ｱ荳縲・- 隗｣譫舌Ο繧ｸ繝・け縺ｮ驥崎､・炎貂幢ｼ域嫌蜍募､画峩縺ｪ縺暦ｼ峨・
+- URL解析を共通化する `_parse_request_path_qs` を追加。
+- `do_GET` / `do_POST` / `do_DELETE` の冒頭解析を共通ヘルパー利用へ統一。
+- 解析ロジックの重複削減（挙動変更なし）。
+
 ## Checks
 - `python -m py_compile core/handlers.py anima_pipeline.py` pass
 - `python scripts/run_quick_checks.py --include-hooks-guard` pass
 
 
 ### v1.4.884
-- `do_GET` 縺九ｉ `/session` 縺ｨ `/chara_presets` 繧偵・繝ｫ繝代・縺ｸ蛻・屬縲・  - `_handle_get_session_route`
+- `do_GET` から `/session` と `/chara_presets` をヘルパーへ分離。
+  - `_handle_get_session_route`
   - `_handle_get_chara_presets_route`
-- `do_GET` 蛻・ｲ舌・遏ｭ邵ｮ・域嫌蜍募､画峩縺ｪ縺暦ｼ峨・
+- `do_GET` 分岐の短縮（挙動変更なし）。
+
 ### v1.4.885
-- `GET /generate_preset` 蛻・ｲ舌ｒ繝倥Ν繝代・縺ｸ謚ｽ蜃ｺ縲・  - `_handle_get_generate_preset_route`
-- `do_GET` 縺ｮ蛻・ｲ占ｦ矩壹＠繧呈隼蝟・ｼ域嫌蜍募､画峩縺ｪ縺暦ｼ峨・
+- `GET /generate_preset` 分岐をヘルパーへ抽出。
+  - `_handle_get_generate_preset_route`
+- `do_GET` の分岐見通しを改善（挙動変更なし）。
+
 ### v1.4.886
-- `do_GET` 縺ｮ `/session` 縺ｨ `/chara_presets` 繧呈里蟄倥・繝ｫ繝代・蜻ｼ縺ｳ蜃ｺ縺励∈邨ｱ荳縲・- GET蛻・ｲ舌・驥崎､・さ繝ｼ繝峨ｒ蜑頑ｸ幢ｼ域嫌蜍募､画峩縺ｪ縺暦ｼ峨・
+- `do_GET` の `/session` と `/chara_presets` を既存ヘルパー呼び出しへ統一。
+- GET分岐の重複コードを削減（挙動変更なし）。
+
 ### v1.4.887
-- `do_GET` 繧呈ｮｵ髫弱ョ繧｣繧ｹ繝代ャ繝√↓蜀肴ｧ区・縲・  - `early -> info -> poll -> session -> history -> generate_preset -> chara_presets -> misc -> image -> 404`
-- 霑ｽ蜉繝倥Ν繝代・:
+- `do_GET` を段階ディスパッチに再構成。
+  - `early -> info -> poll -> session -> history -> generate_preset -> chara_presets -> misc -> image -> 404`
+- 追加ヘルパー:
   - `_handle_get_misc_routes`
   - `_handle_get_terminal_image_routes`
-- GET縺ｮ雋ｬ蜍吝・髮｢繧貞ｼｷ蛹厄ｼ域嫌蜍募､画峩縺ｪ縺暦ｼ峨・
+- GETの責務分離を強化（挙動変更なし）。
+
 ### v1.4.888
-- `GET /poll_status` 繧偵Ν繝ｼ繝医・繝ｫ繝代・蛹悶・  - `_handle_get_poll_route`
-- `do_GET` 縺ｮ蛻・ｲ舌ヱ繧ｿ繝ｼ繝ｳ繧堤ｵｱ荳・医☆縺ｹ縺ｦ繝倥Ν繝代・蛻､螳壹・繝ｼ繧ｹ・峨・
-## 譛邨・UI遒ｺ隱搾ｼ・1.4.888・・1. 襍ｷ蜍輔＠縺ｦ繝医ャ繝苓｡ｨ遉ｺ・育區逕ｻ髱｢/譁・ｭ怜喧縺代↑縺暦ｼ峨・2. 險隱槫・譖ｿ: 譌･譛ｬ隱樞℡闍ｱ隱槭ｒ蠕蠕ｩ縺励※繝ｩ繝吶Ν蟠ｩ繧後↑縺励・3. 逕滓・繝輔Ο繝ｼ: Generate -> Cancel -> Re-Generate 縺ｧ迥ｶ諷玖｡ｨ遉ｺ縺悟崋逹縺励↑縺・・4. 螻･豁ｴ陦ｨ遉ｺ: 繧ｻ繝・す繝ｧ繝ｳ螻･豁ｴ/蜈ｨ螻･豁ｴ縺ｮ隱ｭ縺ｿ霎ｼ縺ｿ縲√し繝繝崎｡ｨ遉ｺ縲√・繝ｼ繧ｸ繝ｳ繧ｰ縲・5. 繝励Μ繧ｻ繝・ヨ: 菫晏ｭ・隱ｭ霎ｼ/蜑企勁縲√し繝繝堺ｽ懈・縲√ワ繝ｼ繝峨Μ繝ｭ繝ｼ繝牙ｾ後・蜀崎｡ｨ遉ｺ縲・6. LoRA: 荳隕ｧ蜿門ｾ励√き繝ｼ繝牙牡蠖薙√し繝繝崎｡ｨ遉ｺ・亥叙蠕励〒縺阪ｋ迺ｰ蠅・〒・峨・7. 險ｭ螳・ `/config` 菫晏ｭ伜ｾ後↓蜀崎ｵｷ蜍輔＠縺ｦ蛟､縺御ｿ晄戟縺輔ｌ繧九・8. 404邉ｻ: 蟄伜惠縺励↑縺・ヱ繧ｹ縺ｸ繧｢繧ｯ繧ｻ繧ｹ縺励※UI縺悟｣翫ｌ縺ｪ縺・・
-蝠城｡後′蜃ｺ縺溘ｉ縲∝・迴ｾ謇矩・ｼ域桃菴憺・ｼ峨→ Console/Network 縺ｮ襍､繧ｨ繝ｩ繝ｼ繧偵◎縺ｮ縺ｾ縺ｾ蜈ｱ譛峨・
+- `GET /poll_status` をルートヘルパー化。
+  - `_handle_get_poll_route`
+- `do_GET` の分岐パターンを統一（すべてヘルパー判定ベース）。
+
+## 最終GUI確認（v1.4.888）
+1. 起動してトップ表示（白画面/文字化けなし）。
+2. 言語切替: 日本語⇄英語を往復してラベル崩れなし。
+3. 生成フロー: Generate -> Cancel -> Re-Generate で状態表示が固着しない。
+4. 履歴表示: セッション履歴/全履歴の読み込み、サムネ表示、ページング。
+5. プリセット: 保存/読込/削除、サムネ作成、ハードリロード後の再表示。
+6. LoRA: 一覧取得、カード割当、サムネ表示（取得できる環境で）。
+7. 設定: `/config` 保存後に再起動して値が保持される。
+8. 404系: 存在しないパスへアクセスしてUIが壊れない。
+
+問題が出たら、再現手順（操作順）と Console/Network の赤エラーをそのまま共有。
+
 ### v1.4.889
-- `GET` 繝ｫ繝ｼ繝医・谺關ｽ繧貞ｾｩ譌ｧ縲・  - `/version`
+- `GET` ルートの欠落を復旧。
+  - `/version`
   - `/extra_tags`
   - `/style_tags`
   - `/neg_extra_tags`
-- 險隱槫・譖ｿ譎ゅ・螻･豁ｴ陦ｨ遉ｺ蟠ｩ繧後・Console 404 縺ｮ蝗槫ｸｰ繧剃ｿｮ豁｣縲・
+- 言語切替時の履歴表示崩れ・Console 404 の回帰を修正。
+
 ### v1.4.890
-- 螻･豁ｴ繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ縺ｮ險隱槫・譖ｿ繝ｩ繝吶Ν蟠ｩ繧鯉ｼ・???`・峨ｒ菫ｮ豁｣縲・- `frontend/index.html` 縺ｮ豺ｷ蝨ｨ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ譁・ｭ怜・繧呈ｭ｣蟶ｸ縺ｪJA/EN譁・ｨ縺ｫ鄂ｮ謠帙・- 蠖ｱ髻ｿ: `Generation History (Session)`, `Session History`, `All History`, `Clear`, 繝励Μ繧ｻ繝・ヨ邂｡逅・Λ繝吶Ν縲・
+- 履歴セクションの言語切替ラベル崩れ（`???`）を修正。
+- `frontend/index.html` の混在フォールバック文字列を正常なJA/EN文言に置換。
+- 影響: `Generation History (Session)`, `Session History`, `All History`, `Clear`, プリセット管理ラベル。
+
 ### v1.4.891
-- 蛻晏屓襍ｷ蜍墓凾縺ｫ LoRA 繧ｵ繝繝阪′ 404 縺ｫ縺ｪ繧句屓蟶ｰ繧剃ｿｮ豁｣縲・- `GET /lora_thumbnail` 繧・`core/handlers.py` 縺ｮ GET misc 繝ｫ繝ｼ繝医↓蠕ｩ譌ｧ縲・- 繧ｵ繝繝肴悴逋ｺ隕区凾縺ｯ `204` 繧定ｿ斐☆譌｢蟄倅ｺ呈鋤謖吝虚繧堤ｶｭ謖√・
+- 初回起動時に LoRA サムネが 404 になる回帰を修正。
+- `GET /lora_thumbnail` を `core/handlers.py` の GET misc ルートに復旧。
+- サムネ未発見時は `204` を返す既存互換挙動を維持。
+
 ### v1.4.892
-- 逕滓・荳ｭ縺ｮ豕ｨ諢乗枚縲娯ｻ 襍ｷ蜍慕峩蠕後・騾ｲ謐・縺瑚｡ｨ遉ｺ縺輔ｌ縺ｪ縺・ｴ蜷医′縺ゅｊ縺ｾ縺呻ｼ亥・蝗杆S謗･邯壹・繧ｿ繧､繝溘Φ繧ｰ縺ｫ繧医ｋ・峨阪・闍ｱ險ｳ繧定ｿｽ蜉縲・- 闍ｱ隱朸I譎ゅ↓隧ｲ蠖捺ｳｨ險倥′譌･譛ｬ隱槭・縺ｾ縺ｾ谿九ｋ蝠城｡後ｒ菫ｮ豁｣縲・
-## 霑ｽ險假ｼ・026-03-23 / REFACTOR-1 邯咏ｶ夲ｼ・
-### 11) 繝｢繧ｸ繝･繝ｼ繝ｫ蛻・牡縺ｮ譛ｬ菴馴←逕ｨ
-- `anima_pipeline.py` 繧偵お繝ｳ繝医Μ繝昴う繝ｳ繝井ｸｭ蠢・∈謨ｴ逅・- `core/` 縺ｸ讖溯・蛻・屬・・onfig / handlers / presets / history / frontend / runtime / llm / comfyui・・- `frontend/index.html` 縺ｨ `frontend/i18n.js` 繧貞､門・縺鈴°逕ｨ縺ｸ邨ｱ荳
+- 生成中の注意文「※ 起動直後は進捗%が表示されない場合があります（初回WS接続のタイミングによる）」の英訳を追加。
+- 英語UI時に該当注記が日本語のまま残る問題を修正。
 
-### 12) 蝗槫ｸｰ荳榊・蜷医・菫ｮ豁｣・井ｻ雁屓・・- 險隱槫・譖ｿ蠕後↓螻･豁ｴ隕句・縺励′ `???` 縺ｫ縺ｪ繧句撫鬘後ｒ菫ｮ豁｣
-- 404蝗槫ｸｰ・・/version`, `/extra_tags`, `/neg_extra_tags`, `/style_tags`・峨ｒ菫ｮ豁｣
-- LoRA 繧ｵ繝繝阪う繝ｫ縺ｮ蛻晏屓繝ｭ繝ｼ繝牙､ｱ謨暦ｼ・/lora_thumbnail`・峨ｒ蜀肴磁邯壼庄閭ｽ縺ｫ菫ｮ豁｣
-- 襍ｷ蜍慕峩蠕梧ｳｨ諢乗枚縺ｮ闍ｱ險ｳ譛ｪ驕ｩ逕ｨ繧剃ｿｮ豁｣
+## 追記（2026-03-23 / REFACTOR-1 継続）
 
-### 13) 襍ｷ蜍輔・讀懆ｨｼ繝輔Ο繝ｼ縺ｮ謨ｴ蛯・- `start_anima_pipeline - Tailscale.bat` 繧貞・菴懈・
-- Hook/Quick Check 蟆守ｷ壹ｒ邯ｭ謖・ｼ・re-commit / pre-push・・- 螳溯｡檎｢ｺ隱・
-  - `python scripts/check_frontend_syntax.py` 笨・  - `python scripts/run_quick_checks.py --include-hooks-guard` 笨・
-### 14) 迴ｾ蝨ｨ縺ｮ陬懆ｶｳ
-- 譌｢遏･隱ｲ鬘後→縺励※縲瑚ｵｷ蜍慕峩蠕後・騾ｲ謐・霑ｽ蠕馴≦繧後阪・邯咏ｶ夊ｦｳ蟇滂ｼ郁・蜻ｽ縺ｧ縺ｯ縺ｪ縺・◆繧∝ｾ檎ｶ壼ｯｾ蠢懶ｼ・- 譛ｬ霑ｽ險俶凾轤ｹ縺ｮ譛ｬ菴薙ヰ繝ｼ繧ｸ繝ｧ繝ｳ: `1.4.900`
+### 11) モジュール分割の本体適用
+- `anima_pipeline.py` をエントリポイント中心へ整理
+- `core/` へ機能分離（config / handlers / presets / history / frontend / runtime / llm / comfyui）
+- `frontend/index.html` と `frontend/i18n.js` を外出し運用へ統一
+
+### 12) 回帰不具合の修正（今回）
+- 言語切替後に履歴見出しが `???` になる問題を修正
+- 404回帰（`/version`, `/extra_tags`, `/neg_extra_tags`, `/style_tags`）を修正
+- LoRA サムネイルの初回ロード失敗（`/lora_thumbnail`）を再接続可能に修正
+- 起動直後注意文の英訳未適用を修正
+
+### 13) 起動・検証フローの整備
+- `start_anima_pipeline - Tailscale.bat` を再作成
+- Hook/Quick Check 導線を維持（pre-commit / pre-push）
+- 実行確認:
+  - `python scripts/check_frontend_syntax.py` ✅
+  - `python scripts/run_quick_checks.py --include-hooks-guard` ✅
+
+### 14) 現在の補足
+- 既知課題として「起動直後の進捗%追従遅れ」は継続観察（致命ではないため後続対応）
+- 本追記時点の本体バージョン: `1.4.900`
 
 ### v1.4.900
-- INPUT-12: 繧ｭ繝｣繝ｩ蜷・菴懷刀蜷阪↓ JA/EN 谺・ｒ霑ｽ蜉・・name_en` / `series_en`・峨・- INPUT-12: LLM縺ｪ縺礼函謌舌〒 EN 谺・━蜈医∫ｩｺ谺・凾縺ｯ JA 谺・ヵ繧ｩ繝ｼ繝ｫ繝舌ャ繧ｯ縺ｧ `name_(series)` 逕滓・縲・- INPUT-12: 繧ｻ繝・す繝ｧ繝ｳ菫晏ｭ・蠕ｩ蜈・・繧ｭ繝｣繝ｩ繝励Μ繧ｻ繝・ヨ菫晏ｭ・隱ｭ霎ｼ縺ｫ `name_en` / `series_en` 繧貞渚譏縲・- INPUT-5: 繝励Μ繧ｻ繝・ヨ繧ｫ繝・ざ繝ｪ縺ｫ `negative` 繧定ｿｽ蜉縺励～/presets/negative/*` 縺ｧ菫晏ｭ・隱ｭ霎ｼ/蜑企勁蟇ｾ蠢懊・- INPUT-5: 繝阪ぎ繝・ぅ繝冶ｪｿ謨ｴ繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ荳企Κ縺ｫ Negative Preset UI・磯∈謚・菫晏ｭ・隱ｭ霎ｼ/蜑企勁・峨ｒ霑ｽ蜉縲・- INPUT-5: 繝阪ぎ繝・ぅ繝悶・繝ｪ繧ｻ繝・ヨ縺ｧ `quality_neg_tags` / `neg_extra_tags` / `neg_style_tags` / `neg_extra_note` / `selected_neg_safety` 繧剃ｿ晏ｭ・蠕ｩ蜈・・- Config: `last_negative_preset` 繧・`pipeline_config` 縺ｮ菫晏ｭ伜ｯｾ雎｡縺ｫ霑ｽ蜉縲・- 讀懆ｨｼ: `python scripts/check_frontend_syntax.py` / `python scripts/run_quick_checks.py --include-hooks-guard` 謌仙粥縲・
+- INPUT-12: キャラ名/作品名に JA/EN 欄を追加（`name_en` / `series_en`）。
+- INPUT-12: LLMなし生成で EN 欄優先、空欄時は JA 欄フォールバックで `name_(series)` 生成。
+- INPUT-12: セッション保存/復元・キャラプリセット保存/読込に `name_en` / `series_en` を反映。
+- INPUT-5: プリセットカテゴリに `negative` を追加し、`/presets/negative/*` で保存/読込/削除対応。
+- INPUT-5: ネガティブ調整セクション上部に Negative Preset UI（選択/保存/読込/削除）を追加。
+- INPUT-5: ネガティブプリセットで `quality_neg_tags` / `neg_extra_tags` / `neg_style_tags` / `neg_extra_note` / `selected_neg_safety` を保存/復元。
+- Config: `last_negative_preset` を `pipeline_config` の保存対象に追加。
+- 検証: `python scripts/check_frontend_syntax.py` / `python scripts/run_quick_checks.py --include-hooks-guard` 成功。
+
 ### v1.4.901
-- `/generate_preset` 縺ｮ蜻ｽ蜷阪ｒ JA/EN 騾｣蜍輔↓諡｡蠑ｵ縲Ａname_en` 縺悟・蜉帙＆繧後※縺・ｋ蝣ｴ蜷医∽ｿ晏ｭ伜錐縺ｮ譌｢螳壼､繧・`JA・・N・荏 蠖｢蠑上↓邨ｱ荳縲・- 閾ｪ蜍慕函謌舌・繝ｪ繧ｻ繝・ヨ菫晏ｭ俶凾縺ｫ `name_en` / `series_en` 繧ゆｿ晄戟縲・- 繝輔Ο繝ｳ繝医・縲後・繝ｪ繧ｻ繝・ヨ閾ｪ蜍慕函謌舌阪後く繝｣繝ｩ繝励Μ繧ｻ繝・ヨ菫晏ｭ倥阪・繝・ヵ繧ｩ繝ｫ繝亥錐繧貞酔縺倩ｦ丞援・・A・・N・牙━蜈茨ｼ峨↓邨ｱ荳縲・
+- `/generate_preset` の命名を JA/EN 連動に拡張。`name_en` が入力されている場合、保存名の既定値を `JA（EN）` 形式に統一。
+- 自動生成プリセット保存時に `name_en` / `series_en` も保持。
+- フロントの「プリセット自動生成」「キャラプリセット保存」のデフォルト名を同じ規則（JA（EN）優先）に統一。
+
 ### v1.4.902
-- `settings/preset_gen_prompt.txt` 縺ｫ蜃ｺ蜉帙ヵ繧ｩ繝ｼ繝槭ャ繝亥宛邏・ｒ霑ｽ險假ｼ医さ繝ｼ繝峨ヵ繧ｧ繝ｳ繧ｹ遖∵ｭ｢繝ｻ蜊倅ｸJSON蠢・茨ｼ峨・- `/generate_preset` 縺ｧ LLM遨ｺ蠢懃ｭ・蜀・ｮｹ荳崎ｶｳ譎ゅ↓1蝗槭□縺題・蜍輔Μ繝医Λ繧､縺吶ｋ蜃ｦ逅・ｒ霑ｽ蜉縲・
+- `settings/preset_gen_prompt.txt` に出力フォーマット制約を追記（コードフェンス禁止・単一JSON必須）。
+- `/generate_preset` で LLM空応答/内容不足時に1回だけ自動リトライする処理を追加。
+
 ### v1.4.903
-- `/generate_preset` 縺ｧ `name_en` / `series_en` 縺ｮ閾ｪ蜍戊｣懷ｮ後ｒ霑ｽ蜉・・anbooru繧ｿ繧ｰ讀懃ｴ｢ -> 陬懷勧LLM謗ｨ螳・-> 繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ縺ｮ鬆・ｼ峨・- 譌･譛ｬ隱槫錐縺ｮ縺ｿ蜈･蜉帶凾縺ｧ繧ゅ∬ｿ泌唆繝励Μ繧ｻ繝・ヨ縺ｫ闍ｱ隱槭ち繧ｰ蛟呵｣懊ｒ蜷ｫ繧√ｋ繧医≧謾ｹ蝟・・- 閾ｪ蜍慕函謌舌・繝ｪ繧ｻ繝・ヨ蜷阪・譌｢螳壼､蛻､螳壹ｒ陬懷ｮ悟ｾ後・ `name_en` 繝吶・繧ｹ縺ｫ邨ｱ荳・・JA・・N・荏・峨・
+- `/generate_preset` で `name_en` / `series_en` の自動補完を追加（Danbooruタグ検索 -> 補助LLM推定 -> フォールバックの順）。
+- 日本語名のみ入力時でも、返却プリセットに英語タグ候補を含めるよう改善。
+- 自動生成プリセット名の既定値判定を補完後の `name_en` ベースに統一（`JA（EN）`）。
+
 ### v1.4.904
-- 闍ｱ隱槫錐陬懷勧謗ｨ螳壹〒蛻ｶ蠕｡隱橸ｼ井ｾ・ `no_think`・峨ｒ蛟呵｣懊°繧蛾勁螟悶☆繧九ぎ繝ｼ繝峨ｒ霑ｽ蜉縲・- 陬懷勧謗ｨ螳壹・繝ｭ繝ｳ繝励ヨ繧定ｪｿ謨ｴ縺励∽ｸ崎ｦ√↑蛻ｶ蠕｡隱槭・豺ｷ蜈･繧呈椛蛻ｶ縲・
+- 英語名補助推定で制御語（例: `no_think`）を候補から除外するガードを追加。
+- 補助推定プロンプトを調整し、不要な制御語の混入を抑制。
+
 ### v1.4.905
-- `/generate_preset` 縺ｮ闍ｱ隱槫錐陬懷勧謗ｨ螳壹↓螯･蠖捺ｧ繝舌Μ繝・・繧ｷ繝ｧ繝ｳ繧定ｿｽ蜉縲・- 謖・､ｺ譁・ｷｷ蜈･邉ｻ縺ｮ荳肴ｭ｣蛟呵｣懶ｼ井ｾ・ `the_user_wants_to_convert...`・峨ｒ髯､螟悶・
+- `/generate_preset` の英語名補助推定に妥当性バリデーションを追加。
+- 指示文混入系の不正候補（例: `the_user_wants_to_convert...`）を除外。
+
 ### v1.4.906
-- `Series EN` 縺檎ｩｺ縺ｫ縺ｪ繧九こ繝ｼ繧ｹ蜷代￠縺ｫ縲～name_(series)` 蠖｢蠑上・繧ｭ繝｣繝ｩ繧ｿ繧ｰ縺九ｉ series 繧呈歓蜃ｺ縺吶ｋ繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ繧定ｿｽ蜉縲・- 縺薙ｌ縺ｫ繧医ｊ JA菴懷刀蜷阪・縺ｿ蜈･蜉帶凾縺ｧ繧ゅ√く繝｣繝ｩ繧ｿ繧ｰ縺ｫ series 縺悟性縺ｾ繧後ｋ蝣ｴ蜷医・ `Series EN` 繧定｣懷ｮ悟庄閭ｽ縲・
+- `Series EN` が空になるケース向けに、`name_(series)` 形式のキャラタグから series を抽出するフォールバックを追加。
+- これにより JA作品名のみ入力時でも、キャラタグに series が含まれる場合は `Series EN` を補完可能。
+
 ### v1.4.907
-- EN陬懷ｮ悟､縺ｮ豁｣隕丞喧繧定ｿｽ蜉: `name_(series)` 縺ｯ `Name EN=name` / `Series EN=series` 縺ｫ蛻・屬縲・- `Series EN` 縺ｮ `fate_(series)` 蠖｢蠑上ｒ `fate` 縺ｸ豁｣隕丞喧縲・- `Name EN` 縺ｫ縺ｯASCII繧ｿ繧ｰ螯･蠖捺ｧ繝√ぉ繝・け繧帝←逕ｨ縺励∵律譛ｬ隱槭ｄ謖・､ｺ譁・ｷｷ蜈･繧帝勁螟悶・
+- EN補完値の正規化を追加: `name_(series)` は `Name EN=name` / `Series EN=series` に分離。
+- `Series EN` の `fate_(series)` 形式を `fate` へ正規化。
+- `Name EN` にはASCIIタグ妥当性チェックを適用し、日本語や指示文混入を除外。
+
 ### v1.4.908
-- Positive preset 繧定ｿｽ蜉・・ositive 繧ｫ繝・ざ繝ｪ菫晏ｭ・隱ｭ霎ｼ/蜑企勁・峨・- 繝昴ず繝・ぅ繝冶ｪｿ謨ｴ繧ｻ繧ｯ繧ｷ繝ｧ繝ｳ荳企Κ縺ｫ Positive Preset UI・磯∈謚・菫晏ｭ・隱ｭ霎ｼ/蜑企勁・峨ｒ霑ｽ蜉縲・- Positive preset 縺ｧ selected_period / year / quality_tags / meta_tags / selected_safety / style_tags / extra_tags / extra_note 繧剃ｿ晏ｭ・蠕ｩ蜈・・- Config/Session 縺ｫ last_positive_preset / lastPositivePreset 繧定ｿｽ蜉縺励∵怙邨る∈謚槭ｒ蠕ｩ蜈・・
+- Positive preset を追加（positive カテゴリ保存/読込/削除）。
+- ポジティブ調整セクション上部に Positive Preset UI（選択/保存/読込/削除）を追加。
+- Positive preset で selected_period / year / quality_tags / meta_tags / selected_safety / style_tags / extra_tags / extra_note を保存/復元。
+- Config/Session に last_positive_preset / lastPositivePreset を追加し、最終選択を復元。
+
 ### v1.4.909
-- Positive Preset UI 譁・ｨ縺ｮ譁・ｭ怜喧縺代ｒ菫ｮ豁｣・磯∈謚櫁い繝ｻ遒ｺ隱阪ム繧､繧｢繝ｭ繧ｰ繝ｻ繧ｨ繝ｩ繝ｼ繝｡繝・そ繝ｼ繧ｸ・峨・- Positive preset 縺ｮ隱ｭ霎ｼ/菫晏ｭ・蜑企勁蟆守ｷ壹〒陦ｨ遉ｺ繝｡繝・そ繝ｼ繧ｸ繧呈ｭ｣蟶ｸ蛹悶・
+- Positive Preset UI 文言の文字化けを修正（選択肢・確認ダイアログ・エラーメッセージ）。
+- Positive preset の読込/保存/削除導線で表示メッセージを正常化。
+
 ## Recent Addendum (v1.4.910)
 - OUTPUT-8 follow-up fix: prevented mixed JA/EN labels in the Named Sessions panel during language toggle.
 - Added a dedicated no-auto-i18n boundary for the sessions panel (`data-no-i18n="1"`).
@@ -405,7 +603,10 @@
 - `python -m py_compile anima_pipeline.py core/handlers.py` pass
 - `python scripts/check_frontend_syntax.py` pass
 
-### 15) guides蜀肴紛蛯呻ｼ・026-03-23・・- `docs/guides/anima_pipeline_guide.md` 繧偵Μ繝輔ぃ繧ｯ繧ｿ蠕梧ｧ区・縺ｫ蜷医ｏ縺帙※蜈ｨ髱｢譖ｴ譁ｰ・域枚蟄怜喧縺題ｧ｣豸茨ｼ・- `docs/guides/anima_pipeline_guide_en.md` 繧貞酔蜀・ｮｹ縺ｧ蜀肴紛蛯呻ｼ域ｧ区・繝ｻ襍ｷ蜍輔・譛蟆城・蟶・そ繝・ヨ繧堤樟陦悟喧・・- 繧ｯ繧､繝・け繝√ぉ繝・け蟆守ｷ壹ｒ `quick_checks_and_hooks.md` 蜿ら・縺ｸ邨ｱ荳
+### 15) guides再整備（2026-03-23）
+- `docs/guides/anima_pipeline_guide.md` をリファクタ後構成に合わせて全面更新（文字化け解消）
+- `docs/guides/anima_pipeline_guide_en.md` を同内容で再整備（構成・起動・最小配布セットを現行化）
+- クイックチェック導線を `quick_checks_and_hooks.md` 参照へ統一
 
 ## Addendum (2026-03-23 / Preset Defaults + Guides)
 
@@ -431,11 +632,13 @@
 
 
 ### v1.5.0
-- 驟榊ｸ・ヰ繝ｼ繧ｸ繝ｧ繝ｳ繧・1.4.914 -> 1.5.0 縺ｫ譖ｴ譁ｰ縲・- README.md / README_EN.md / docs/specs/features.md / docs/updates/roadmap.md 縺ｮ迴ｾ蝨ｨ繝舌・繧ｸ繝ｧ繝ｳ陦ｨ險倥ｒ `v1.5.0` 縺ｫ蜷梧悄縲・
+- 配布バージョンを 1.4.914 -> 1.5.0 に更新。
+- README.md / README_EN.md / docs/specs/features.md / docs/updates/roadmap.md の現在バージョン表記を `v1.5.0` に同期。
+
 
 ### v1.5.01
 - Added startup config backfill for missing keys from `DEFAULT_CONFIG` in `load_config()`.
-- Added backfill log line: `[config] 荳崎ｶｳ繧ｭ繝ｼ繧定｣懷ｮ後＠縺ｾ縺励◆`.
+- Added backfill log line: `[config] 不足キーを補完しました`.
 - Added version badge fallback display on initial page load (`__APP_VERSION__` injection + client-side fallback before `/version` response).
 - Added release notes index/file:
   - `docs/release_notes/README.md`
@@ -477,3 +680,21 @@
   - API v2 metadata (`feature_api_v2*.md`) target release
 - Version bump: `1.5.03` -> `1.5.1`.
 
+## 2026-03-26 - v1.5.11
+
+- Release version updated to `v1.5.11`.
+- Launcher updated for portable-first behavior:
+  - Prefer bundled `python_embeded/python.exe`.
+  - Fallback to system `python` / `py` only when bundled Python is unavailable.
+- Workflow bundle policy updated to include four templates:
+  - `image_anima_preview.json`
+  - `image_anima_preview_Lora4.json`
+  - `image_anima2_preview.json`
+  - `image_anima2_preview_Lora4.json`
+- Documentation updated:
+  - README requirements clarified (bundled Python behavior).
+  - User guides' requirements updated for portable usage and bundled workflows.
+- Release notes added: `docs/release_notes/release_notes_v1.5.11.md`.
+- Release notes updated with Japanese details for reflected changes and compatibility.
+- Prepared minimal package zip for v1.5.11 release asset:
+  - `dist/anima-pipeline_v1.5.11_minimal.zip`
