@@ -104,6 +104,7 @@
     </div>
     <div class="hero-actions">
       <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" class="btn-primary">GitHubでダウンロード</a>
+      <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" class="btn-secondary js-version-zip-download">このバージョンのZIPをダウンロード</a>
       <a href="guides/anima_pipeline_guide.md" class="btn-secondary">使い方ガイド</a>
       <a href="demo.html" class="btn-secondary">デモはこちら</a>
     </div>
@@ -373,6 +374,7 @@
     </p>
     <div class="cta-btns">
       <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" class="btn-primary" style="min-width: 260px; text-align: center;">GitHubでダウンロード</a>
+      <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" class="btn-secondary js-version-zip-download" style="min-width: 260px; text-align: center;">このバージョンのZIPをダウンロード</a>
       <a href="guides/anima_pipeline_guide.md" class="btn-secondary" style="min-width: 260px; text-align: center;">使い方ガイド（日本語）</a>
       <a href="guides/anima_pipeline_guide_en.md" class="btn-secondary" style="min-width: 260px; text-align: center;">English Guide</a>
     </div>
@@ -389,7 +391,24 @@
   <p>© 2026 <a href="https://github.com/tomotto1296" target="_blank">tomotto1296</a> - Anima Pipeline is released under the MIT License</p>
 </footer>
 
+<script>
+  (function () {
+    const versionBadge = document.querySelector('.hero-badge');
+    if (!versionBadge) return;
+
+    const versionMatch = versionBadge.textContent.match(/v?(\d+\.\d+(?:\.\d+)?)/i);
+    if (!versionMatch) return;
+
+    const version = versionMatch[1];
+    const assetName = 'anima-pipeline_v' + version + '_minimal.zip';
+    const releaseUrl = 'https://github.com/tomotto1296/anima-pipeline/releases/download/v' + version + '/' + assetName;
+
+    document.querySelectorAll('.js-version-zip-download').forEach((link) => {
+      link.href = releaseUrl;
+      link.setAttribute('download', assetName);
+    });
+  })();
+</script>
+
 </body>
 </html>
-
-
