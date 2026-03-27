@@ -103,7 +103,7 @@
       <div class="flow-chip">画像生成完了</div>
     </div>
     <div class="hero-actions">
-      <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" class="btn-primary">GitHubでダウンロード</a>
+      <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" class="btn-primary js-github-download">GitHubでダウンロード</a>
       <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" class="btn-secondary js-version-zip-download">このバージョンのZIPをダウンロード</a>
       <a href="guides/anima_pipeline_guide.md" class="btn-secondary">使い方ガイド</a>
       <a href="demo.html" class="btn-secondary">デモはこちら</a>
@@ -373,7 +373,7 @@
       質問・バグ報告は <a href="https://github.com/tomotto1296/anima-pipeline/issues" target="_blank">Issue</a> で、最新情報は <a href="https://x.com/RHU_AIstudio" target="_blank">X</a> で。
     </p>
     <div class="cta-btns">
-      <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" class="btn-primary" style="min-width: 260px; text-align: center;">GitHubでダウンロード</a>
+      <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" class="btn-primary js-github-download" style="min-width: 260px; text-align: center;">GitHubでダウンロード</a>
       <a href="https://github.com/tomotto1296/anima-pipeline/releases/latest" target="_blank" class="btn-secondary js-version-zip-download" style="min-width: 260px; text-align: center;">このバージョンのZIPをダウンロード</a>
       <a href="guides/anima_pipeline_guide.md" class="btn-secondary" style="min-width: 260px; text-align: center;">使い方ガイド（日本語）</a>
       <a href="guides/anima_pipeline_guide_en.md" class="btn-secondary" style="min-width: 260px; text-align: center;">English Guide</a>
@@ -393,6 +393,26 @@
 
 <script>
   (function () {
+    const registerDownloadClickMetrics = (selector, downloadType) => {
+      document.querySelectorAll(selector).forEach((link) => {
+        link.addEventListener('click', () => {
+          if (typeof window.gtag !== 'function') return;
+
+          const section = link.closest('.hero-actions')
+            ? 'hero'
+            : link.closest('.cta-btns')
+              ? 'cta'
+              : 'other';
+
+          window.gtag('event', 'download_button_click', {
+            download_type: downloadType,
+            section: section,
+            link_url: link.href
+          });
+        });
+      });
+    };
+
     const versionBadge = document.querySelector('.hero-badge');
     if (!versionBadge) return;
 
@@ -407,6 +427,9 @@
       link.href = releaseUrl;
       link.setAttribute('download', assetName);
     });
+
+    registerDownloadClickMetrics('.js-github-download', 'github_release_page');
+    registerDownloadClickMetrics('.js-version-zip-download', 'version_zip');
   })();
 </script>
 
