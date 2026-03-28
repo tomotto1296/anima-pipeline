@@ -23,6 +23,21 @@
     --multi:#7c4dbf;
     --card:#ffffff;
     --highlight:#f3eeff;
+    color-scheme: light;
+  }
+  :root[data-theme="dark"] {
+    --ink:#e9e6f4;
+    --paper:#12101a;
+    --accent:#9b7bcf;
+    --accent2:#cf8eb0;
+    --muted:#b4abc9;
+    --border:#3a3350;
+    --success:#85c7a1;
+    --single:#69b587;
+    --multi:#a88fe0;
+    --card:#1d1a2a;
+    --highlight:#29233a;
+    color-scheme: dark;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{
@@ -43,7 +58,8 @@
     background:linear-gradient(120deg, var(--ink) 0%, #7c4dbf 100%);
     -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
     border-bottom:1.5px solid var(--border);padding-bottom:0.8rem;}
-  .lang-switch{display:flex;justify-content:flex-end;gap:0.35rem;margin:-0.3rem 0 0.8rem 0;}
+  .top-controls{display:flex;justify-content:space-between;align-items:center;gap:0.6rem;margin:-0.3rem 0 0.8rem 0;flex-wrap:wrap;}
+  .lang-switch{display:flex;justify-content:flex-end;gap:0.35rem;margin:0;}
   .lang-btn{
     border:1px solid var(--border);background:white;color:var(--muted);
     border-radius:999px;padding:0.2rem 0.55rem;cursor:pointer;
@@ -52,6 +68,25 @@
   }
   .lang-btn:hover{background:var(--highlight);color:var(--multi);border-color:var(--accent);transform:none;box-shadow:none;}
   .lang-btn.active{border-color:var(--multi);color:var(--multi);background:var(--highlight);}
+  .theme-switch{display:flex;align-items:center;gap:0.35rem;}
+  .theme-switch label{
+    margin:0;
+    font-family:'DM Mono',monospace;
+    font-size:0.62rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .theme-select{
+    width:auto;
+    min-width:6.5rem;
+    padding:0.25rem 1.6rem 0.25rem 0.5rem;
+    border-radius:999px;
+    background:var(--card);
+    font-family:'DM Mono',monospace;
+    font-size:0.64rem;
+    letter-spacing:0.04em;
+  }
   label{display:block;font-size:0.72rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;}
   input[type=text],input[type=password],textarea{width:100%;background:var(--card);border:1px solid var(--border);
     border-radius:6px;padding:0.7rem 1rem;font-family:'Zen Kaku Gothic New',sans-serif;
@@ -258,6 +293,18 @@
   .tag-check{display:flex;align-items:center;gap:0.25rem;border:1px solid var(--border);
     padding:0.3rem 0.55rem;cursor:pointer;user-select:none;background:white;font-family:'DM Mono',monospace;font-size:0.72rem;transition:all 0.15s;}
   .tag-check:has(input:checked){background:var(--highlight);border-color:var(--multi);color:var(--multi);}
+  :root[data-theme="dark"] .container{background:rgba(25,22,36,0.92);box-shadow:0 8px 28px rgba(0,0,0,0.38);}
+  :root[data-theme="dark"] input[type=text],
+  :root[data-theme="dark"] input[type=password],
+  :root[data-theme="dark"] textarea,
+  :root[data-theme="dark"] select{background:var(--card);color:var(--ink);}
+  :root[data-theme="dark"] .sbody,
+  :root[data-theme="dark"] .status-box,
+  :root[data-theme="dark"] .extra-block,
+  :root[data-theme="dark"] .chara-block{background:rgba(30,26,43,0.92);}
+  :root[data-theme="dark"] #galleryModal > div{background:var(--card) !important;}
+  :root[data-theme="dark"] #modalPositive{background:#242033 !important;color:var(--ink) !important;}
+  :root[data-theme="dark"] #modalNegative{background:#33202a !important;color:#f0c8d6 !important;}
   .tag-check input{cursor:pointer;margin:0;width:12px;height:12px;}
   .safety-btn{border:1px solid var(--border);background:white;padding:0.35rem 0.6rem;
     border-radius:5px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);cursor:pointer;user-select:none;}
@@ -494,9 +541,19 @@
 <body>
 <div class="container">
   <h1>Anima Pipeline <span id="versionBadge" style="font-weight:300;letter-spacing:0.2em;color:var(--muted);"></span></h1>
-  <div class="lang-switch">
-    <button id="langBtnJa" class="lang-btn" onclick="setLang('ja')" type="button">日本語</button>
-    <button id="langBtnEn" class="lang-btn" onclick="setLang('en')" type="button">English</button>
+  <div class="top-controls">
+    <div class="theme-switch">
+      <label for="themeModeSelect">表示テーマ</label>
+      <select id="themeModeSelect" class="theme-select" onchange="setThemeMode(this.value)">
+        <option value="device">端末連動</option>
+        <option value="light">ライト</option>
+        <option value="dark">ダーク</option>
+      </select>
+    </div>
+    <div class="lang-switch">
+      <button id="langBtnJa" class="lang-btn" onclick="setLang('ja')" type="button">日本語</button>
+      <button id="langBtnEn" class="lang-btn" onclick="setLang('en')" type="button">English</button>
+    </div>
   </div>
   <h2>キャラクター生成（プロンプト+画像）</h2>
 
@@ -1125,12 +1182,23 @@
 <script>
 const __LANG_STORAGE_KEY__ = 'anima_ui_lang_v2';
 const __OS_DEFAULT_LANG__ = (typeof __OS_LANG__ === 'string' && __OS_LANG__.toLowerCase().startsWith('ja')) ? 'ja' : 'en';
+const __THEME_STORAGE_KEY__ = 'anima_ui_theme_v1';
+const __THEME_MODE_DEFAULT__ = 'device';
 let currentLang = localStorage.getItem(__LANG_STORAGE_KEY__) || __OS_DEFAULT_LANG__;
 if(currentLang !== 'ja' && currentLang !== 'en') currentLang = __OS_DEFAULT_LANG__;
+let currentThemeMode = localStorage.getItem(__THEME_STORAGE_KEY__) || __THEME_MODE_DEFAULT__;
+if(!['device','light','dark'].includes(currentThemeMode)) currentThemeMode = __THEME_MODE_DEFAULT__;
+const __themeMediaQuery = (typeof window.matchMedia === 'function')
+  ? window.matchMedia('(prefers-color-scheme: dark)')
+  : null;
 
 const BASE_I18N_MAP_EN = {
   'キャラクター生成（プロンプト+画像）': 'Character Generation (Prompt + Image)',
   '設定': 'Settings',
+  '表示テーマ': 'Theme',
+  '端末連動': 'Device',
+  'ライト': 'Light',
+  'ダーク': 'Dark',
   '必須': 'Required',
   '必須設定': 'Required Settings',
   'LLMを使わないなら不要': 'Not required if LLM is disabled',
@@ -1738,6 +1806,48 @@ function refreshLangButtons(){
   enBtn.classList.toggle('active', currentLang === 'en');
 }
 
+function _resolveTheme(mode){
+  if(mode === 'light' || mode === 'dark') return mode;
+  if(__themeMediaQuery) return __themeMediaQuery.matches ? 'dark' : 'light';
+  return 'light';
+}
+
+function _syncThemeSelector(){
+  const sel = document.getElementById('themeModeSelect');
+  if(sel) sel.value = currentThemeMode;
+}
+
+function applyThemeMode(mode, opts={}){
+  const nextMode = ['device','light','dark'].includes(mode) ? mode : __THEME_MODE_DEFAULT__;
+  currentThemeMode = nextMode;
+  const resolved = _resolveTheme(nextMode);
+  document.documentElement.setAttribute('data-theme-mode', nextMode);
+  document.documentElement.setAttribute('data-theme', resolved);
+  _syncThemeSelector();
+  if(opts.persist !== false){
+    localStorage.setItem(__THEME_STORAGE_KEY__, nextMode);
+  }
+}
+
+function setThemeMode(mode){
+  applyThemeMode(mode, {persist:true});
+}
+window.setThemeMode = setThemeMode;
+
+function _bindThemeSystemListener(){
+  if(!__themeMediaQuery) return;
+  const onChange = ()=>{
+    if(currentThemeMode === 'device'){
+      applyThemeMode('device', {persist:false});
+    }
+  };
+  if(typeof __themeMediaQuery.addEventListener === 'function'){
+    __themeMediaQuery.addEventListener('change', onChange);
+  }else if(typeof __themeMediaQuery.addListener === 'function'){
+    __themeMediaQuery.addListener(onChange);
+  }
+}
+
 function applyLanguageUiFixups(){
   const tabSession = document.getElementById('galleryTabSession');
   const tabAll = document.getElementById('galleryTabAll');
@@ -1811,6 +1921,8 @@ function scheduleI18nIfNeeded(){
 
 document.addEventListener('DOMContentLoaded', ()=>{
   document.documentElement.lang = currentLang === 'ja' ? 'ja' : 'en';
+  applyThemeMode(currentThemeMode, {persist:false});
+  _bindThemeSystemListener();
   refreshLangButtons();
   applyLanguageUiFixups();
   // Startup fast-path: Japanese mode skips full-DOM i18n walk.
