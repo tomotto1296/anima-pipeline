@@ -333,6 +333,7 @@ These are currently tracked as non-critical issues.
 | **v1.5.19** | INPUT-1: random character preset generation from `ui_options` (random attribute apply + save confirmation + STATUS summary). Dice icon style was unified for random buttons. |
 | **v1.5.18** | INPUT-6 follow-up: Improved mobile LoRA visibility (card columns and slot-row layout optimization). |
 | **v1.5.17** | OUTPUT-9: Added previous-item prompt diff viewer in history modal (Positive/Negative with toggle support; Negative appears only when differences exist). |
+| **v1.5.16** | GEN-9: Implemented `🎲 Today's Mood` (placed near Generate, applies one random existing character preset plus random scene world/time/weather, and shows STATUS summary). |
 | **v1.5.15** | UI-5: Added theme mode selector (Device/Light/Dark). Improved dark-mode contrast and readability (section cards, LoRA area, inputs, disabled add buttons, language toggle). |
 | **v1.5.14** | INPUT-6: LoRA management UX updates (search, favorites, recommended weight display, sort-order fix, unified settings API) |
 | **v1.5.0** | Module split (core/ · frontend/), generation history DB, preset hierarchy, positive/negative presets, named session save, character name JA/EN split, setup diagnostics UI |
