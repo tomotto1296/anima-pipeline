@@ -6197,7 +6197,7 @@ function makeCharaBlock(idx){
   charaPresetAutoBtn.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;padding:0.28rem 0;width:2.8rem;text-align:center;border:1px solid #3a8c5c;border-radius:5px;background:white;color:#3a8c5c;cursor:pointer;';
   charaPresetAutoBtn.onclick = ()=>generateCharaPreset(idx);
   const charaPresetRandomGenBtn = document.createElement('button');
-  charaPresetRandomGenBtn.textContent = '⚀';
+  charaPresetRandomGenBtn.textContent = '🎲';
   charaPresetRandomGenBtn.title = currentLang === 'en' ? 'Random Generate (INPUT-1)' : 'ランダム生成（INPUT-1）';
   charaPresetRandomGenBtn.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;padding:0.28rem 0;width:2.8rem;text-align:center;border:1px solid #7a8db8;border-radius:5px;background:white;color:#4f5f8f;cursor:pointer;';
   charaPresetRandomGenBtn.onclick = ()=>applyInput1RandomCharaPreset(idx);
