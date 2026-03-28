@@ -817,6 +817,10 @@
   - Added random character preset generation from existing `ui_options` choices.
   - Added save confirmation flow after random apply.
   - Added short random summary display in STATUS area.
+- GEN-9 behavior aligned to spec:
+  - Moved "🎲 今日の気分" button near the generate button.
+  - Applies random character preset (when available) plus random `scene_world` / `scene_tod` / `scene_weather`.
+  - Shows short "今日の気分: ..." summary in STATUS area (instead of alert-only feedback).
 - Updated docs:
   - `docs/specs/features.md`
   - `docs/updates/roadmap.md`
