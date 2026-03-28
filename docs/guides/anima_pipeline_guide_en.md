@@ -299,6 +299,7 @@ These are currently tracked as non-critical issues.
 
 | Version | Changes |
 |---------|---------|
+| **v1.5.15** | UI-5: Added theme mode selector (Device/Light/Dark). Improved dark-mode contrast and readability (section cards, LoRA area, inputs, disabled add buttons, language toggle). |
 | **v1.5.14** | INPUT-6: LoRA management UX updates (search, favorites, recommended weight display, sort-order fix, unified settings API) |
 | **v1.5.0** | Module split (core/ · frontend/), generation history DB, preset hierarchy, positive/negative presets, named session save, character name JA/EN split, setup diagnostics UI |
 | **v1.4.7** | UI language switch (JA/EN), logging, preset thumbnail list, allow 0 characters, BOM read fix |

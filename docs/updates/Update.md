@@ -757,3 +757,16 @@
   - `README.md` / `README_EN.md`
   - `docs/specs/features.md`
   - `docs/updates/Update.md` current version
+
+## 2026-03-28 - v1.5.15
+
+- Release version updated to `v1.5.15`.
+- UI-5 (Theme mode) implemented and tuned:
+  - Added theme selector (`Device / Light / Dark`) in the header.
+  - Added local preference persistence (`anima_ui_theme_v1`).
+  - Added system-follow behavior in `Device` mode (`prefers-color-scheme` follow).
+  - Refined dark-mode contrast for section cards, LoRA grid area, language toggle, number inputs, and disabled add buttons.
+- Updated docs:
+  - `docs/specs/features.md`
+  - `docs/guides/anima_pipeline_guide.md`
+  - `docs/guides/anima_pipeline_guide_en.md`
