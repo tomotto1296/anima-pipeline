@@ -1,5 +1,5 @@
 ---
-title: "【2026年版】技術力なくても推しキャラを量産！ComfyUI × LLMで自動プロンプト生成ツール「anima-pipeline」作った（2026-03-28更新）"
+title: "推しキャラ量産！ComfyUI×LLM自動プロンプト生成「anima-pipeline」"
 emoji: "😀"
 type: "idea"
 topics:
