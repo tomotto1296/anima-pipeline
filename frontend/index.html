@@ -401,6 +401,12 @@
     color:#fff;
     border-color:var(--multi);
   }
+  :root[data-theme="dark"] .period-btn.active{
+    background:#7c4dbf;
+    color:#ffffff;
+    border-color:#c4b1ef;
+    box-shadow:0 0 0 1px rgba(196,177,239,0.45), 0 0 10px rgba(124,77,191,0.35);
+  }
   :root[data-theme="dark"] .extra-custom button{
     background:var(--card) !important;
     color:var(--ink) !important;
@@ -469,6 +475,7 @@
   :root[data-theme="dark"] #modalPositive{background:#242033 !important;color:var(--ink) !important;}
   :root[data-theme="dark"] #modalNegative{background:#33202a !important;color:#f0c8d6 !important;}
   :root[data-theme="dark"] #modalPromptDiff{background:#1f2431 !important;border-color:#2d3f56 !important;color:var(--ink) !important;}
+  :root[data-theme="dark"] #modalNegPromptDiff{background:#2a1f25 !important;border-color:#5e3c4f !important;color:#f0c8d6 !important;}
   .tag-check input{cursor:pointer;margin:0;width:12px;height:12px;}
   .safety-btn{border:1px solid var(--border);background:white;padding:0.35rem 0.6rem;
     border-radius:5px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);cursor:pointer;user-select:none;}
@@ -1346,6 +1353,13 @@
       </div>
       <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:0.3rem;">▸ 送信ネガティブプロンプト</div>
       <div id="modalNegative" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:#c0392b;background:#fff5f5;border-radius:6px;padding:0.6rem;white-space:pre-wrap;word-break:break-all;"></div>
+      <div id="modalNegDiffWrap" style="margin-top:0.6rem;display:none;">
+        <div class="prompt-diff-head" style="margin-bottom:0.3rem;">
+          <div id="modalNegDiffTitle" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);">▸ Negative Prompt Diff vs Previous</div>
+          <button id="modalNegDiffToggleBtn" class="prompt-diff-toggle" onclick="toggleNegativePromptDiffFromModal()">Hide diff</button>
+        </div>
+        <div id="modalNegPromptDiff" class="prompt-diff-wrap"></div>
+      </div>
     </div>
 </div>
 </div>
@@ -2217,6 +2231,7 @@ let galleryItems = []; // {imagePaths:[], positivePrompt:'', negativePrompt:'', 
 let modalItemIndex = -1;
 let modalCurrentImgUrl = '';
 let modalDiffVisible = true;
+let modalNegDiffVisible = true;
 let currentGalleryTab = 'session';
 let historyPage = 1;
 let historyTotalPages = 1;
@@ -2337,6 +2352,59 @@ function togglePromptDiffFromModal(){
   if(btn) btn.textContent = modalDiffVisible ? t('差分を隠す', 'Hide diff') : t('差分を表示', 'Show diff');
 }
 
+function renderNegativePromptDiff(prevPrompt, currentPrompt){
+  const wrap = document.getElementById('modalNegDiffWrap');
+  const title = document.getElementById('modalNegDiffTitle');
+  const box = document.getElementById('modalNegPromptDiff');
+  const btn = document.getElementById('modalNegDiffToggleBtn');
+  if(!wrap || !title || !box || !btn) return;
+
+  const t = (ja, en)=> (currentLang === 'ja' ? ja : en);
+  title.textContent = '▸ ' + t('前回との差分（Negative）', 'Negative Prompt Diff vs Previous');
+  btn.textContent = modalNegDiffVisible ? t('差分を隠す', 'Hide diff') : t('差分を表示', 'Show diff');
+
+  const prev = String(prevPrompt || '').trim();
+  const cur = String(currentPrompt || '').trim();
+  if(!prev){
+    wrap.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+
+  const diff = buildPromptDiff(prev, cur);
+  if(diff.added.length === 0 && diff.removed.length === 0){
+    wrap.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+
+  const currentHtml = diff.currTags.length
+    ? diff.currTags.map(tag=>{
+        const safe = escapeDiffHtml(tag);
+        return diff.added.some(a=>a.toLowerCase()===tag.toLowerCase())
+          ? '<span class="prompt-diff-added">' + safe + '</span>'
+          : safe;
+      }).join(', ')
+    : '<span class="prompt-diff-empty">' + t('（空）', '(empty)') + '</span>';
+
+  const removedHtml = diff.removed.length
+    ? '<div class="prompt-diff-removed-list">' + t('削除: ', 'Removed: ') + diff.removed.map(tag=>'<span class="prompt-diff-removed">' + escapeDiffHtml(tag) + '</span>').join(', ') + '</div>'
+    : '';
+
+  box.innerHTML = '<div class="prompt-diff-current">' + currentHtml + '</div>' + removedHtml;
+  box.style.display = modalNegDiffVisible ? 'block' : 'none';
+  wrap.style.display = 'block';
+}
+
+function toggleNegativePromptDiffFromModal(){
+  modalNegDiffVisible = !modalNegDiffVisible;
+  const box = document.getElementById('modalNegPromptDiff');
+  if(box) box.style.display = modalNegDiffVisible ? 'block' : 'none';
+  const btn = document.getElementById('modalNegDiffToggleBtn');
+  const t = (ja, en)=> (currentLang === 'ja' ? ja : en);
+  if(btn) btn.textContent = modalNegDiffVisible ? t('差分を隠す', 'Hide diff') : t('差分を表示', 'Show diff');
+}
+
 function openGalleryModal(idx, imgPath, item){
   modalItemIndex = idx;
   const modal = document.getElementById('galleryModal');
@@ -2385,6 +2453,7 @@ function openGalleryModal(idx, imgPath, item){
   document.getElementById('modalPositive').textContent = item?.positivePrompt || t('（なし）', '(none)');
   document.getElementById('modalNegative').textContent = item?.negativePrompt || t('（なし）', '(none)');
   modalDiffVisible = true;
+  modalNegDiffVisible = true;
   let prevPositivePrompt = '';
   if(typeof item?.prevPositivePrompt === 'string'){
     prevPositivePrompt = item.prevPositivePrompt;
@@ -2392,6 +2461,13 @@ function openGalleryModal(idx, imgPath, item){
     prevPositivePrompt = galleryItems[idx - 1].positivePrompt || '';
   }
   renderPromptDiff(prevPositivePrompt, item?.positivePrompt || '');
+  let prevNegativePrompt = '';
+  if(typeof item?.prevNegativePrompt === 'string'){
+    prevNegativePrompt = item.prevNegativePrompt;
+  }else if(idx > 0 && Array.isArray(galleryItems) && galleryItems[idx - 1]){
+    prevNegativePrompt = galleryItems[idx - 1].negativePrompt || '';
+  }
+  renderNegativePromptDiff(prevNegativePrompt, item?.negativePrompt || '');
   updateThumbActionState();
 }
 
@@ -2808,6 +2884,7 @@ function renderAllHistoryGrid(items){
         positivePrompt: it.prompt || '',
         negativePrompt: it.negative_prompt || '',
         prevPositivePrompt: (items[i + 1] && items[i + 1].prompt) ? items[i + 1].prompt : '',
+        prevNegativePrompt: (items[i + 1] && items[i + 1].negative_prompt) ? items[i + 1].negative_prompt : '',
         imagePaths: [it.image_path || '', it.thumbnail_path || '']
       }
     );
