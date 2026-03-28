@@ -244,6 +244,12 @@ def main() -> int:
     if failed:
         return 1
 
+    # Keep the temp script only on failure for debugging.
+    try:
+        TMP_SCRIPT.unlink(missing_ok=True)
+    except Exception:
+        pass
+
     print('[OK] frontend syntax guard passed')
     return 0
 

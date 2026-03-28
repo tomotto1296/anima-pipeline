@@ -8,7 +8,7 @@
 - `1.4.699x` 系は `1.4.7` として正式リリース済み
 
 ## 現在バージョン
-- `1.5.1`
+- `1.5.12`
 
 
 ## 直近追記（v1.4.910）
@@ -698,3 +698,15 @@
 - Release notes updated with Japanese details for reflected changes and compatibility.
 - Prepared minimal package zip for v1.5.11 release asset:
   - `dist/anima-pipeline_v1.5.11_minimal.zip`
+
+## 2026-03-28 - v1.5.12
+
+- Release version updated to `v1.5.12`.
+- Updated visible version labels:
+  - `anima_pipeline.py` `__version__`
+  - `README.md` / `README_EN.md`
+  - `docs/index.html` / `docs/index_en.html`
+  - `docs/updates/Update.md` current version
+- Updated frontend syntax check temp-file behavior:
+  - `scripts/check_frontend_syntax.py` now deletes `frontend/.check_inline_main.js` when checks pass.
+  - On check failure, the temp file is kept for debugging.
