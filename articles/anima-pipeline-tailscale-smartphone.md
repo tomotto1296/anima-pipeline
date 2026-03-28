@@ -1,3 +1,16 @@
+---
+title: "スマホでAI画像生成: Anima Pipeline×Tailscale接続ガイド"
+emoji: "📱"
+type: "tech"
+topics:
+  - "ai画像生成"
+  - "comfyui"
+  - "tailscale"
+  - "anima"
+published: true
+published_at: "2026-03-28 09:00"
+---
+
 # ごろ寝しながらAI画像生成——Anima PipelineとTailscaleでスマホから自宅PCを操作する
 
 ## はじめに
