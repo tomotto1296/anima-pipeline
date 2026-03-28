@@ -8,7 +8,7 @@
 - `1.4.699x` 系は `1.4.7` として正式リリース済み
 
 ## 現在バージョン
-- `1.5.14`
+- `1.5.17`
 
 
 ## 直近追記（v1.4.910）
@@ -781,3 +781,18 @@
 - Updated docs:
   - `docs/updates/roadmap.md` (GEN-9 marked as completed)
   - `docs/specs/features.md`
+
+## 2026-03-28 - v1.5.17
+
+- Release version updated to `v1.5.17`.
+- OUTPUT-9 implemented:
+  - Added prompt diff viewer against previous history item in gallery modal.
+  - Added Positive prompt diff toggle (`Show diff` / `Hide diff`).
+  - Added Negative prompt diff viewer and toggle, shown only when differences exist.
+- Added spec:
+  - `docs/specs/feature_OUTPUT-9_prompt_diff.md`
+- Updated docs:
+  - `README.md` / `README_EN.md` current version
+  - `docs/specs/features.md`
+  - `docs/updates/roadmap.md` (OUTPUT-9 marked as completed)
+  - `docs/updates/Update.md` current version
