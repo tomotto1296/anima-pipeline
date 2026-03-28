@@ -3,13 +3,13 @@
 <p align="center">
   <img src="images/hero-ui-and-result.jpg" alt="Anima Pipeline UI + Generated Image" width="800">
   <br>
-  <em>Enter character name 竊・LLM auto-generates Danbooru tags 竊・One-click to stunning Anima images!</em>
+  <em>Enter character name -> LLM auto-generates Danbooru tags -> One-click to stunning Anima images!</em>
 </p>
 Browser UI + LLM automation for the Anima workflow.
 
-[Back to Japanese README 竊・README.md](README.md)
+[Back to Japanese README -> README.md](README.md)
 
-## 倹 Live Demo / Landing Page
+## Live Demo / Landing Page
 - [Japanese Site](https://tomotto1296.github.io/anima-pipeline/index.html)
 - [English Version](https://tomotto1296.github.io/anima-pipeline/index_en.html)
 - [Try Demo (Lite)](https://tomotto1296.github.io/anima-pipeline/demo_en.html)
@@ -55,8 +55,8 @@ The repository includes four ready-to-use workflow JSON files:
 You can use these as-is, or export your own workflow from ComfyUI:
 
 1. Launch ComfyUI
-2. Top-right menu 竊・"Browse Templates" 竊・Select **Anima**
-3. Menu 竊・"Save (API Format)" and save it as `image_anima_preview.json`
+2. Top-right menu -> "Browse Templates" -> Select **Anima**
+3. Menu -> "Save (API Format)" and save it as `image_anima_preview.json`
 4. Place it in the `workflows/` folder
 
 > Any JSON exported from ComfyUI using "Save (API Format)" can be placed in `workflows/` and selected from the dropdown.
@@ -65,7 +65,7 @@ You can use these as-is, or export your own workflow from ComfyUI:
 
 **Windows:** Double-click `start_anima_pipeline.bat` (installs `requests` automatically on first run)
 
-> If the batch file opens in VS Code, right-click it and choose "Open with" 竊・"Command Prompt".
+> If the batch file opens in VS Code, right-click it and choose "Open with" -> "Command Prompt".
 
 **Other platforms:**
 ```bash
@@ -77,7 +77,7 @@ Open http://localhost:7860 in your browser.
 
 ### 3. Initial Setup
 
-Open "笆ｶ Settings" at the top, check the ComfyUI URL, and click "沈 Save Settings".
+Open "Settings" at the top, check the ComfyUI URL, and click "Save Settings".
 
 If using an LLM, choose platform (LM Studio / Gemini / Custom), then set URL, API key, and model name.
 
@@ -95,18 +95,18 @@ If you want smartphone access or LoRA thumbnails, add this option when starting 
 
 | Status | Feature |
 |---|---|
-| 笘・| JA/EN split fields for character/work name (`name_en` / `series_en`) |
-| 笘・| Positive/Negative preset save and load |
-| 笘・| Preset hierarchy (`chara / scene / camera / quality / lora / composite`) |
-| 笘・| Generation History DB (all-history UI + re-edit) |
-| 笘・| Named sessions (multi-slot save/load with overwrite handling) |
-| 笘・| Setup diagnostics UI (`/diagnostics`) |
-| 笘・| Metadata embedding (PNG/WebP, LoRA hash metadata) |
-| 笘・| OUTPUT-9: Previous-item prompt diff in history modal (Positive with toggle, Negative shown only when differences exist) |
-| 笘・| LoRA injection (card-grid UI, thumbnails, up to 4 slots) |
-| 笘・| Workflow switching (select from `workflows/`, auto-detect Node IDs) |
-| 笘・| UI language switch (Japanese / English) |
-| 笘・| Logging (save, secret masking, ZIP export) |
+| Done | JA/EN split fields for character/work name (`name_en` / `series_en`) |
+| Done | Positive/Negative preset save and load |
+| Done | Preset hierarchy (`chara / scene / camera / quality / lora / composite`) |
+| Done | Generation History DB (all-history UI + re-edit) |
+| Done | Named sessions (multi-slot save/load with overwrite handling) |
+| Done | Setup diagnostics UI (`/diagnostics`) |
+| Done | Metadata embedding (PNG/WebP, LoRA hash metadata) |
+| Done | OUTPUT-9: Previous-item prompt diff in history modal (Positive with toggle, Negative shown only when differences exist) |
+| Done | LoRA injection (card-grid UI, thumbnails, up to 4 slots) |
+| Done | Workflow switching (select from `workflows/`, auto-detect Node IDs) |
+| Done | UI language switch (Japanese / English) |
+| Done | Logging (save, secret masking, ZIP export) |
 
 > For the full feature list with versions, see [docs/specs/features.md](docs/specs/features.md).
 
