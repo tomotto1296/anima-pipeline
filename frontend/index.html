@@ -166,6 +166,15 @@
   .prompt-final{margin-top:0.5rem;background:#fef5ff;border-left:3px solid var(--accent2);border-radius:0 6px 6px 0;padding:0.8rem 1rem;
     white-space:pre-wrap;
     font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--ink);line-height:1.6;display:none;}
+  .prompt-diff-wrap{font-family:'DM Mono',monospace;font-size:0.72rem;background:#f8fbff;border:1px solid #dbe9f8;border-radius:6px;padding:0.55rem;line-height:1.6;}
+  .prompt-diff-head{display:flex;align-items:center;justify-content:space-between;gap:0.4rem;}
+  .prompt-diff-toggle{margin-top:0;width:auto;padding:0.15rem 0.5rem;border:1px solid var(--border);border-radius:4px;background:white;color:var(--muted);font-family:'DM Mono',monospace;font-size:0.65rem;letter-spacing:0;text-transform:none;cursor:pointer;box-shadow:none;}
+  .prompt-diff-toggle:hover{background:var(--highlight);color:var(--multi);border-color:var(--accent);transform:none;}
+  .prompt-diff-current{color:var(--ink);white-space:pre-wrap;word-break:break-word;}
+  .prompt-diff-added{background:#eaf9ee;color:#1f7a40;border-radius:4px;padding:0.06rem 0.2rem;}
+  .prompt-diff-removed-list{margin-top:0.45rem;color:#8d2f2f;white-space:pre-wrap;word-break:break-word;}
+  .prompt-diff-removed{background:#ffe8e8;color:#9b2f2f;border-radius:4px;padding:0.06rem 0.2rem;text-decoration:line-through;}
+  .prompt-diff-empty{color:var(--muted);}
   .prompt-output.show{display:block;}
   select{width:100%;background:white;border:1px solid var(--border);padding:0.7rem 1rem;
     font-family:'DM Mono',monospace;font-size:0.83rem;color:var(--ink);outline:none;
@@ -459,6 +468,7 @@
   :root[data-theme="dark"] #galleryModal > div{background:var(--card) !important;}
   :root[data-theme="dark"] #modalPositive{background:#242033 !important;color:var(--ink) !important;}
   :root[data-theme="dark"] #modalNegative{background:#33202a !important;color:#f0c8d6 !important;}
+  :root[data-theme="dark"] #modalPromptDiff{background:#1f2431 !important;border-color:#2d3f56 !important;color:var(--ink) !important;}
   .tag-check input{cursor:pointer;margin:0;width:12px;height:12px;}
   .safety-btn{border:1px solid var(--border);background:white;padding:0.35rem 0.6rem;
     border-radius:5px;font-family:'DM Mono',monospace;font-size:0.72rem;color:var(--ink);cursor:pointer;user-select:none;}
@@ -1327,6 +1337,13 @@
       <img id="modalImg" src="" style="width:100%;border-radius:8px;margin-bottom:0.8rem;">
       <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:0.3rem;">▸ Sent Positive Prompt</div>
       <div id="modalPositive" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:var(--ink);background:#f8f8f8;border-radius:6px;padding:0.6rem;margin-bottom:0.6rem;white-space:pre-wrap;word-break:break-all;"></div>
+      <div id="modalDiffWrap" style="margin-bottom:0.6rem;display:none;">
+        <div class="prompt-diff-head" style="margin-bottom:0.3rem;">
+          <div id="modalDiffTitle" style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);">▸ Prompt Diff vs Previous</div>
+          <button id="modalDiffToggleBtn" class="prompt-diff-toggle" onclick="togglePromptDiffFromModal()">Hide diff</button>
+        </div>
+        <div id="modalPromptDiff" class="prompt-diff-wrap"></div>
+      </div>
       <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:0.3rem;">▸ 送信ネガティブプロンプト</div>
       <div id="modalNegative" style="font-family:'DM Mono',monospace;font-size:0.75rem;color:#c0392b;background:#fff5f5;border-radius:6px;padding:0.6rem;white-space:pre-wrap;word-break:break-all;"></div>
     </div>
@@ -2199,6 +2216,7 @@ let lastFinalPrompt='', lastNegativePrompt='';
 let galleryItems = []; // {imagePaths:[], positivePrompt:'', negativePrompt:'', timestamp:''}
 let modalItemIndex = -1;
 let modalCurrentImgUrl = '';
+let modalDiffVisible = true;
 let currentGalleryTab = 'session';
 let historyPage = 1;
 let historyTotalPages = 1;
@@ -2240,6 +2258,83 @@ function renderGalleryItem(item, idx){
     card.onclick = ()=>openGalleryModal(idx, imgPath, item);
     grid.insertBefore(card, grid.firstChild);
   });
+}
+
+function escapeDiffHtml(str){
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function splitPromptTags(prompt){
+  return String(prompt || '')
+    .split(/[,\n]/)
+    .map(t=>t.trim())
+    .filter(Boolean);
+}
+
+function buildPromptDiff(prevPrompt, currentPrompt){
+  const prevTags = splitPromptTags(prevPrompt);
+  const currTags = splitPromptTags(currentPrompt);
+  const prevSet = new Set(prevTags.map(t=>t.toLowerCase()));
+  const currSet = new Set(currTags.map(t=>t.toLowerCase()));
+  const added = currTags.filter(t=>!prevSet.has(t.toLowerCase()));
+  const removed = prevTags.filter(t=>!currSet.has(t.toLowerCase()));
+  return { prevTags, currTags, added, removed };
+}
+
+function renderPromptDiff(prevPrompt, currentPrompt){
+  const wrap = document.getElementById('modalDiffWrap');
+  const title = document.getElementById('modalDiffTitle');
+  const box = document.getElementById('modalPromptDiff');
+  const btn = document.getElementById('modalDiffToggleBtn');
+  if(!wrap || !title || !box || !btn) return;
+
+  const t = (ja, en)=> (currentLang === 'ja' ? ja : en);
+  title.textContent = '▸ ' + t('前回との差分（Prompt）', 'Prompt Diff vs Previous');
+  btn.textContent = modalDiffVisible ? t('差分を隠す', 'Hide diff') : t('差分を表示', 'Show diff');
+
+  const prev = String(prevPrompt || '').trim();
+  const cur = String(currentPrompt || '').trim();
+  if(!prev){
+    wrap.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+
+  const diff = buildPromptDiff(prev, cur);
+  const currentHtml = diff.currTags.length
+    ? diff.currTags.map(tag=>{
+        const safe = escapeDiffHtml(tag);
+        return diff.added.some(a=>a.toLowerCase()===tag.toLowerCase())
+          ? '<span class="prompt-diff-added">' + safe + '</span>'
+          : safe;
+      }).join(', ')
+    : '<span class="prompt-diff-empty">' + t('（空）', '(empty)') + '</span>';
+
+  const removedHtml = diff.removed.length
+    ? '<div class="prompt-diff-removed-list">' + t('削除: ', 'Removed: ') + diff.removed.map(tag=>'<span class="prompt-diff-removed">' + escapeDiffHtml(tag) + '</span>').join(', ') + '</div>'
+    : '';
+
+  if(diff.added.length === 0 && diff.removed.length === 0){
+    box.innerHTML = '<span class="prompt-diff-empty">' + t('変更なし', 'No changes') + '</span>';
+  }else{
+    box.innerHTML = '<div class="prompt-diff-current">' + currentHtml + '</div>' + removedHtml;
+  }
+  box.style.display = modalDiffVisible ? 'block' : 'none';
+  wrap.style.display = 'block';
+}
+
+function togglePromptDiffFromModal(){
+  modalDiffVisible = !modalDiffVisible;
+  const box = document.getElementById('modalPromptDiff');
+  if(box) box.style.display = modalDiffVisible ? 'block' : 'none';
+  const btn = document.getElementById('modalDiffToggleBtn');
+  const t = (ja, en)=> (currentLang === 'ja' ? ja : en);
+  if(btn) btn.textContent = modalDiffVisible ? t('差分を隠す', 'Hide diff') : t('差分を表示', 'Show diff');
 }
 
 function openGalleryModal(idx, imgPath, item){
@@ -2285,9 +2380,18 @@ function openGalleryModal(idx, imgPath, item){
     }
   };
   loadModal();
-  document.getElementById('modalTitle').textContent = '生成結果 ' + item.timestamp;
-  document.getElementById('modalPositive').textContent = item.positivePrompt||'（なし）';
-  document.getElementById('modalNegative').textContent = item.negativePrompt||'（なし）';
+  const t = (ja, en)=> (currentLang === 'ja' ? ja : en);
+  document.getElementById('modalTitle').textContent = t('生成結果 ', 'Result ') + (item?.timestamp || '');
+  document.getElementById('modalPositive').textContent = item?.positivePrompt || t('（なし）', '(none)');
+  document.getElementById('modalNegative').textContent = item?.negativePrompt || t('（なし）', '(none)');
+  modalDiffVisible = true;
+  let prevPositivePrompt = '';
+  if(typeof item?.prevPositivePrompt === 'string'){
+    prevPositivePrompt = item.prevPositivePrompt;
+  }else if(idx > 0 && Array.isArray(galleryItems) && galleryItems[idx - 1]){
+    prevPositivePrompt = galleryItems[idx - 1].positivePrompt || '';
+  }
+  renderPromptDiff(prevPositivePrompt, item?.positivePrompt || '');
   updateThumbActionState();
 }
 
@@ -2684,7 +2788,7 @@ function renderAllHistoryGrid(items){
     grid.appendChild(empty);
     return;
   }
-  items.forEach((it)=>{
+  items.forEach((it, i)=>{
     const card = document.createElement('div');
     card.style.cssText = 'position:relative;cursor:pointer;border-radius:8px;overflow:hidden;background:#f0f0f0;aspect-ratio:1;';
     const img = document.createElement('img');
@@ -2703,6 +2807,7 @@ function renderAllHistoryGrid(items){
         timestamp: ts.textContent,
         positivePrompt: it.prompt || '',
         negativePrompt: it.negative_prompt || '',
+        prevPositivePrompt: (items[i + 1] && items[i + 1].prompt) ? items[i + 1].prompt : '',
         imagePaths: [it.image_path || '', it.thumbnail_path || '']
       }
     );
