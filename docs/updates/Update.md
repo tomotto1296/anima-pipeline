@@ -8,7 +8,7 @@
 - `1.4.699x` 系は `1.4.7` として正式リリース済み
 
 ## 現在バージョン
-- `1.5.17`
+- `1.5.18`
 
 
 ## 直近追記（v1.4.910）
@@ -795,4 +795,17 @@
   - `README.md` / `README_EN.md` current version
   - `docs/specs/features.md`
   - `docs/updates/roadmap.md` (OUTPUT-9 marked as completed)
+  - `docs/updates/Update.md` current version
+
+## 2026-03-28 - v1.5.18
+
+- Release version updated to `v1.5.18`.
+- INPUT-6 follow-up (mobile UI fix):
+  - Improved LoRA card visibility on mobile by changing card grid from 3 columns to 2 columns.
+  - Reworked LoRA slot row layout for mobile to prevent select/weight/recommended label overlap.
+- Updated docs:
+  - `README.md` / `README_EN.md` current version
+  - `docs/specs/features.md`
+  - `docs/guides/anima_pipeline_guide.md` / `docs/guides/anima_pipeline_guide_en.md`
+  - `docs/updates/roadmap.md`
   - `docs/updates/Update.md` current version

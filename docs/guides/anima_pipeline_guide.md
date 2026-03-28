@@ -5,7 +5,7 @@
 Anima Pipeline はブラウザUIから入力した情報を元に、必要に応じてLLMでプロンプト補助を行い、ComfyUIに送信して画像生成するツールです。
 
 リファクタ後は `anima_pipeline.py` をエントリポイントとして、機能を `core/` と `frontend/` に分割しています。
-現行版は `v1.5.14` です。
+現行版は `v1.5.18` です。
 
 ---
 
@@ -182,6 +182,9 @@ The result panel shows `OK / WARN / ERR / SKIP`, and `WARN / ERR` rows include h
   - `history/history.db`
   - `history/thumbs/`
 - セッション履歴 の クリア は、セッション表示のみを消します（DBの 全履歴 は消えません）。
+- OUTPUT-9: 履歴モーダルに「前回との差分（Prompt）」を表示できます。
+  - Positive は前回比較結果を表示し、`Show/Hide diff` トグルで開閉できます。
+  - Negative は差分がある場合のみ表示され、同様にトグルで開閉できます。
 
 ---
 
@@ -304,6 +307,8 @@ python scripts/run_quick_checks.py --include-hooks-guard
 
 | バージョン | 主な変更内容 |
 |-----------|------------|
+| **v1.5.18** | INPUT-6 follow-up: モバイルLoRA UIの視認性を改善（カード列数・スロット行レイアウト最適化）。 |
+| **v1.5.17** | OUTPUT-9: 履歴モーダルで前回との差分ビューアを実装（Positive/Negative、トグル対応。Negativeは差分発生時のみ表示）。 |
 | **v1.5.15** | UI-5: 表示テーマ切替（端末連動/ライト/ダーク）を追加。ダークモード時のコントラスト・可読性を調整（セクション背景、LoRA領域、入力欄、無効ボタン、言語トグル）。 |
 | **v1.5.14** | INPUT-6: LoRA管理UI改善（検索、★お気に入り、推奨weight表示、整列順修正、設定保存API統一） |
 | **v1.5.0** | モジュール分割（core/・frontend/）、生成履歴DB、プリセット階層化、ポジティブ/ネガティブプリセット、名前付きセッション保存、キャラ名日英分離、セットアップ診断UI |

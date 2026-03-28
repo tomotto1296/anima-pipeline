@@ -5,7 +5,7 @@
 Anima Pipeline is a browser-based tool that can optionally use an LLM to assist prompt creation, then sends jobs to ComfyUI for image generation.
 
 After refactoring, `anima_pipeline.py` remains the entry point, while most logic is split into `core/` and `frontend/`.
-The current release is `v1.5.14`.
+The current release is `v1.5.18`.
 
 ---
 
@@ -182,6 +182,9 @@ Notes:
   - `history/history.db`
   - `history/thumbs/`
 - `Clear` in session history clears only session cards (DB records in `All History` remain).
+- OUTPUT-9: The history modal can show a prompt diff against the previous item.
+  - Positive diff is shown with a `Show/Hide diff` toggle.
+  - Negative diff is shown only when a difference exists, with the same toggle behavior.
 
 ## 8. Named Session Save (OUTPUT-8)
 
@@ -301,6 +304,8 @@ These are currently tracked as non-critical issues.
 
 | Version | Changes |
 |---------|---------|
+| **v1.5.18** | INPUT-6 follow-up: Improved mobile LoRA visibility (card columns and slot-row layout optimization). |
+| **v1.5.17** | OUTPUT-9: Added previous-item prompt diff viewer in history modal (Positive/Negative with toggle support; Negative appears only when differences exist). |
 | **v1.5.15** | UI-5: Added theme mode selector (Device/Light/Dark). Improved dark-mode contrast and readability (section cards, LoRA area, inputs, disabled add buttons, language toggle). |
 | **v1.5.14** | INPUT-6: LoRA management UX updates (search, favorites, recommended weight display, sort-order fix, unified settings API) |
 | **v1.5.0** | Module split (core/ · frontend/), generation history DB, preset hierarchy, positive/negative presets, named session save, character name JA/EN split, setup diagnostics UI |

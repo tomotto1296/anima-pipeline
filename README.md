@@ -1,4 +1,4 @@
-# Anima Pipeline
+﻿# Anima Pipeline
 
 <p align="center">
   <img src="images/hero-ui-and-result.jpg" alt="Anima Pipeline UI + Generated Image" width="800">
@@ -22,7 +22,7 @@
 
 ## 現在のバージョンとドキュメント
 
-- 現在バージョン: `v1.5.17`
+- 現在バージョン: `v1.5.18`
 - 実装済み機能一覧: [docs/specs/features.md](docs/specs/features.md)
 - ロードマップ: [docs/updates/roadmap.md](docs/updates/roadmap.md)
 - 更新履歴: [docs/updates/Update.md](docs/updates/Update.md)
@@ -147,3 +147,4 @@ anima_pipeline/
 - note: https://note.com/rhustudio/n/nf0dc2414f852
 - Qiita: https://qiita.com/RHU/items/18095cb22281cd027bc4
 - zenn: https://zenn.dev/rhu/articles/anima-pipeline-comfyui-llm
+
