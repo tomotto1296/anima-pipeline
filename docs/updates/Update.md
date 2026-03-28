@@ -8,7 +8,7 @@
 - `1.4.699x` 系は `1.4.7` として正式リリース済み
 
 ## 現在バージョン
-- `1.5.19`
+- `1.5.20`
 
 
 ## 直近追記（v1.4.910）
@@ -822,6 +822,19 @@
   - Applies random character preset (when available) plus random `scene_world` / `scene_tod` / `scene_weather`.
   - Shows short "今日の気分: ..." summary in STATUS area (instead of alert-only feedback).
 - Updated docs:
+  - `docs/specs/features.md`
+  - `docs/updates/roadmap.md`
+  - `docs/updates/Update.md` current version
+
+## 2026-03-28 - v1.5.20
+
+- Release version updated to `v1.5.20`.
+- SHARE-1 implemented:
+  - Added `GET /presets_export` to download `chara/` + `presets/{scene,camera,quality,lora,composite}` as zip.
+  - Added `POST /presets_import` (`multipart/form-data`) with overwrite conflict handling (`409`).
+  - Added settings panel UI for "Export Presets" / "Import Presets".
+- Updated docs:
+  - `README.md` / `README_EN.md` current version
   - `docs/specs/features.md`
   - `docs/updates/roadmap.md`
   - `docs/updates/Update.md` current version
