@@ -1143,7 +1143,10 @@
     <input type="checkbox" id="useLLM" checked style="width:14px;height:14px;accent-color:var(--multi);cursor:pointer;">
     <label for="useLLM" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);cursor:pointer;user-select:none;">LLMを使用する</label>
   </div>
-  <button id="btn" onclick="generate()">▶ 生成開始　(Ctrl+Enter)</button>
+  <div style="display:flex;gap:0.5rem;align-items:stretch;">
+    <button id="btn" onclick="generate()" style="margin:0;flex:1;">▶ 生成開始　(Ctrl+Enter)</button>
+    <button id="btnMood" onclick="applyTodaysMood()" style="margin:0;min-width:180px;width:auto;">🎲 今日の気分</button>
+  </div>
   <button class="btn-cancel" id="cancelBtn" onclick="cancelGenerate()">■ 生成中止</button>
 
   <div class="extra-block" id="extraBlock" style="margin-top:0.8rem;border:1px solid var(--border);padding:0.8rem;background:#fafaf8;">
@@ -2066,16 +2069,25 @@ function applyLanguageUiFixups(){
   const tabAll = document.getElementById('galleryTabAll');
   const title = document.querySelector('#gallerySection > div:first-child > div:first-child');
   const clearBtn = document.querySelector('#gallerySection > div:first-child > button');
+  const moodBtn = document.getElementById('btnMood');
   if(currentLang === 'en'){
     if(tabSession) tabSession.textContent = 'Session History';
     if(tabAll) tabAll.textContent = 'All History';
     if(title) title.textContent = 'Generation History (Session)';
     if(clearBtn) clearBtn.textContent = 'Clear';
+    if(moodBtn){
+      moodBtn.textContent = "🎲 Today's Mood";
+      moodBtn.title = "Today's Mood";
+    }
   }else{
     if(tabSession) tabSession.textContent = 'セッション履歴';
     if(tabAll) tabAll.textContent = '全履歴';
     if(title) title.textContent = '生成履歴（このセッション）';
     if(clearBtn) clearBtn.textContent = 'クリア';
+    if(moodBtn){
+      moodBtn.textContent = '🎲 今日の気分';
+      moodBtn.title = '今日の気分';
+    }
   }
 }
 
@@ -3017,22 +3029,164 @@ async function generateCharaPreset(idx){
   }
 }
 
-function applyRandomCharaPreset(idx){
-  if(!Array.isArray(charaPresets) || charaPresets.length===0){
-    alert('ランダム適用できるプリセットがありません');
+async function applyTodaysMood(){
+  const isJa = currentLang !== 'en';
+  let presets = [];
+  try{
+    const res = await fetch('/chara_presets', { cache: 'no-store' });
+    if(!res.ok) throw new Error('fetch failed: ' + res.status);
+    presets = await res.json();
+    charaPresets = Array.isArray(presets) ? presets : [];
+    updateAllPresetSelects();
+  }catch(e){
+    console.error('[GEN-9] failed to fetch presets', e);
+    alert(isJa ? 'キャラプリセットの取得に失敗しました' : 'Failed to fetch presets');
     return;
   }
-  const sel = document.getElementById('chara_preset_sel_'+idx);
-  if(!sel) return;
-  const current = parseInt(sel.value, 10);
-  let picked = Math.floor(Math.random() * charaPresets.length);
-  if(charaPresets.length > 1 && !Number.isNaN(current) && picked === current){
-    picked = (picked + 1 + Math.floor(Math.random() * (charaPresets.length - 1))) % charaPresets.length;
+
+  const pickScene = (group, key)=>{
+    const buttons = [...document.querySelectorAll(`[data-scenegroup="${group}"]`)];
+    if(buttons.length === 0) return '-';
+    const btn = buttons[Math.floor(Math.random() * buttons.length)];
+    selScene(group, btn);
+    return (btn.textContent || btn.dataset[key] || '-').trim();
+  };
+
+  const world = pickScene('world', 'world');
+  const tod = pickScene('tod', 'tod');
+  const weather = pickScene('weather', 'weather');
+
+  let charSummary = isJa ? 'スキップ' : 'Skipped';
+  const charCount = Math.max(0, Math.min(6, parseInt(document.getElementById('f_charcount')?.value)||0));
+  if(charaPresets.length > 0 && charCount > 0){
+    const idx = 0;
+    const sel = document.getElementById('chara_preset_sel_'+idx);
+    if(sel){
+      const current = parseInt(sel.value, 10);
+      let picked = Math.floor(Math.random() * charaPresets.length);
+      if(charaPresets.length > 1 && !Number.isNaN(current) && picked === current){
+        picked = (picked + 1 + Math.floor(Math.random() * (charaPresets.length - 1))) % charaPresets.length;
+      }
+      sel.value = String(picked);
+      loadCharaPreset(idx);
+      charSummary = charaPresets[picked]?.name || (isJa ? '適用済み' : 'Applied');
+    }
   }
-  sel.value = String(picked);
-  loadCharaPreset(idx);
-  const name = charaPresets[picked]?.name || '';
-  if(name) alert('今日の気分: 「' + name + '」を適用しました');
+
+  const statusBox = document.getElementById('statusBox');
+  const steps = document.getElementById('steps');
+  if(statusBox) statusBox.classList.add('show');
+  const summary = isJa
+    ? `今日の気分: キャラ=${charSummary} / 世界観=${world} / 時間帯=${tod} / 天気=${weather}`
+    : `Today's mood: Character=${charSummary} / World=${world} / Time=${tod} / Weather=${weather}`;
+  setStep(steps, 'mood_apply', 'done', summary);
+  setTimeout(()=>{
+    const el = document.getElementById('mood_apply');
+    if(el) el.remove();
+  }, 4500);
+}
+
+function applyInput1RandomCharaPreset(idx){
+  const isJa = currentLang !== 'en';
+  const root = document.getElementById(`chara_${idx}`);
+  if(!root) return;
+
+  const pick = (arr) => {
+    const xs = Array.isArray(arr) ? arr : [];
+    if(xs.length === 0) return null;
+    return xs[Math.floor(Math.random() * xs.length)] || null;
+  };
+  const pickNonEmptyOptions = (sel) => {
+    if(!sel) return null;
+    const options = [...sel.options].filter(o => (o.value || '').trim() !== '');
+    return pick(options);
+  };
+  const clickRandom = (nodes) => {
+    const items = Array.isArray(nodes) ? nodes : [];
+    if(items.length === 0) return null;
+    const chosen = pick(items);
+    if(!chosen) return null;
+    chosen.click();
+    return chosen;
+  };
+
+  const genderButtons = [...root.querySelectorAll('.gender-btn[data-g]')];
+  const ageButtons = [...root.querySelectorAll('.age-row .age-btn[data-a]')];
+  const hairStyleButtons = [...root.querySelectorAll('[data-hs]')].filter(b => (b.dataset.hs || '').trim() !== '');
+  const outfitCatButtons = [...root.querySelectorAll('[data-outcat]')].filter(b => ['全身', '上半身'].includes(b.dataset.outcat || ''));
+
+  if (!genderButtons.length || !ageButtons.length || !hairStyleButtons.length || !outfitCatButtons.length) {
+    alert(isJa ? 'ランダム生成に必要な選択肢が見つかりません' : 'No options available for random generation');
+    return;
+  }
+
+  const chosenGender = clickRandom(genderButtons);
+  const chosenAge = clickRandom(ageButtons);
+  const chosenHairStyle = clickRandom(hairStyleButtons);
+  const chosenOutfitCat = clickRandom(outfitCatButtons);
+
+  const hairStyleFree = document.getElementById(`chara_hairstyle_free_${idx}`);
+  if (hairStyleFree) hairStyleFree.value = '';
+
+  const hairHidden = document.getElementById(`chara_haircolor_${idx}`);
+  const hairSel = hairHidden?.parentElement?.querySelector('select');
+  const hairOther = document.getElementById(`chara_hairother_${idx}`);
+  if (hairOther) hairOther.value = '';
+  const hairOpt = pickNonEmptyOptions(hairSel);
+  if (hairOpt && hairSel) {
+    hairSel.value = hairOpt.value;
+    hairSel.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  const eyeHidden = document.getElementById(`chara_eyes_${idx}`);
+  const eyeWrap = eyeHidden?.parentElement;
+  const oddBtn = eyeWrap?.querySelector('.odd-eye-btn');
+  if (oddBtn && oddBtn.dataset.odd === '1') oddBtn.click();
+  const eyeSel = eyeWrap?.querySelector('select');
+  const eyeOpt = pickNonEmptyOptions(eyeSel);
+  if (eyeOpt && eyeSel) {
+    eyeSel.value = eyeOpt.value;
+    eyeSel.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  const colorSelects = [...root.querySelectorAll('select[data-ocolor]')].filter(sel => sel.offsetParent !== null);
+  colorSelects.forEach(sel => {
+    const opt = pickNonEmptyOptions(sel);
+    if (opt) {
+      sel.value = opt.value;
+      sel.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+  });
+
+  const visibleItemRows = [...root.querySelectorAll('div')].filter(row =>
+    row.offsetParent !== null && row.querySelector('[data-oitem]')
+  );
+  visibleItemRows.forEach(row => {
+    const itemButtons = [...row.querySelectorAll('[data-oitem]')].filter(b => (b.dataset.oitem || '').trim() !== '');
+    clickRandom(itemButtons);
+  });
+
+  const summary = [
+    `${isJa ? '性別' : 'Gender'}=${chosenGender?.textContent || '-'}`,
+    `${isJa ? '年齢' : 'Age'}=${chosenAge?.textContent || '-'}`,
+    `${isJa ? '髪型' : 'Hairstyle'}=${chosenHairStyle?.textContent || '-'}`,
+    `${isJa ? '髪色' : 'Hair'}=${hairOpt?.textContent || '-'}`,
+    `${isJa ? '瞳色' : 'Eyes'}=${eyeOpt?.textContent || '-'}`,
+    `${isJa ? '衣装' : 'Outfit'}=${chosenOutfitCat?.textContent || '-'}`,
+  ].join(' / ');
+
+  const statusBox = document.getElementById('statusBox');
+  const steps = document.getElementById('steps');
+  if (statusBox) statusBox.classList.add('show');
+  setStep(steps, `rand_${idx}`, 'done', `${isJa ? 'ランダム生成:' : 'Random:'} ${summary}`);
+  setTimeout(() => {
+    const el = document.getElementById(`rand_${idx}`);
+    if (el) el.remove();
+  }, 4500);
+
+  if (confirm(isJa ? 'このキャラを保存しますか？' : 'Save this character?')) {
+    saveCharaPreset(idx);
+  }
 }
 
 async function saveCharaPreset(idx){
@@ -6042,11 +6196,11 @@ function makeCharaBlock(idx){
   charaPresetAutoBtn.title = 'Danbooru Wiki+LLMでプリセット自動生成';
   charaPresetAutoBtn.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;padding:0.28rem 0;width:2.8rem;text-align:center;border:1px solid #3a8c5c;border-radius:5px;background:white;color:#3a8c5c;cursor:pointer;';
   charaPresetAutoBtn.onclick = ()=>generateCharaPreset(idx);
-  const charaPresetMoodBtn = document.createElement('button');
-  charaPresetMoodBtn.textContent = '🎲';
-  charaPresetMoodBtn.title = '今日の気分（ランダムテンプレ適用）';
-  charaPresetMoodBtn.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;padding:0.28rem 0;width:2.8rem;text-align:center;border:1px solid #8e7ec2;border-radius:5px;background:white;color:#7f6bb9;cursor:pointer;';
-  charaPresetMoodBtn.onclick = ()=>applyRandomCharaPreset(idx);
+  const charaPresetRandomGenBtn = document.createElement('button');
+  charaPresetRandomGenBtn.textContent = '⚀';
+  charaPresetRandomGenBtn.title = currentLang === 'en' ? 'Random Generate (INPUT-1)' : 'ランダム生成（INPUT-1）';
+  charaPresetRandomGenBtn.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;padding:0.28rem 0;width:2.8rem;text-align:center;border:1px solid #7a8db8;border-radius:5px;background:white;color:#4f5f8f;cursor:pointer;';
+  charaPresetRandomGenBtn.onclick = ()=>applyInput1RandomCharaPreset(idx);
   charaPresetRow.appendChild(cpNumLbl);
   charaPresetRow.appendChild(charaPresetSel);
   const cpRow2 = document.createElement('div');
@@ -6055,7 +6209,7 @@ function makeCharaBlock(idx){
   cpRow2.appendChild(charaPresetLoadBtn);
   cpRow2.appendChild(charaPresetSaveBtn);
   cpRow2.appendChild(charaPresetAutoBtn);
-  cpRow2.appendChild(charaPresetMoodBtn);
+  cpRow2.appendChild(charaPresetRandomGenBtn);
   charaPresetRow.appendChild(cpRow2);
 
   header.appendChild(charaPresetRow);
