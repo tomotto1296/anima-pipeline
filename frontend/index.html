@@ -1431,6 +1431,16 @@ const BASE_I18N_MAP_EN = {
   '半目': 'Half-Closed',
   '閉じ': 'Closed',
   'LORA一覧取得': 'Fetch LORA List',
+  '☆ お気に入り': '☆ Favorites',
+  '★ お気に入り': '★ Favorites',
+  '推奨:': 'Recommended:',
+  '推奨: 1.00': 'Recommended: 1.00',
+  '推奨: 0.80': 'Recommended: 0.80',
+  '推奨weightは自動反映': 'Recommended weight is auto-applied',
+  'カードクリックで割当 / ★でお気に入り / 推奨weightは自動反映': 'Click card to assign / ★ to favorite / recommended weight auto-applies',
+  'お気に入りのみ': 'Favorites only',
+  'LoRA検索': 'Search LoRA',
+  '一致するLoRAがありません': 'No matching LoRA',
   '例: スペシャルウィーク': 'e.g.: Special Week',
   '例: ウマ娘、ブルアカ': 'e.g.: Umamusume, Blue Archive',
   '青肌': 'blue skin',
@@ -3385,11 +3395,18 @@ function getFilteredLoraList(){
     if(!q) return true;
     return name.toLowerCase().includes(q) || name.replace(/\\/g,'/').split('/').pop().toLowerCase().includes(q);
   });
+  const sortKey = (name)=>{
+    const base = String(name || '').replace(/\\/g,'/').split('/').pop().toLowerCase();
+    return base.replace(/[^a-z0-9]+/g, '');
+  };
   return filtered.sort((a,b)=>{
     const af = isLoraFavorite(a) ? 0 : 1;
     const bf = isLoraFavorite(b) ? 0 : 1;
     if(af !== bf) return af - bf;
-    return a.localeCompare(b);
+    const ka = sortKey(a);
+    const kb = sortKey(b);
+    if(ka !== kb) return ka.localeCompare(kb);
+    return String(a).localeCompare(String(b));
   });
 }
 
@@ -3596,17 +3613,17 @@ function initLoraSlots(){
   });
   const favOnlyBtn = document.createElement('button');
   favOnlyBtn.type = 'button';
-  favOnlyBtn.textContent = '☆ Fav only';
+  favOnlyBtn.textContent = '☆ お気に入り';
   favOnlyBtn.style.cssText = 'display:inline-flex;width:auto;align-items:center;justify-content:center;font-family:DM Mono,monospace;font-size:0.68rem;letter-spacing:0;padding:0.25rem 0.45rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--muted);cursor:pointer;white-space:nowrap;';
   favOnlyBtn.addEventListener('click', ()=>{
     _loraFavoritesOnly = !_loraFavoritesOnly;
-    favOnlyBtn.textContent = _loraFavoritesOnly ? '★ Fav only' : '☆ Fav only';
+    favOnlyBtn.textContent = _loraFavoritesOnly ? '★ お気に入り' : '☆ お気に入り';
     favOnlyBtn.style.color = _loraFavoritesOnly ? '#b9770e' : 'var(--muted)';
     refreshLoraSelectOptions();
     updateLoraCardGrid();
   });
   const reloadBtn = document.createElement('button');
-  reloadBtn.textContent = '🔄 Fetch LORA List';
+  reloadBtn.textContent = '🔄 LORA一覧取得';
   reloadBtn.onclick = loadLoraList;
   reloadBtn.style.cssText = 'display:inline-flex;width:auto;align-items:center;justify-content:center;font-family:DM Mono,monospace;font-size:0.68rem;letter-spacing:0;padding:0.25rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--muted);cursor:pointer;white-space:nowrap;';
   header.appendChild(searchInput);
@@ -7299,4 +7316,3 @@ document.addEventListener('keydown',e=>{
 
 </body>
 </html>
-

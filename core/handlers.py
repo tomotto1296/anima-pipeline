@@ -78,60 +78,22 @@ def build_handler(context: dict):
             req_path = parsed.path
             req_qs = parse_qs(parsed.query, keep_blank_values=True)
             return req_path, req_qs
-        def _lora_prefs_path(self) -> str:
-            return _sf('lora_prefs.json')
-        def _load_lora_prefs(self) -> dict:
-            payload = {"favorites": [], "recommended_weights": {}}
-            fp = self._lora_prefs_path()
+        def _lora_favorites_path(self) -> str:
+            return _sf('lora_favorites.json')
+        def _load_lora_favorites(self) -> list[str]:
+            fp = self._lora_favorites_path()
             if not os.path.exists(fp):
-                return payload
+                return []
             try:
                 with open(fp, 'r', encoding='utf-8-sig') as f:
                     raw = json.load(f)
             except Exception:
-                return payload
-            if not isinstance(raw, dict):
-                return payload
-
-            favorites = []
-            seen = set()
-            for name in raw.get('favorites', []) if isinstance(raw.get('favorites', []), list) else []:
-                n = str(name or '').strip()
-                if not n or n in seen:
-                    continue
-                seen.add(n)
-                favorites.append(n)
-
-            recommended_weights = {}
-            rw_raw = raw.get('recommended_weights', {})
-            if isinstance(rw_raw, dict):
-                for k, v in rw_raw.items():
-                    name = str(k or '').strip()
-                    if not name:
-                        continue
-                    try:
-                        w = float(v)
-                    except Exception:
-                        continue
-                    if w < 0:
-                        w = 0.0
-                    if w > 2:
-                        w = 2.0
-                    recommended_weights[name] = w
-            return {"favorites": favorites, "recommended_weights": recommended_weights}
-        def _save_lora_prefs(self, payload: dict):
-            fp = self._lora_prefs_path()
-            os.makedirs(os.path.dirname(fp), exist_ok=True)
-            with open(fp, 'w', encoding='utf-8') as f:
-                json.dump(payload if isinstance(payload, dict) else {}, f, ensure_ascii=False, indent=2)
-        def _load_lora_favorites(self) -> list[str]:
-            payload = self._load_lora_prefs()
-            favorites = payload.get('favorites', []) if isinstance(payload, dict) else []
-            if not isinstance(favorites, list):
+                return []
+            if not isinstance(raw, list):
                 return []
             out = []
             seen = set()
-            for name in favorites:
+            for name in raw:
                 n = str(name or '').strip()
                 if not n or n in seen:
                     continue
@@ -139,11 +101,10 @@ def build_handler(context: dict):
                 out.append(n)
             return out
         def _save_lora_favorites(self, favorites: list[str]):
-            payload = self._load_lora_prefs()
-            if not isinstance(payload, dict):
-                payload = {"favorites": [], "recommended_weights": {}}
-            payload["favorites"] = favorites if isinstance(favorites, list) else []
-            self._save_lora_prefs(payload)
+            fp = self._lora_favorites_path()
+            os.makedirs(os.path.dirname(fp), exist_ok=True)
+            with open(fp, 'w', encoding='utf-8') as f:
+                json.dump(favorites if isinstance(favorites, list) else [], f, ensure_ascii=False, indent=2)
         def _resolve_workflow_path_for_diagnostics(self, cfg: dict) -> str:
             wf_file = str(cfg.get('workflow_file', '') or '').strip()
             if wf_file:
@@ -1097,10 +1058,6 @@ def build_handler(context: dict):
                 self._send_json({'loras': loras})
                 return True
 
-            if req_path == '/lora_prefs':
-                self._send_json(self._load_lora_prefs())
-                return True
-
             if req_path == '/lora_favorites':
                 self._send_json({'status': 'ok', 'favorites': self._load_lora_favorites()})
                 return True
@@ -1341,10 +1298,6 @@ def build_handler(context: dict):
 
             if req_path == '/chara_preset_thumb':
                 self._handle_post_chara_preset_thumb(body)
-                return True
-
-            if req_path == '/lora_prefs':
-                self._handle_post_lora_prefs(body)
                 return True
 
             if req_path == '/lora_favorites':
@@ -1681,38 +1634,6 @@ def build_handler(context: dict):
                 result = {'ok': False, 'error': str(e)}
                 print(f'[プリセット] サムネエラー: {e}')
             self._send_json(result)
-        def _handle_post_lora_prefs(self, body):
-            try:
-                incoming = body if isinstance(body, dict) else {}
-                favorites = []
-                seen = set()
-                for name in incoming.get('favorites', []) if isinstance(incoming.get('favorites', []), list) else []:
-                    n = str(name or '').strip()
-                    if not n or n in seen:
-                        continue
-                    seen.add(n)
-                    favorites.append(n)
-                recommended_weights = {}
-                rw_raw = incoming.get('recommended_weights', {})
-                if isinstance(rw_raw, dict):
-                    for k, v in rw_raw.items():
-                        name = str(k or '').strip()
-                        if not name:
-                            continue
-                        try:
-                            w = float(v)
-                        except Exception:
-                            continue
-                        if w < 0:
-                            w = 0.0
-                        if w > 2:
-                            w = 2.0
-                        recommended_weights[name] = w
-                payload = {"favorites": favorites, "recommended_weights": recommended_weights}
-                self._save_lora_prefs(payload)
-                self._send_json({"status": "ok", **payload})
-            except Exception as e:
-                self._send_json({"status": "error", "error": str(e)}, code=500)
         def _handle_post_lora_favorites(self, body):
             try:
                 incoming = body if isinstance(body, dict) else {}
