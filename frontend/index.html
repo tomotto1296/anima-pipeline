@@ -3318,39 +3318,185 @@ function getSelectedWorkflow(){
 }
 
 let _loraList = [];
+let _loraFavorites = [];
+let _loraFavoritesLoaded = false;
+let _loraSearchQuery = '';
+let _loraFavoritesOnly = false;
+
+function normalizeLoraName(name){
+  return String(name || '').trim();
+}
+
+function isLoraFavorite(name){
+  const n = normalizeLoraName(name);
+  return !!n && _loraFavorites.includes(n);
+}
+
+function getRecommendedLoraWeight(name){
+  const n = normalizeLoraName(name);
+  if(!n) return 1.0;
+  const m = n.match(/(?:^|[_-])w(\d+(?:\.\d+)?)(?:[_-]|\.|$)/i);
+  if(!m) return 1.0;
+  const w = Number(m[1]);
+  return Number.isFinite(w) ? Math.max(0, Math.min(2, w)) : 1.0;
+}
+
+async function loadLoraPrefs(){
+  try{
+    const res = await fetch('/lora_favorites');
+    if(!res.ok) return;
+    const data = await res.json();
+    const fav = Array.isArray(data.favorites) ? data.favorites.map(normalizeLoraName).filter(Boolean) : [];
+    _loraFavorites = [...new Set(fav)];
+    _loraFavoritesLoaded = true;
+  }catch(e){
+    console.warn('[lora] prefs load failed:', e);
+  }
+}
+
+async function saveLoraPrefs(){
+  try{
+    await fetch('/lora_favorites', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ favorites: _loraFavorites || [] })
+    });
+  }catch(e){
+    console.warn('[lora] prefs save failed:', e);
+  }
+}
+
+function toggleLoraFavorite(name){
+  const n = normalizeLoraName(name);
+  if(!n) return;
+  const set = new Set(_loraFavorites || []);
+  if(set.has(n)) set.delete(n); else set.add(n);
+  _loraFavorites = [...set];
+  saveLoraPrefs();
+  refreshLoraSelectOptions();
+  updateLoraCardGrid();
+  updateAllLoraSlotFavoriteButtons();
+}
+
+function getFilteredLoraList(){
+  const q = _loraSearchQuery.toLowerCase();
+  const filtered = _loraList.filter(name=>{
+    if(_loraFavoritesOnly && !isLoraFavorite(name)) return false;
+    if(!q) return true;
+    return name.toLowerCase().includes(q) || name.replace(/\\/g,'/').split('/').pop().toLowerCase().includes(q);
+  });
+  return filtered.sort((a,b)=>{
+    const af = isLoraFavorite(a) ? 0 : 1;
+    const bf = isLoraFavorite(b) ? 0 : 1;
+    if(af !== bf) return af - bf;
+    return a.localeCompare(b);
+  });
+}
+
+function applyRecommendedWeightToSlot(idx, name){
+  const n = normalizeLoraName(name);
+  const strEl = document.getElementById(`lora_strength_${idx}`);
+  if(!strEl) return;
+  if(!n){
+    strEl.value = '1';
+    updateLoraRecommendedLabel(idx, 1.0, false);
+    return;
+  }
+  const rec = getRecommendedLoraWeight(n);
+  strEl.value = String(rec);
+  updateLoraRecommendedLabel(idx, rec, rec !== 1.0);
+}
+
+function updateLoraRecommendedLabel(idx, rec, isDetected){
+  const el = document.getElementById(`lora_rec_${idx}`);
+  if(!el) return;
+  const v = Number.isFinite(Number(rec)) ? Number(rec).toFixed(2) : '1.00';
+  el.textContent = `推奨: ${v}`;
+  el.style.color = isDetected ? '#2d5f99' : 'var(--muted)';
+}
+
+function updateLoraSlotFavoriteButton(idx){
+  const btn = document.getElementById(`lora_fav_btn_${idx}`);
+  const sel = document.getElementById(`lora_name_${idx}`);
+  if(!btn || !sel) return;
+  const n = normalizeLoraName(sel.value);
+  if(!n){
+    btn.textContent = '☆';
+    btn.disabled = true;
+    btn.title = 'LoRA選択後にお気に入り登録';
+    btn.style.opacity = '0.5';
+    return;
+  }
+  btn.disabled = false;
+  btn.style.opacity = '1';
+  if(isLoraFavorite(n)){
+    btn.textContent = '★';
+    btn.title = 'お気に入り解除';
+  }else{
+    btn.textContent = '☆';
+    btn.title = 'お気に入り登録';
+  }
+}
+
+function updateAllLoraSlotFavoriteButtons(){
+  for(let i=0; i<LORA_SLOT_COUNT; i++) updateLoraSlotFavoriteButton(i);
+}
 
 async function loadLoraList(){
   try{
+    if(!_loraFavoritesLoaded) await loadLoraPrefs();
     const res = await fetch('/lora_list');
     const data = await res.json();
     _loraList = data.loras || [];
-    for(let i=0; i<LORA_SLOT_COUNT; i++){
-      const sel = document.getElementById(`lora_name_${i}`);
-      if(!sel) continue;
-      const current = sel.value;
-      while(sel.options.length > 1) sel.remove(1);
-      _loraList.forEach(name=>{
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.textContent = name.replace(/\\/g,'/');
-        sel.appendChild(opt);
-      });
-      if(current && [...sel.options].some(o=>o.value===current)) sel.value = current;
-    }
+    refreshLoraSelectOptions();
     updateLoraCardGrid();
+    updateAllLoraSlotFavoriteButtons();
   }catch(e){ console.warn('[lora] load failed:', e); }
+}
+
+function refreshLoraSelectOptions(){
+  const options = getFilteredLoraList();
+  for(let i=0; i<LORA_SLOT_COUNT; i++){
+    const sel = document.getElementById(`lora_name_${i}`);
+    if(!sel) continue;
+    const current = sel.value;
+    while(sel.options.length > 1) sel.remove(1);
+    options.forEach(name=>{
+      const opt = document.createElement('option');
+      opt.value = name;
+      opt.textContent = name.replace(/\\/g,'/');
+      sel.appendChild(opt);
+    });
+    if(current){
+      if(![...sel.options].some(o=>o.value===current)){
+        const opt = document.createElement('option');
+        opt.value = current;
+        opt.textContent = current.replace(/\\/g,'/');
+        sel.appendChild(opt);
+      }
+      sel.value = current;
+    }
+  }
 }
 
 function updateLoraCardGrid(){
   const grid = document.getElementById('loraCardGrid');
   if(!grid) return;
   const loraOpen = document.getElementById('blockLora')?.style.display !== 'none';
+  const filtered = getFilteredLoraList();
   grid.innerHTML = '';
-  _loraList.forEach(name=>{
+  filtered.forEach(name=>{
     const card = document.createElement('div');
     card.style.cssText = 'position:relative;border:2px solid var(--border);border-radius:8px;overflow:hidden;cursor:pointer;background:#f0f0f0;aspect-ratio:1;transition:border-color 0.15s;';
     card.dataset.loraName = name;
     card.title = name.replace(/\\/g,'/');
+    const fav = document.createElement('button');
+    fav.type = 'button';
+    fav.textContent = isLoraFavorite(name) ? '★' : '☆';
+    fav.title = isLoraFavorite(name) ? 'お気に入り解除' : 'お気に入り登録';
+    fav.style.cssText = 'position:absolute;top:3px;left:3px;z-index:3;display:inline-flex;width:auto;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.6);border-radius:4px;background:rgba(0,0,0,0.45);color:#ffd166;font-family:DM Mono,monospace;font-size:0.62rem;letter-spacing:0;padding:0.05rem 0.25rem;cursor:pointer;';
+    fav.addEventListener('click', (ev)=>{ ev.stopPropagation(); toggleLoraFavorite(name); });
+    card.appendChild(fav);
     const img = document.createElement('img');
     img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:none;';
     img.onload = ()=>{ img.style.display='block'; };
@@ -3371,25 +3517,51 @@ function updateLoraCardGrid(){
     card.addEventListener('click', ()=>assignLoraSlot(name));
     grid.appendChild(card);
   });
+  if(filtered.length === 0){
+    const empty = document.createElement('div');
+    empty.textContent = '一致するLoRAがありません';
+    empty.style.cssText = 'grid-column:1/-1;font-family:DM Mono,monospace;font-size:0.68rem;color:var(--muted);text-align:center;padding:0.7rem 0.2rem;';
+    grid.appendChild(empty);
+  }
   updateLoraCardBadges();
 }
 
 function assignLoraSlot(name){
+  const n = normalizeLoraName(name);
   for(let i=0; i<LORA_SLOT_COUNT; i++){
     const sel = document.getElementById(`lora_name_${i}`);
-    if(sel && sel.value === name){ sel.value=''; updateLoraCardBadges(); return; }
+    if(sel && sel.value === n){
+      sel.value='';
+      updateLoraCardBadges();
+      updateAllLoraSlotFavoriteButtons();
+      return;
+    }
   }
   for(let i=0; i<LORA_SLOT_COUNT; i++){
     const sel = document.getElementById(`lora_name_${i}`);
-    if(sel && !sel.value){ sel.value=name; updateLoraCardBadges(); return; }
+    if(sel && !sel.value){
+      sel.value = n;
+      applyRecommendedWeightToSlot(i, n);
+      updateLoraCardBadges();
+      updateAllLoraSlotFavoriteButtons();
+      return;
+    }
   }
   const sel = document.getElementById('lora_name_0');
-  if(sel){ sel.value=name; updateLoraCardBadges(); }
+  if(sel){
+    sel.value = n;
+    applyRecommendedWeightToSlot(0, n);
+    updateLoraCardBadges();
+    updateAllLoraSlotFavoriteButtons();
+  }
 }
 
 function updateLoraCardBadges(){
   document.querySelectorAll('.lora-card-badge').forEach(b=>{ b.style.display='none'; });
-  document.querySelectorAll('#loraCardGrid > div').forEach(c=>{ c.style.borderColor='var(--border)'; });
+  document.querySelectorAll('#loraCardGrid > div').forEach(c=>{
+    if(!c.dataset || !c.dataset.loraName) return;
+    c.style.borderColor = isLoraFavorite(c.dataset.loraName) ? '#f1c40f' : 'var(--border)';
+  });
   for(let i=0; i<LORA_SLOT_COUNT; i++){
     const sel = document.getElementById(`lora_name_${i}`);
     if(!sel || !sel.value) continue;
@@ -3405,33 +3577,78 @@ function updateLoraCardBadges(){
 function initLoraSlots(){
   const container = document.getElementById('loraSlots');
   if(!container) return;
+  loadLoraPrefs().then(()=>{
+    refreshLoraSelectOptions();
+    updateLoraCardGrid();
+    updateAllLoraSlotFavoriteButtons();
+  });
+
   const header = document.createElement('div');
-  header.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:0.5rem;';
+  header.style.cssText = 'display:flex;gap:0.35rem;justify-content:space-between;align-items:center;margin-bottom:0.35rem;flex-wrap:wrap;';
+  const searchInput = document.createElement('input');
+  searchInput.type = 'text';
+  searchInput.placeholder = 'LoRA検索';
+  searchInput.style.cssText = 'display:inline-block;width:13.5rem;max-width:100%;font-family:DM Mono,monospace;font-size:0.68rem;border:1px solid var(--border);border-radius:5px;padding:0.25rem 0.45rem;outline:none;';
+  searchInput.addEventListener('input', ()=>{
+    _loraSearchQuery = searchInput.value.trim();
+    refreshLoraSelectOptions();
+    updateLoraCardGrid();
+  });
+  const favOnlyBtn = document.createElement('button');
+  favOnlyBtn.type = 'button';
+  favOnlyBtn.textContent = '☆ Fav only';
+  favOnlyBtn.style.cssText = 'display:inline-flex;width:auto;align-items:center;justify-content:center;font-family:DM Mono,monospace;font-size:0.68rem;letter-spacing:0;padding:0.25rem 0.45rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--muted);cursor:pointer;white-space:nowrap;';
+  favOnlyBtn.addEventListener('click', ()=>{
+    _loraFavoritesOnly = !_loraFavoritesOnly;
+    favOnlyBtn.textContent = _loraFavoritesOnly ? '★ Fav only' : '☆ Fav only';
+    favOnlyBtn.style.color = _loraFavoritesOnly ? '#b9770e' : 'var(--muted)';
+    refreshLoraSelectOptions();
+    updateLoraCardGrid();
+  });
   const reloadBtn = document.createElement('button');
   reloadBtn.textContent = '🔄 Fetch LORA List';
   reloadBtn.onclick = loadLoraList;
-  reloadBtn.style.cssText = 'font-family:DM Mono,monospace;font-size:0.68rem;padding:0.25rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--muted);cursor:pointer;white-space:nowrap;';
+  reloadBtn.style.cssText = 'display:inline-flex;width:auto;align-items:center;justify-content:center;font-family:DM Mono,monospace;font-size:0.68rem;letter-spacing:0;padding:0.25rem 0.5rem;border:1px solid var(--border);border-radius:5px;background:white;color:var(--muted);cursor:pointer;white-space:nowrap;';
+  header.appendChild(searchInput);
+  header.appendChild(favOnlyBtn);
   header.appendChild(reloadBtn);
   container.appendChild(header);
+
   const grid = document.createElement('div');
   grid.id = 'loraCardGrid';
   grid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:0.4rem;margin-bottom:0.6rem;max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:0.4rem;background:#fafaf8;';
   container.appendChild(grid);
   const slotNote = document.createElement('div');
   slotNote.style.cssText = 'font-family:DM Mono,monospace;font-size:0.65rem;color:var(--muted);margin-bottom:0.3rem;';
-  slotNote.textContent = 'カードをクリックでスロットに割り当て（再クリックで解除）';
+  slotNote.textContent = 'カードクリックで割当 / ★でお気に入り / 推奨weightは自動反映';
   container.appendChild(slotNote);
+
   for(let i=0; i<LORA_SLOT_COUNT; i++){
     const row = document.createElement('div');
-    row.style.cssText = 'display:grid;grid-template-columns:1fr auto auto;gap:0.4rem;align-items:center;margin-bottom:0.3rem;';
+    row.style.cssText = 'display:grid;grid-template-columns:1fr auto auto auto auto;gap:0.35rem;align-items:center;margin-bottom:0.3rem;';
     const sel = document.createElement('select');
     sel.id = `lora_name_${i}`;
     sel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.72rem;border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.5rem;outline:none;background:white;color:var(--ink);cursor:pointer;';
-    sel.addEventListener('change', updateLoraCardBadges);
+    sel.addEventListener('change', ()=>{
+      applyRecommendedWeightToSlot(i, sel.value);
+      updateLoraCardBadges();
+      updateLoraSlotFavoriteButton(i);
+    });
     const emptyOpt = document.createElement('option');
     emptyOpt.value = '';
     emptyOpt.textContent = `— S${i+1} 未使用 —`;
     sel.appendChild(emptyOpt);
+
+    const favBtn = document.createElement('button');
+    favBtn.type = 'button';
+    favBtn.id = `lora_fav_btn_${i}`;
+    favBtn.textContent = '☆';
+    favBtn.style.cssText = 'display:inline-flex;width:auto;align-items:center;justify-content:center;font-family:DM Mono,monospace;font-size:0.76rem;letter-spacing:0;border:1px solid var(--border);border-radius:5px;background:white;color:#b9770e;padding:0.22rem 0.34rem;cursor:pointer;';
+    favBtn.addEventListener('click', ()=>{
+      const current = document.getElementById(`lora_name_${i}`)?.value || '';
+      if(current) toggleLoraFavorite(current);
+    });
+
     const strLabel = document.createElement('span');
     strLabel.textContent = '強度';
     strLabel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);white-space:nowrap;';
@@ -3439,9 +3656,18 @@ function initLoraSlots(){
     strInput.type = 'number';
     strInput.id = `lora_strength_${i}`;
     strInput.value = '1'; strInput.min = '0'; strInput.max = '2'; strInput.step = '0.05';
-    strInput.style.cssText = 'font-family:DM Mono,monospace;font-size:0.75rem;border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.4rem;outline:none;width:4.5rem;box-sizing:border-box;';
-    row.appendChild(sel); row.appendChild(strLabel); row.appendChild(strInput);
+    strInput.style.cssText = 'font-family:DM Mono,monospace;font-size:0.75rem;border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.4rem;outline:none;width:4.6rem;box-sizing:border-box;';
+    const recLabel = document.createElement('span');
+    recLabel.id = `lora_rec_${i}`;
+    recLabel.textContent = '推奨: 1.00';
+    recLabel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.64rem;color:var(--muted);white-space:nowrap;';
+    row.appendChild(sel);
+    row.appendChild(favBtn);
+    row.appendChild(strLabel);
+    row.appendChild(strInput);
+    row.appendChild(recLabel);
     container.appendChild(row);
+    updateLoraRecommendedLabel(i, 1.0, false);
   }
   // LoRAセクションを開いた時に自動取得（toggleBlockから呼ばれる）
 }
@@ -3478,6 +3704,8 @@ function applyLoraSlots(slots){
     }
     if(strEl) strEl.value = slot.strength !== undefined ? slot.strength : 1;
   });
+  updateLoraCardBadges();
+  updateAllLoraSlotFavoriteButtons();
 }
 
 function initGenParams(){

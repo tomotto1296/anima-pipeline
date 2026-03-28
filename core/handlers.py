@@ -124,6 +124,26 @@ def build_handler(context: dict):
             os.makedirs(os.path.dirname(fp), exist_ok=True)
             with open(fp, 'w', encoding='utf-8') as f:
                 json.dump(payload if isinstance(payload, dict) else {}, f, ensure_ascii=False, indent=2)
+        def _load_lora_favorites(self) -> list[str]:
+            payload = self._load_lora_prefs()
+            favorites = payload.get('favorites', []) if isinstance(payload, dict) else []
+            if not isinstance(favorites, list):
+                return []
+            out = []
+            seen = set()
+            for name in favorites:
+                n = str(name or '').strip()
+                if not n or n in seen:
+                    continue
+                seen.add(n)
+                out.append(n)
+            return out
+        def _save_lora_favorites(self, favorites: list[str]):
+            payload = self._load_lora_prefs()
+            if not isinstance(payload, dict):
+                payload = {"favorites": [], "recommended_weights": {}}
+            payload["favorites"] = favorites if isinstance(favorites, list) else []
+            self._save_lora_prefs(payload)
         def _resolve_workflow_path_for_diagnostics(self, cfg: dict) -> str:
             wf_file = str(cfg.get('workflow_file', '') or '').strip()
             if wf_file:
@@ -1081,6 +1101,10 @@ def build_handler(context: dict):
                 self._send_json(self._load_lora_prefs())
                 return True
 
+            if req_path == '/lora_favorites':
+                self._send_json({'status': 'ok', 'favorites': self._load_lora_favorites()})
+                return True
+
             if req_path == '/workflows':
                 files = []
                 try:
@@ -1321,6 +1345,10 @@ def build_handler(context: dict):
 
             if req_path == '/lora_prefs':
                 self._handle_post_lora_prefs(body)
+                return True
+
+            if req_path == '/lora_favorites':
+                self._handle_post_lora_favorites(body)
                 return True
 
             if req_path in ('/extra_tags', '/style_tags', '/neg_extra_tags', '/neg_style_tags'):
@@ -1685,6 +1713,21 @@ def build_handler(context: dict):
                 self._send_json({"status": "ok", **payload})
             except Exception as e:
                 self._send_json({"status": "error", "error": str(e)}, code=500)
+        def _handle_post_lora_favorites(self, body):
+            try:
+                incoming = body if isinstance(body, dict) else {}
+                favorites = []
+                seen = set()
+                for name in incoming.get('favorites', []) if isinstance(incoming.get('favorites', []), list) else []:
+                    n = str(name or '').strip()
+                    if not n or n in seen:
+                        continue
+                    seen.add(n)
+                    favorites.append(n)
+                self._save_lora_favorites(favorites)
+                self._send_json({"status": "ok", "favorites": favorites})
+            except Exception as e:
+                self._send_json({"status": "error", "error": str(e)}, code=500)
         def _handle_post_generate(self, body):
             user_input=body.get('input','')
             use_llm=body.get('use_llm',True)
@@ -1910,4 +1953,3 @@ def build_handler(context: dict):
             return False
 
     return Handler
-

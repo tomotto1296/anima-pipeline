@@ -8,7 +8,7 @@
 - `1.4.699x` 系は `1.4.7` として正式リリース済み
 
 ## 現在バージョン
-- `1.5.12`
+- `1.5.13`
 
 
 ## 直近追記（v1.4.910）
@@ -710,3 +710,19 @@
 - Updated frontend syntax check temp-file behavior:
   - `scripts/check_frontend_syntax.py` now deletes `frontend/.check_inline_main.js` when checks pass.
   - On check failure, the temp file is kept for debugging.
+
+## 2026-03-28 - v1.5.13
+
+- INPUT-6 (LoRA管理強化) の初期実装を追加:
+  - LoRA検索（カードグリッドの絞り込み）
+  - LoRAお気に入り（★）の登録/解除
+  - 推奨weight（LoRAごとに保存し、再選択時に自動適用）
+  - 自動候補（お気に入り優先表示）
+- Added LoRA preferences API:
+  - `GET /lora_favorites`
+  - `POST /lora_favorites`
+  - 保存先: `settings/lora_favorites.json`
+- Updated version labels:
+  - `anima_pipeline.py` `__version__`: `1.5.13`
+  - `README.md` / `README_EN.md`
+  - `docs/updates/Update.md` current version

@@ -22,7 +22,7 @@ Browser UI + LLM automation for the Anima workflow.
 
 ## Current Version & Docs
 
-- Current version: `v1.5.12`
+- Current version: `v1.5.13`
 - Implemented features: [docs/specs/features.md](docs/specs/features.md)
 - Roadmap: [docs/updates/roadmap.md](docs/updates/roadmap.md)
 - Update log: [docs/updates/Update.md](docs/updates/Update.md)
