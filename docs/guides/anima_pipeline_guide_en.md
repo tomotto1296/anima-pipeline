@@ -5,7 +5,7 @@
 Anima Pipeline is a browser-based tool that can optionally use an LLM to assist prompt creation, then sends jobs to ComfyUI for image generation.
 
 After refactoring, `anima_pipeline.py` remains the entry point, while most logic is split into `core/` and `frontend/`.
-The current release is `v1.5.19`.
+The current release is `v1.5.20`.
 
 ---
 
@@ -144,10 +144,13 @@ Behavior notes:
 
 ### Random Features Split (GEN-9 / INPUT-1)
 
-- The character preset row now has two random-related buttons (both shown with dice icon style).
+- `🎲 Today's Mood (GEN-9)` is placed next to the Generate button.
 - `Today's Mood (GEN-9)`:
-  - Randomly loads one existing character preset.
+  - Randomly loads one existing character preset (skips character apply when no presets exist).
+  - Also randomizes scene world / time of day / weather (`scene_world` / `scene_tod` / `scene_weather`).
+  - Shows a short applied-summary message in STATUS.
 - `Random Generate (INPUT-1)`:
+  - Uses the `⚀` button in the character preset row.
   - Applies a new random character setup from existing `ui_options` choices (gender/age/hairstyle/hair color/eye color/outfit).
   - Shows a save confirmation dialog after applying random values.
   - Shows a short summary in STATUS.
@@ -314,6 +317,7 @@ These are currently tracked as non-critical issues.
 
 | Version | Changes |
 |---------|---------|
+| **v1.5.20** | SHARE-1: Implemented preset bundle Export/Import (zip). Also improved visual distinction between `Generate` and `Today's Mood`, and switched the two-button row to stacked layout on mobile. |
 | **v1.5.19** | INPUT-1: random character preset generation from `ui_options` (random attribute apply + save confirmation + STATUS summary). Dice icon style was unified for random buttons. |
 | **v1.5.18** | INPUT-6 follow-up: Improved mobile LoRA visibility (card columns and slot-row layout optimization). |
 | **v1.5.17** | OUTPUT-9: Added previous-item prompt diff viewer in history modal (Positive/Negative with toggle support; Negative appears only when differences exist). |
