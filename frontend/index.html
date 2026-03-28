@@ -2788,6 +2788,24 @@ async function generateCharaPreset(idx){
   }
 }
 
+function applyRandomCharaPreset(idx){
+  if(!Array.isArray(charaPresets) || charaPresets.length===0){
+    alert('ランダム適用できるプリセットがありません');
+    return;
+  }
+  const sel = document.getElementById('chara_preset_sel_'+idx);
+  if(!sel) return;
+  const current = parseInt(sel.value, 10);
+  let picked = Math.floor(Math.random() * charaPresets.length);
+  if(charaPresets.length > 1 && !Number.isNaN(current) && picked === current){
+    picked = (picked + 1 + Math.floor(Math.random() * (charaPresets.length - 1))) % charaPresets.length;
+  }
+  sel.value = String(picked);
+  loadCharaPreset(idx);
+  const name = charaPresets[picked]?.name || '';
+  if(name) alert('今日の気分: 「' + name + '」を適用しました');
+}
+
 async function saveCharaPreset(idx){
   const ch = collectCharaData(idx);
   const ja = (ch.name || '').trim();
@@ -5789,6 +5807,11 @@ function makeCharaBlock(idx){
   charaPresetAutoBtn.title = 'Danbooru Wiki+LLMでプリセット自動生成';
   charaPresetAutoBtn.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;padding:0.28rem 0;width:2.8rem;text-align:center;border:1px solid #3a8c5c;border-radius:5px;background:white;color:#3a8c5c;cursor:pointer;';
   charaPresetAutoBtn.onclick = ()=>generateCharaPreset(idx);
+  const charaPresetMoodBtn = document.createElement('button');
+  charaPresetMoodBtn.textContent = '🎲';
+  charaPresetMoodBtn.title = '今日の気分（ランダムテンプレ適用）';
+  charaPresetMoodBtn.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;padding:0.28rem 0;width:2.8rem;text-align:center;border:1px solid #8e7ec2;border-radius:5px;background:white;color:#7f6bb9;cursor:pointer;';
+  charaPresetMoodBtn.onclick = ()=>applyRandomCharaPreset(idx);
   charaPresetRow.appendChild(cpNumLbl);
   charaPresetRow.appendChild(charaPresetSel);
   const cpRow2 = document.createElement('div');
@@ -5797,6 +5820,7 @@ function makeCharaBlock(idx){
   cpRow2.appendChild(charaPresetLoadBtn);
   cpRow2.appendChild(charaPresetSaveBtn);
   cpRow2.appendChild(charaPresetAutoBtn);
+  cpRow2.appendChild(charaPresetMoodBtn);
   charaPresetRow.appendChild(cpRow2);
 
   header.appendChild(charaPresetRow);

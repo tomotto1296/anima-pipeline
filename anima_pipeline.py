@@ -27,7 +27,7 @@ _workflows_dir = os.path.join(_base_dir, 'workflows')
 os.makedirs(_settings_dir, exist_ok=True)
 os.makedirs(_workflows_dir, exist_ok=True)
 
-__version__ = "1.5.15"
+__version__ = "1.5.16"
 
 
 def _sf(name):
@@ -151,7 +151,6 @@ def main():
 
 if __name__ == '__main__':
     main()
-
 
 
 
