@@ -102,6 +102,7 @@ If you want smartphone access or LoRA thumbnails, add this option when starting 
 | 笘・| Named sessions (multi-slot save/load with overwrite handling) |
 | 笘・| Setup diagnostics UI (`/diagnostics`) |
 | 笘・| Metadata embedding (PNG/WebP, LoRA hash metadata) |
+| 笘・| OUTPUT-9: Previous-item prompt diff in history modal (Positive with toggle, Negative shown only when differences exist) |
 | 笘・| LoRA injection (card-grid UI, thumbnails, up to 4 slots) |
 | 笘・| Workflow switching (select from `workflows/`, auto-detect Node IDs) |
 | 笘・| UI language switch (Japanese / English) |
