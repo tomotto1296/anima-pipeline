@@ -335,6 +335,7 @@ These are currently tracked as non-critical issues.
 | **v1.5.17** | OUTPUT-9: Added previous-item prompt diff viewer in history modal (Positive/Negative with toggle support; Negative appears only when differences exist). |
 | **v1.5.16** | GEN-9: Implemented `🎲 Today's Mood` (placed near Generate, applies one random existing character preset plus random scene world/time/weather, and shows STATUS summary). |
 | **v1.5.15** | UI-5: Added theme mode selector (Device/Light/Dark). Improved dark-mode contrast and readability (section cards, LoRA area, inputs, disabled add buttons, language toggle). |
+| **v1.5.13** | INPUT-6 initial implementation: added baseline LoRA search, favorites, recommended weight auto-apply, and card-to-slot assignment flow. |
 | **v1.5.14** | INPUT-6: LoRA management UX updates (search, favorites, recommended weight display, sort-order fix, unified settings API) |
 | **v1.5.0** | Module split (core/ · frontend/), generation history DB, preset hierarchy, positive/negative presets, named session save, character name JA/EN split, setup diagnostics UI |
 | **v1.4.7** | UI language switch (JA/EN), logging, preset thumbnail list, allow 0 characters, BOM read fix |
