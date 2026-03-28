@@ -5,7 +5,7 @@
 Anima Pipeline is a browser-based tool that can optionally use an LLM to assist prompt creation, then sends jobs to ComfyUI for image generation.
 
 After refactoring, `anima_pipeline.py` remains the entry point, while most logic is split into `core/` and `frontend/`.
-The current release is `v1.5.18`.
+The current release is `v1.5.19`.
 
 ---
 
@@ -141,6 +141,16 @@ Behavior notes:
 - When LLM is disabled, tag assembly prioritizes EN fields and falls back to JA fields when EN is empty.
 - Preset auto-generation can attempt EN completion (name_en / series_en) even when only Japanese input is provided.
 - Default character preset naming uses JA（EN） when both values exist.
+
+### Random Features Split (GEN-9 / INPUT-1)
+
+- The character preset row now has two random-related buttons (both shown with dice icon style).
+- `Today's Mood (GEN-9)`:
+  - Randomly loads one existing character preset.
+- `Random Generate (INPUT-1)`:
+  - Applies a new random character setup from existing `ui_options` choices (gender/age/hairstyle/hair color/eye color/outfit).
+  - Shows a save confirmation dialog after applying random values.
+  - Shows a short summary in STATUS.
 
 ### Positive/Negative Presets (INPUT-5)
 
@@ -304,6 +314,7 @@ These are currently tracked as non-critical issues.
 
 | Version | Changes |
 |---------|---------|
+| **v1.5.19** | INPUT-1: random character preset generation from `ui_options` (random attribute apply + save confirmation + STATUS summary). Dice icon style was unified for random buttons. |
 | **v1.5.18** | INPUT-6 follow-up: Improved mobile LoRA visibility (card columns and slot-row layout optimization). |
 | **v1.5.17** | OUTPUT-9: Added previous-item prompt diff viewer in history modal (Positive/Negative with toggle support; Negative appears only when differences exist). |
 | **v1.5.15** | UI-5: Added theme mode selector (Device/Light/Dark). Improved dark-mode contrast and readability (section cards, LoRA area, inputs, disabled add buttons, language toggle). |
