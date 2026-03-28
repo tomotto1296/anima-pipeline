@@ -205,6 +205,12 @@ LLMなし派は直接英語タグ入力で最速生成可能。
 - プリセットサムネギャラリー実装
 - 多数のバグ修正 & 起動安定化
 
+## スマホ・外出先から使いたい方へ
+
+Tailscaleを使えば、外出先や別の部屋からでもスマホでAnima Pipelineを操作できます。
+
+@[card](https://zenn.dev/rhu/articles/anima-pipeline-tailscale-smartphone)
+
 ## おわりに
 
 技術力なくても、**キャラ愛だけで画像量産**できるようにしたくて作りました。
