@@ -90,7 +90,8 @@ In `SETTINGS`, verify:
 7. `History DB Path` (default: `history/history.db`)
 8. `History Thumb Dir` (default: `history/thumbs`)
 
-Click `Save Settings` to write values into `settings/pipeline_config.json`.
+Click `Save Settings` to write user-specific values into `settings/pipeline_config.local.json`.  
+Shared defaults are loaded from `settings/pipeline_config.default.json`.
 
 ### Setup Diagnostics (SETUP-2)
 
@@ -203,7 +204,37 @@ If it fails:
 
 ---
 
-## 10. Minimal Distribution Set
+## 10. Smartphone Access (via Tailscale — Remote / Off-LAN)
+
+Use Tailscale if you want to control Anima Pipeline from your phone outside your home Wi-Fi.
+
+### One-Time Setup
+
+1. Create an account at [Tailscale](https://tailscale.com/)
+2. **PC**: Install Tailscale and sign in
+3. **Smartphone**: Install the Tailscale app and sign in with the same account
+4. **ComfyUI**: Add `--listen --enable-cors-header` to your launch options
+
+   ```
+   .\python_embeded\python.exe -s ComfyUI\main.py --windows-standalone-build --lowvram --listen --enable-cors-header
+   ```
+
+### Connecting
+
+1. Run `start_anima_pipeline - Tailscale.bat` on your PC
+2. Open the URL shown in the console on your phone (for example, `http://100.x.x.x:7860`)
+
+   ```
+   [INFO] Starting server... Open http://100.x.x.x:7860
+   ```
+
+   > If Tailscale is not connected, you will see `[WARN] Tailscale IP not found.` — check that the Tailscale app is active on both your PC and phone.
+
+> **Tips:** Once Tailscale is set up, you can use `start_anima_pipeline - Tailscale.bat` as your default launcher. It works fine on the same LAN too, so there is no need to switch between the two scripts.
+
+---
+
+## 11. Minimal Distribution Set
 
 Minimum required files:
 
@@ -226,7 +257,7 @@ Recommended to include:
 Recommended to exclude:
 
 - `logs/`, `history/`, `__pycache__/`, `.tmp*`
-- personal/local `settings/pipeline_config.json`
+- personal/local `settings/pipeline_config.local.json`
 
 For users already on `v1.5.11`, it is recommended to ship an upgrade ZIP alongside the minimal ZIP.
 
@@ -241,7 +272,7 @@ This generates both files in `dist/`:
 
 ---
 
-## 11. Quick Checks
+## 12. Quick Checks
 
 See [quick_checks_and_hooks.md](./quick_checks_and_hooks.md) for full details.
 
@@ -254,7 +285,7 @@ python scripts/run_quick_checks.py --include-hooks-guard
 
 ---
 
-## 12. Known Behavior
+## 13. Known Behavior
 
 - Right after startup, progress % can appear late on first generation
 - After cancel, `Generating...` may remain for a short time
@@ -263,7 +294,7 @@ These are currently tracked as non-critical issues.
 
 ---
 
-## 13. Version History
+## 14. Version History
 
 | Version | Changes |
 |---------|---------|

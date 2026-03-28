@@ -26,7 +26,7 @@
 
 ### 保存先
 - 既定: `anima-pipeline/logs/`
-- `settings/pipeline_config.json` で変更可能
+- `settings/pipeline_config.local.json` で変更可能（共有既定値は `settings/pipeline_config.default.json`）
 
 ### 設定項目
 - `log_dir`

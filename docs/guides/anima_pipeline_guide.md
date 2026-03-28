@@ -90,7 +90,8 @@ python anima_pipeline.py
 7. `History DB Path`（既定: `history/history.db`）
 8. `History Thumb Dir`（既定: `history/thumbs`）
 
-`Save Settings` を押すと `settings/pipeline_config.json` に保存されます。
+`Save Settings` を押すと、個人設定は `settings/pipeline_config.local.json` に保存されます。  
+共通既定値は `settings/pipeline_config.default.json` から読み込まれます。
 
 ### Setup Diagnostics (SETUP-2)
 
@@ -203,10 +204,39 @@ The result panel shows `OK / WARN / ERR / SKIP`, and `WARN / ERR` rows include h
 - PCファイアウォールで 7860 の受信許可を確認
 - URLが `https://` ではなく `http://` になっているか確認
 - ComfyUI側のCORS設定（必要環境のみ）を確認
+---
+
+## 10. スマホアクセス（Tailscale経由・外出先対応）
+
+同一Wi-Fiの外からでもスマホで操作したい場合は、Tailscaleを使います。
+
+### 事前準備（初回のみ）
+
+1. [Tailscale](https://tailscale.com/) でアカウントを作成
+2. **PC側**: Tailscaleをインストールしてログイン
+3. **スマホ側**: Tailscaleアプリをインストールしてログイン（同じアカウント）
+4. **ComfyUI**: 起動オプションに `--listen --enable-cors-header` を追加
+
+   ```
+   .\python_embeded\python.exe -s ComfyUI\main.py --windows-standalone-build --lowvram --listen --enable-cors-header
+   ```
+
+### 接続手順
+
+1. PC上で `start_anima_pipeline - Tailscale.bat` を実行
+2. コンソールに表示された URL（例: `http://100.x.x.x:7860`）をスマホで開く
+
+   ```
+   [INFO] Starting server... Open http://100.x.x.x:7860
+   ```
+
+   > Tailscaleが接続されていない場合は `[WARN] Tailscale IP not found.` と表示されます。その場合はスマホ・PCのTailscaleアプリが両方オンになっているか確認してください。
+
+> **Tips:** Tailscaleのセットアップが済んだら、以降は `start_anima_pipeline - Tailscale.bat` を常用するのがおすすめです。同一LAN内でも問題なく動作するため、使い分けが不要になります。
 
 ---
 
-## 10. 配布時の最小構成
+## 11. 配布時の最小構成
 
 最小構成は次の通りです。
 
@@ -229,7 +259,7 @@ start_anima_pipeline.bat (または任意の起動手段)
 配布に含めない推奨:
 
 - `logs/`, `history/`, `__pycache__/`, `.tmp*`
-- 個人環境の `settings/pipeline_config.json`
+- 個人環境の `settings/pipeline_config.local.json`
 
 `v1.5.11` 以降の既存ユーザー向けには、差分上書き用ZIPの併配布を推奨します。
 
@@ -244,7 +274,7 @@ powershell -ExecutionPolicy Bypass -File scripts/build_release_zips.ps1 -Version
 
 ---
 
-## 11. クイックチェック
+## 12. クイックチェック
 
 詳細は [quick_checks_and_hooks.md](./quick_checks_and_hooks.md) を参照してください。
 
@@ -257,7 +287,7 @@ python scripts/run_quick_checks.py --include-hooks-guard
 
 ---
 
-## 12. 既知事項
+## 13. 既知事項
 
 - 起動直後の初回生成は、進捗%表示が遅れて出るケースがあります
 - キャンセル直後に `Generating...` が短時間残るケースがあります
@@ -266,7 +296,7 @@ python scripts/run_quick_checks.py --include-hooks-guard
 
 ---
 
-## 13. バージョン履歴
+## 14. バージョン履歴
 
 | バージョン | 主な変更内容 |
 |-----------|------------|
