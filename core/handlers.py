@@ -1013,6 +1013,9 @@ def build_handler(context: dict):
             if self._handle_get_chara_presets_route(req_path):
                 return
 
+            if self._handle_get_presets_export_route(req_path):
+                return
+
             if self._handle_get_misc_routes(req_path, req_qs, unquote):
                 return
 
@@ -1206,6 +1209,186 @@ def build_handler(context: dict):
 
             return False
 
+        def _iter_share1_export_targets(self):
+            for d in [CHARA_PRESETS_DIR]:
+                if not os.path.isdir(d):
+                    continue
+                for fn in sorted(os.listdir(d)):
+                    low = fn.lower()
+                    if not (low.endswith('.json') or low.endswith('.webp')):
+                        continue
+                    fp = os.path.join(d, fn)
+                    if os.path.isfile(fp):
+                        yield fp, f'chara/{fn}'
+
+            for category in ('scene', 'camera', 'quality', 'lora', 'composite'):
+                cat_dir = os.path.join(PRESETS_BASE_DIR, category)
+                if not os.path.isdir(cat_dir):
+                    continue
+                for fn in sorted(os.listdir(cat_dir)):
+                    if not fn.lower().endswith('.json'):
+                        continue
+                    fp = os.path.join(cat_dir, fn)
+                    if os.path.isfile(fp):
+                        yield fp, f'presets/{category}/{fn}'
+
+        def _handle_get_presets_export_route(self, req_path: str) -> bool:
+            if req_path != '/presets_export':
+                return False
+
+            mem = io.BytesIO()
+            with zipfile.ZipFile(mem, mode='w', compression=zipfile.ZIP_DEFLATED) as zf:
+                for src_path, arcname in self._iter_share1_export_targets():
+                    try:
+                        zf.write(src_path, arcname=arcname)
+                    except Exception:
+                        pass
+
+            data = mem.getvalue()
+            filename = f'anima-presets_{datetime.date.today().isoformat()}.zip'
+            self._send_bytes(
+                data,
+                'application/zip',
+                extra_headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+            )
+            return True
+
+        def _extract_multipart_file_bytes(self, raw_body: bytes, content_type: str, field_name: str = 'file'):
+            ctype = str(content_type or '')
+            marker = 'boundary='
+            pos = ctype.lower().find(marker)
+            if pos < 0:
+                raise ValueError('missing multipart boundary')
+            boundary = ctype[pos + len(marker):].strip()
+            if boundary.startswith('"') and boundary.endswith('"'):
+                boundary = boundary[1:-1]
+            if not boundary:
+                raise ValueError('missing multipart boundary')
+
+            boundary_bytes = ('--' + boundary).encode('utf-8', errors='ignore')
+            for part in raw_body.split(boundary_bytes):
+                chunk = part.strip(b'\r\n')
+                if not chunk or chunk == b'--':
+                    continue
+                if chunk.endswith(b'--'):
+                    chunk = chunk[:-2].rstrip(b'\r\n')
+                head, sep, body = chunk.partition(b'\r\n\r\n')
+                if not sep:
+                    continue
+                if body.endswith(b'\r\n'):
+                    body = body[:-2]
+                headers = {}
+                for line in head.split(b'\r\n'):
+                    if b':' not in line:
+                        continue
+                    k, v = line.split(b':', 1)
+                    headers[k.decode('latin-1').strip().lower()] = v.decode('latin-1').strip()
+                disposition = headers.get('content-disposition', '')
+                if f'name="{field_name}"' not in disposition and f"name='{field_name}'" not in disposition:
+                    continue
+                if 'filename=' not in disposition:
+                    raise ValueError('multipart file part is missing filename')
+                return body
+            raise ValueError('multipart file field is missing')
+
+        def _is_truthy_qs(self, value: str) -> bool:
+            return str(value or '').strip().lower() in {'1', 'true', 'yes', 'on'}
+
+        def _resolve_share1_import_target(self, arcname: str):
+            norm = str(arcname or '').replace('\\', '/').strip()
+            norm = norm.lstrip('/')
+            if not norm or '..' in norm.split('/'):
+                return None
+
+            parts = [p for p in norm.split('/') if p]
+            if len(parts) == 2 and parts[0] == 'chara':
+                fn = parts[1]
+                if fn != os.path.basename(fn):
+                    return None
+                low = fn.lower()
+                if not (low.endswith('.json') or low.endswith('.webp')):
+                    return None
+                return os.path.join(CHARA_PRESETS_DIR, fn)
+
+            if len(parts) == 3 and parts[0] == 'presets':
+                category = parts[1].lower()
+                fn = parts[2]
+                if category not in {'scene', 'camera', 'quality', 'lora', 'composite'}:
+                    return None
+                if fn != os.path.basename(fn) or (not fn.lower().endswith('.json')):
+                    return None
+                return os.path.join(PRESETS_BASE_DIR, category, fn)
+
+            return None
+
+        def _handle_post_presets_import_route(self, req_path: str, req_qs: dict) -> bool:
+            if req_path != '/presets_import':
+                return False
+
+            try:
+                length = int(self.headers.get('Content-Length', 0) or 0)
+            except Exception:
+                length = 0
+            raw_body = self.rfile.read(length) if length > 0 else b''
+            overwrite = self._is_truthy_qs((req_qs.get('overwrite', ['false'])[0] or 'false'))
+
+            try:
+                file_bytes = self._extract_multipart_file_bytes(raw_body, self.headers.get('Content-Type', ''), field_name='file')
+            except ValueError as e:
+                self._send_json({'status': 'error', 'imported': 0, 'skipped': 0, 'error': str(e)}, code=400)
+                return True
+
+            imports = {}
+            skipped = 0
+            try:
+                with zipfile.ZipFile(io.BytesIO(file_bytes), mode='r') as zf:
+                    for info in zf.infolist():
+                        if info.is_dir():
+                            continue
+                        dest_path = self._resolve_share1_import_target(info.filename)
+                        if not dest_path:
+                            skipped += 1
+                            continue
+                        imports[dest_path] = zf.read(info.filename)
+            except zipfile.BadZipFile:
+                self._send_json({'status': 'error', 'imported': 0, 'skipped': 0, 'error': 'Invalid zip file'}, code=400)
+                return True
+            except Exception as e:
+                self._send_json({'status': 'error', 'imported': 0, 'skipped': 0, 'error': str(e)}, code=500)
+                return True
+
+            if not imports:
+                self._send_json({'status': 'ok', 'imported': 0, 'skipped': skipped, 'error': ''}, code=200)
+                return True
+
+            conflict_count = sum(1 for path in imports if os.path.exists(path))
+            if conflict_count > 0 and (not overwrite):
+                self._send_json(
+                    {
+                        'status': 'error',
+                        'imported': 0,
+                        'skipped': skipped,
+                        'error': 'Preset already exists. Overwrite?',
+                        'conflicts': conflict_count,
+                    },
+                    code=409,
+                )
+                return True
+
+            imported = 0
+            try:
+                for dest_path, payload in imports.items():
+                    os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+                    with open(dest_path, 'wb') as f:
+                        f.write(payload)
+                    imported += 1
+            except Exception as e:
+                self._send_json({'status': 'error', 'imported': imported, 'skipped': skipped, 'error': str(e)}, code=500)
+                return True
+
+            self._send_json({'status': 'ok', 'imported': imported, 'skipped': skipped, 'error': ''}, code=200)
+            return True
+
         def _handle_post_preset_routes(self, req_path: str, body: dict, unquote_fn) -> bool:
             if req_path.startswith('/presets/'):
                 parts = [p for p in req_path.split('/') if p]
@@ -1247,10 +1430,19 @@ def build_handler(context: dict):
 
             return False
         def do_POST(self):
-            length=int(self.headers.get('Content-Length',0))
-            body=json.loads(self.rfile.read(length))
-            from urllib.parse import unquote
             req_path, req_qs = self._parse_request_path_qs()
+            from urllib.parse import unquote
+
+            if self._handle_post_presets_import_route(req_path, req_qs):
+                return
+
+            length=int(self.headers.get('Content-Length',0))
+            raw_body = self.rfile.read(length)
+            try:
+                body = json.loads(raw_body) if raw_body else {}
+            except Exception:
+                self._send_json({'status': 'error', 'error': 'Invalid JSON body'}, code=400)
+                return
     
             if self._handle_post_preset_routes(req_path, body, unquote):
                 return

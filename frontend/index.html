@@ -930,6 +930,14 @@
         <button onclick="deleteCharaPresetFromSettings()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0;width:2.8rem;text-align:center;border:1px solid #e0779a;border-radius:5px;background:white;color:#c0392b;cursor:pointer;">DEL</button>
       </div>
     </div>
+    <div style="margin-top:0.8rem;padding:0.6rem 0.7rem;background:#f5fff6;border:1px solid #76b88b;border-radius:7px;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#2f6f47;font-weight:bold;margin-bottom:0.4rem;">🧩 プリセット共有（zip）</div>
+      <div style="display:flex;gap:0.35rem;align-items:center;flex-wrap:wrap;">
+        <button onclick="exportPresetsZip()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0.6rem;border:1px solid #76b88b;border-radius:5px;background:white;color:#2f6f47;cursor:pointer;">プリセットをエクスポート</button>
+        <button onclick="openPresetsImportDialog()" style="font-family:'DM Mono',monospace;font-size:0.72rem;padding:0.3rem 0.6rem;border:1px solid #76b88b;border-radius:5px;background:white;color:#2f6f47;cursor:pointer;">プリセットをインポート</button>
+        <input type="file" id="presetsImportFile" accept=".zip,application/zip" style="display:none" onchange="importPresetsZipFromInput(this)">
+      </div>
+    </div>
     <div style="margin-top:0.8rem;padding:0.6rem 0.7rem;background:#f5f9ff;border:1px solid #9db9df;border-radius:7px;">
       <div style="font-family:'DM Mono',monospace;font-size:0.7rem;color:#2d5f99;font-weight:bold;margin-bottom:0.4rem;">🗂 プリセット管理（Scene/Camera/Quality/LoRA/Composite/Negative/Positive）</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.35rem;margin-bottom:0.35rem;">
@@ -1636,6 +1644,14 @@ const BASE_I18N_MAP_EN = {
   'ログZIPをエクスポート': 'EXPORT LOGS ZIP',
   'プリセットを選択': 'Select a preset',
   'CharaプリセットDelete': 'Delete Character Preset',
+  'プリセット共有（zip）': 'Preset Sharing (zip)',
+  'プリセットをエクスポート': 'Export Presets',
+  'プリセットをインポート': 'Import Presets',
+  'zipファイルを選択してください': 'Please select a zip file',
+  'zipファイルが正しくありません': 'Invalid zip file',
+  'エクスポートに失敗しました': 'Export failed',
+  'インポートに失敗しました': 'Import failed',
+  'インポート成功': 'Import successful',
   '送信枚数': 'Image Count',
   'PNG生成': 'Generate PNG',
   'WebP変換': 'Convert to WebP',
@@ -3277,6 +3293,75 @@ async function deleteCharaPresetFromSettings(){
   await deleteCharaPresetFromServer(preset._filename);
   charaPresets.splice(i, 1);
   updateAllPresetSelects();
+}
+
+function exportPresetsZip(){
+  try{
+    window.location.href = '/presets_export';
+  }catch(_){
+    alert('エクスポートに失敗しました');
+  }
+}
+
+function openPresetsImportDialog(){
+  const fileInput = document.getElementById('presetsImportFile');
+  if(!fileInput) return;
+  fileInput.value = '';
+  fileInput.click();
+}
+
+async function importPresetsZipFromInput(inputEl){
+  const file = inputEl?.files?.[0];
+  if(!file){
+    alert('zipファイルを選択してください');
+    return;
+  }
+  try{
+    await importPresetsZip(file, false);
+    await loadCharaPresets();
+    await initHierarchicalPresets();
+    alert(
+      (currentLang === 'ja')
+        ? 'インポート成功'
+        : 'Import successful'
+    );
+  }catch(e){
+    alert(e?.message || 'インポートに失敗しました');
+  } finally {
+    if(inputEl) inputEl.value = '';
+  }
+}
+
+async function importPresetsZip(file, overwrite){
+  const formData = new FormData();
+  formData.append('file', file);
+  const url = '/presets_import?overwrite=' + (overwrite ? 'true' : 'false');
+  const res = await fetch(url, {
+    method: 'POST',
+    body: formData,
+  });
+  let data = null;
+  try{
+    data = await res.json();
+  }catch(_){
+    data = null;
+  }
+
+  if(res.status === 409){
+    if(confirm('同名のプリセットが存在します。上書きしますか？')){
+      return importPresetsZip(file, true);
+    }
+    throw new Error((currentLang === 'ja') ? 'インポートをキャンセルしました' : 'Import cancelled');
+  }
+
+  if(!res.ok || !data || data.status !== 'ok'){
+    const rawMsg = String(data?.error || '');
+    if(rawMsg.toLowerCase().includes('invalid zip')){
+      throw new Error('zipファイルが正しくありません');
+    }
+    throw new Error((currentLang === 'ja') ? 'インポートに失敗しました' : 'Import failed');
+  }
+  return data;
 }
 
 function loadCharaPreset(idx){
