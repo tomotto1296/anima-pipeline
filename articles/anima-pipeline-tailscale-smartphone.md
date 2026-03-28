@@ -11,8 +11,6 @@ published: true
 published_at: "2026-03-28 09:00"
 ---
 
-# ごろ寝しながらAI画像生成——Anima PipelineとTailscaleでスマホから自宅PCを操作する
-
 ## はじめに
 
 布団に寝転がりながら、スマホで「生成」を押す。自宅のPCが唸りながら画像を作り始める——そんな使い方がAnima Pipelineでできます。
@@ -32,6 +30,10 @@ https://zenn.dev/rhu/articles/anima-pipeline-comfyui-llm
 
 外出先からのアクセスより先に、同じWi-Fi内でスマホからアクセスする方法です。5分で確認できます。
 
+:::message
+スマホがPCと**同じWi-Fiに接続されている**ことを確認してから進めてください。モバイル回線のままでは同一LAN接続はできません。
+:::
+
 ### 手順
 
 1. PCのIPv4アドレスを確認する（Windowsなら `ipconfig` で `192.168.x.x` 形式のもの）
@@ -46,13 +48,18 @@ https://zenn.dev/rhu/articles/anima-pipeline-comfyui-llm
 .\python_embeded\python.exe -s ComfyUI\main.py --windows-standalone-build --lowvram --listen --enable-cors-header
 ```
 
+:::message
+上記コマンドはComfyUIの**Windowsポータブル版（公式standalone build）**用です。venv環境などで独自にセットアップしている場合は、`python`や`python3`に読み替えてください。
+:::
+
 **なぜこのオプションが必要か：**
 - `--listen` — ComfyUIをローカルホスト以外からも受け付ける設定。これがないとスマホからの接続を弾きます
 - `--enable-cors-header` — Anima PipelineはWebSocketで生成進捗（%表示）をリアルタイム受信しています。CORS設定がないとスマホ側でWebSocket接続が失敗します
 
 ### つながらない場合のチェックポイント
 
-- PCのファイアウォールでポート `7860` の受信が許可されているか
+- スマホがPCと同じWi-Fiに接続されているか
+- PCのファイアウォールでポート `7860` の受信が許可されているか（Windowsの場合、**ネットワークプロファイルが「プライベート」**になっているかも確認）
 - URLが `https://` ではなく `http://` になっているか
 
 ---
