@@ -192,8 +192,8 @@ The result panel shows `OK / WARN / ERR / SKIP`, and `WARN / ERR` rows include h
 - 生成時に更新される `last session`（自動保存）と、`SAVE SESSION` の名前付き保存（手動保存）は別管理です。
 
 ---
-## 9. スマホアクセス（同一LAN）
 
+## 9. スマホアクセス（同一LAN）
 
 1. PCのIPv4を確認（例: `192.168.1.103`）
 2. PC上で Anima Pipeline を起動
@@ -204,6 +204,7 @@ The result panel shows `OK / WARN / ERR / SKIP`, and `WARN / ERR` rows include h
 - PCファイアウォールで 7860 の受信許可を確認
 - URLが `https://` ではなく `http://` になっているか確認
 - ComfyUI側のCORS設定（必要環境のみ）を確認
+
 ---
 
 ## 10. スマホアクセス（Tailscale経由・外出先対応）
