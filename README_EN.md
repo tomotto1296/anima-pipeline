@@ -22,7 +22,7 @@ Browser UI + LLM automation for the Anima workflow.
 
 ## Current Version & Docs
 
-- Current version: `v1.5.13`
+- Current version: `v1.5.14`
 - Implemented features: [docs/specs/features.md](docs/specs/features.md)
 - Roadmap: [docs/updates/roadmap.md](docs/updates/roadmap.md)
 - Update log: [docs/updates/Update.md](docs/updates/Update.md)
@@ -153,4 +153,3 @@ anima_pipeline/
 - `v1.5.x+`: Advanced phase (LLM scoring, auto-tagging, workflow reconstruction assist)
 
 See [docs/updates/roadmap.md](docs/updates/roadmap.md) for details.
-

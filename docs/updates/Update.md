@@ -8,7 +8,7 @@
 - `1.4.699x` 系は `1.4.7` として正式リリース済み
 
 ## 現在バージョン
-- `1.5.13`
+- `1.5.14`
 
 
 ## 直近追記（v1.4.910）
@@ -744,3 +744,16 @@
 - [x] ドキュメント反映:
   - `docs/specs/features.md` に INPUT-6 実装内容を追記
   - リリースノート作成は見送り（ユーザー判断）
+
+## 2026-03-28 - v1.5.14
+
+- Release version updated to `v1.5.14`.
+- INPUT-6 follow-up finalized:
+  - i18n labels for LoRA controls aligned (JA/EN).
+  - LoRA sort order finalized as favorites-first + symbol-insensitive alphabetical order.
+  - Favorites storage/API finalized to `settings/lora_favorites.json` and `/lora_favorites`.
+- Updated visible version labels:
+  - `anima_pipeline.py` `__version__`
+  - `README.md` / `README_EN.md`
+  - `docs/specs/features.md`
+  - `docs/updates/Update.md` current version

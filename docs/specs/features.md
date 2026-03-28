@@ -1,12 +1,12 @@
 # AnimaPipeline 機能一覧
 
-最終更新: 2026-03-28 / 対応バージョン: v1.5.13
+最終更新: 2026-03-28 / 対応バージョン: v1.5.14
 
 > 実装予定・ロードマップは [roadmap.md](../updates/roadmap.md) を参照してください。
 
 ---
 
-## 最新完了機能（v1.4.718〜v1.5.13）
+## 最新完了機能（v1.4.718〜v1.5.14）
 
 | 機能 | バージョン |
 |------|-----------|
@@ -137,5 +137,4 @@
 | POST /save_session, GET /last_session | v1.3.0 |
 | GET /connection_test, GET /llm_connection_test | v1.2.0 |
 | GET /logs_info, GET /logs_zip | v1.4.7 |
-
 
