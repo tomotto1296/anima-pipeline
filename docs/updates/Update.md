@@ -8,7 +8,7 @@
 - `1.4.699x` 系は `1.4.7` として正式リリース済み
 
 ## 現在バージョン
-- `1.5.18`
+- `1.5.19`
 
 
 ## 直近追記（v1.4.910）
@@ -807,5 +807,17 @@
   - `README.md` / `README_EN.md` current version
   - `docs/specs/features.md`
   - `docs/guides/anima_pipeline_guide.md` / `docs/guides/anima_pipeline_guide_en.md`
+  - `docs/updates/roadmap.md`
+  - `docs/updates/Update.md` current version
+
+## 2026-03-28 - v1.5.19
+
+- Release version updated to `v1.5.19`.
+- INPUT-1 implemented:
+  - Added random character preset generation from existing `ui_options` choices.
+  - Added save confirmation flow after random apply.
+  - Added short random summary display in STATUS area.
+- Updated docs:
+  - `docs/specs/features.md`
   - `docs/updates/roadmap.md`
   - `docs/updates/Update.md` current version
