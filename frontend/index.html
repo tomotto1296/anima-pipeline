@@ -137,6 +137,24 @@
     box-shadow:0 5px 18px rgba(124,77,191,0.4);transform:translateY(-1px);}
   button:active{transform:translateY(1px);box-shadow:0 2px 8px rgba(124,77,191,0.25);}
   button:disabled{background:linear-gradient(135deg,#bbb,#ccc);box-shadow:none;cursor:not-allowed;transform:none;}
+  .gen-actions{display:flex;gap:0.5rem;align-items:stretch;margin-top:1.2rem;}
+  .gen-actions button{margin-top:0;}
+  #btn{flex:1.18;}
+  #btnMood{
+    flex:0.82;
+    min-width:178px;
+    background:white;
+    color:#4f3f74;
+    border:1.5px solid #8f7ad2;
+    box-shadow:0 2px 10px rgba(98,78,154,0.18);
+    letter-spacing:0.14em;
+  }
+  #btnMood:hover{
+    background:#f5f1ff;
+    color:#433264;
+    border-color:#7d67c4;
+    box-shadow:0 4px 14px rgba(98,78,154,0.24);
+  }
   .status-box{margin-top:1.5rem;border:1px solid var(--border);background:rgba(255,255,255,0.9);padding:1rem;display:none;border-radius:8px;box-shadow:0 2px 12px rgba(124,77,191,0.07);}
   .status-box.show{display:block;}
   .status-label{font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem;}
@@ -442,6 +460,16 @@
     color:#958eac !important;
     border-color:#575071 !important;
   }
+  :root[data-theme="dark"] #btnMood{
+    background:rgba(188,168,239,0.14) !important;
+    color:#f0e9ff !important;
+    border:1.5px solid #bca8ef !important;
+    box-shadow:0 2px 12px rgba(78,60,120,0.28) !important;
+  }
+  :root[data-theme="dark"] #btnMood:hover{
+    background:rgba(188,168,239,0.24) !important;
+    border-color:#d2c2ff !important;
+  }
   :root[data-theme="dark"] #loraCardGrid{
     background:#231f33 !important;
     border-color:var(--border) !important;
@@ -557,6 +585,19 @@
     /* ボタンのタップ領域を広げる */
     button, .period-btn, .scene-toggle, .fmt-btn, .size-btn{
       min-height:40px;
+    }
+    .gen-actions{
+      flex-direction:column;
+      gap:0.45rem;
+    }
+    .gen-actions #btn,
+    .gen-actions #btnMood{
+      width:100%;
+      min-width:0;
+      flex:1 1 auto;
+    }
+    .gen-actions #btnMood{
+      letter-spacing:0.1em;
     }
 
     /* period-btnの縦書き防止 */
@@ -1189,9 +1230,9 @@
     <input type="checkbox" id="useLLM" checked style="width:14px;height:14px;accent-color:var(--multi);cursor:pointer;">
     <label for="useLLM" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);cursor:pointer;user-select:none;">LLMを使用する</label>
   </div>
-  <div style="display:flex;gap:0.5rem;align-items:stretch;">
-    <button id="btn" onclick="generate()" style="margin:0;flex:1;">▶ 生成開始　(Ctrl+Enter)</button>
-    <button id="btnMood" onclick="applyTodaysMood()" style="margin:0;min-width:180px;width:auto;">🎲 今日の気分</button>
+  <div class="gen-actions">
+    <button id="btn" onclick="generate()">▶ 生成開始　(Ctrl+Enter)</button>
+    <button id="btnMood" onclick="applyTodaysMood()">🎲 今日の気分</button>
   </div>
   <button class="btn-cancel" id="cancelBtn" onclick="cancelGenerate()">■ 生成中止</button>
 
