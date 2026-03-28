@@ -7,7 +7,7 @@ on:
       - main
       - master
     paths:
-      - "qiita/**"
+      - "articles/qiita/**"
       - ".github/workflows/qiita-publish.yml"
   workflow_dispatch:
 
@@ -34,4 +34,4 @@ jobs:
       - name: Publish Qiita Articles
         env:
           QIITA_TOKEN: ${{ secrets.QIITA_TOKEN }}
-        run: qiita publish --all --root ./qiita
+        run: qiita publish --all --root ./articles/qiita
