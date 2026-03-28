@@ -726,3 +726,21 @@
   - `anima_pipeline.py` `__version__`: `1.5.13`
   - `README.md` / `README_EN.md`
   - `docs/updates/Update.md` current version
+
+## v1.5.14 Candidate Tasks (INPUT-6 Follow-up)
+
+- [x] INPUT-6 i18n最終化:
+  - LoRA周辺の新規UI文言（検索・お気に入り・推奨表示）の JA/EN 往復確認
+  - 英語時の表記揺れ（Favorites / Recommended / Search）の統一
+- [x] INPUT-6 並び順仕様の確定:
+  - 「お気に入り先頭 + 記号無視アルファベット順」を仕様に明文化
+  - 実装と `feature_INPUT-6_lora_management.md` の記述を一致させる
+- [x] INPUT-6 API/保存先の最終整合:
+  - `/lora_favorites` と `settings/lora_favorites.json` のみを正式APIとして維持
+  - 旧 `/lora_prefs` 系の参照が残っていないか最終確認
+- [x] INPUT-6 回帰テスト最終化:
+  - LoRA選択・生成、セッション保存/復元、LoRAプリセット保存/読込の回帰確認
+  - モバイルUIでの崩れ確認
+- [x] ドキュメント反映:
+  - `docs/specs/features.md` に INPUT-6 実装内容を追記
+  - リリースノート作成は見送り（ユーザー判断）

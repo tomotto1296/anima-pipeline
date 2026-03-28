@@ -1,12 +1,12 @@
 # AnimaPipeline 機能一覧
 
-最終更新: 2026-03-24 / 対応バージョン: v1.5.1
+最終更新: 2026-03-28 / 対応バージョン: v1.5.13
 
 > 実装予定・ロードマップは [roadmap.md](../updates/roadmap.md) を参照してください。
 
 ---
 
-## 最新完了機能（v1.4.718〜v1.5.1）
+## 最新完了機能（v1.4.718〜v1.5.13）
 
 | 機能 | バージョン |
 |------|-----------|
@@ -19,6 +19,7 @@
 | ポジティブ・ネガティブタグのプリセット保存対応 | v1.4.900 |
 | セッション複数保存（名前付き保存） | v1.4.910 |
 | 自己診断UI（エラー原因候補・ノード不足警告） | v1.4.911 |
+| INPUT-6: LoRA管理強化（検索・お気に入り・推奨weight表示） | v1.5.13 |
 | 配布バージョン更新（v1.5.1） | v1.5.1 |
 
 ---
@@ -81,6 +82,9 @@
 |------|-----------|
 | LoRA 一覧・選択 | v1.4.0 |
 | LoRA サムネイル表示 | v1.4.1 |
+| LoRA お気に入り（`settings/lora_favorites.json` 永続化） | v1.5.13 |
+| LoRA 検索フィルタ（カード + スロットドロップダウン連動） | v1.5.13 |
+| LoRA 推奨weight表示（`_w0.8` 形式のファイル名解析） | v1.5.13 |
 
 ### シーン・スタイル
 
@@ -126,12 +130,12 @@
 | エンドポイント | 追加バージョン |
 |--------------|--------------|
 | GET /lora_list, GET /lora_thumb | v1.4.0 |
+| GET /lora_favorites, POST /lora_favorites | v1.5.13 |
 | GET /workflow_list, GET /workflow_node_ids | v1.4.3 |
 | GET /chara_presets, POST /save_chara_preset, POST /delete_chara_preset | v1.2.0 |
 | POST /chara_preset_thumb, GET /chara_thumb | v1.4.7 |
 | POST /save_session, GET /last_session | v1.3.0 |
 | GET /connection_test, GET /llm_connection_test | v1.2.0 |
 | GET /logs_info, GET /logs_zip | v1.4.7 |
-
 
 
