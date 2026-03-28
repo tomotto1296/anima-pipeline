@@ -102,6 +102,10 @@ If you want smartphone access or LoRA thumbnails, add this option when starting 
 | Done | Named sessions (multi-slot save/load with overwrite handling) |
 | Done | Setup diagnostics UI (`/diagnostics`) |
 | Done | Metadata embedding (PNG/WebP, LoRA hash metadata) |
+| Done | UI-5: Theme mode (`Device / Light / Dark`) with dark-theme readability tuning |
+| Done | GEN-9: `Today's Mood` button (random apply + STATUS summary) |
+| Done | INPUT-1: Random character preset generation (with save-confirm flow) |
+| Done | SHARE-1: Preset bundle zip Export/Import (`/presets_export` and `/presets_import`) |
 | Done | OUTPUT-9: Previous-item prompt diff in history modal (Positive with toggle, Negative shown only when differences exist) |
 | Done | LoRA injection (card-grid UI, thumbnails, up to 4 slots) |
 | Done | Workflow switching (select from `workflows/`, auto-detect Node IDs) |
@@ -149,8 +153,8 @@ anima_pipeline/
 ## Roadmap Summary
 
 - `v1.4.8-v1.5.0`: Foundation phase (completed)
-- `v1.5.1`: Daily workflow improvements (LoRA management, random preset, sharing)
-- `v1.5.2`: Production phase (batch generation, queue, comparison generation)
+- `v1.5.1`: Daily workflow improvements phase (completed: LoRA management, random preset, preset sharing)
+- `v1.5.2`: Production/headline phase (planned: batch generation, queue, comparison generation, image-to-prompt reconstruction)
 - `v1.5.x+`: Advanced phase (LLM scoring, auto-tagging, workflow reconstruction assist)
 
 See [docs/updates/roadmap.md](docs/updates/roadmap.md) for details.
