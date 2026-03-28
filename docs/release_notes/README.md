@@ -1,6 +1,7 @@
 ﻿# Release Notes Index
 
 ## Latest
+- [v1.5.20](./release_notes_v1.5.20.md)
 - [v1.5.11](./release_notes_v1.5.11.md)
 - [v1.5.1](./release_notes_v1.5.1.md)
 - [v1.5.01](./release_notes_v1.5.01.md)
