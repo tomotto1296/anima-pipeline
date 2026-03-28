@@ -21,6 +21,10 @@
     --success:#6db88a;
     --single:#3a8c5c;
     --multi:#7c4dbf;
+    --single-active-bg:#1ba88a;
+    --single-active-border:#127460;
+    --single-active-text:#ffffff;
+    --single-active-shadow:0 0 0 2px rgba(27,168,138,0.26),0 5px 14px rgba(18,116,96,0.28);
     --card:#ffffff;
     --highlight:#f3eeff;
     color-scheme: light;
@@ -35,6 +39,10 @@
     --success:#85c7a1;
     --single:#69b587;
     --multi:#a88fe0;
+    --single-active-bg:#24d7b4;
+    --single-active-border:#64f2d5;
+    --single-active-text:#0f1320;
+    --single-active-shadow:0 0 0 2px rgba(100,242,213,0.50),0 0 14px rgba(36,215,180,0.40);
     --card:#1d1a2a;
     --highlight:#29233a;
     color-scheme: dark;
@@ -508,6 +516,36 @@
   .age-btn.active{background:#2d7a4f;color:white;border-color:#2d7a4f;}
   .age-btn[style*="background-color"].active{outline:3px solid #222;outline-offset:1px;filter:brightness(1.15);}
   .age-btn[style*="background-color"]:hover{filter:brightness(1.1);}
+  .period-btn:hover,
+  .gender-btn:hover,
+  .age-btn:hover,
+  .safety-btn:hover,
+  .fmt-btn:hover{
+    border-color:var(--single-active-border);
+    background:var(--highlight);
+  }
+  .period-btn.active,
+  .gender-btn.active,
+  .age-btn.active,
+  .safety-btn.active,
+  .fmt-btn.active{
+    background:var(--single-active-bg) !important;
+    color:var(--single-active-text) !important;
+    border-color:var(--single-active-border) !important;
+    box-shadow:var(--single-active-shadow);
+    transform:translateY(-1px);
+    font-weight:700;
+  }
+  :root[data-theme="dark"] .period-btn.active,
+  :root[data-theme="dark"] .gender-btn.active,
+  :root[data-theme="dark"] .age-btn.active,
+  :root[data-theme="dark"] .safety-btn.active,
+  :root[data-theme="dark"] .fmt-btn.active{
+    background:var(--single-active-bg) !important;
+    color:var(--single-active-text) !important;
+    border-color:var(--single-active-border) !important;
+    box-shadow:var(--single-active-shadow) !important;
+  }
 
   /* ===== モバイル対応 ===== */
   @media (max-width: 700px){
