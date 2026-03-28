@@ -833,6 +833,9 @@
   - Added `GET /presets_export` to download `chara/` + `presets/{scene,camera,quality,lora,composite}` as zip.
   - Added `POST /presets_import` (`multipart/form-data`) with overwrite conflict handling (`409`).
   - Added settings panel UI for "Export Presets" / "Import Presets".
+- UI follow-up:
+  - Improved visual distinction between main Generate CTA and "🎲 Today's Mood" button.
+  - On mobile, switched Generate / Today's Mood button row to stacked layout for readability and tap comfort.
 - Updated docs:
   - `README.md` / `README_EN.md` current version
   - `docs/specs/features.md`
