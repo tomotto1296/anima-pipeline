@@ -676,11 +676,35 @@
 
     /* LoRAグリッドをモバイルで3列固定 */
     #loraCardGrid{
-      grid-template-columns: repeat(3, 1fr) !important;
+      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
       max-height: 240px;
     }
     #loraCardGrid > div{
-      min-height: 90px;
+      min-height: 78px;
+    }
+    .lora-slot-row{
+      grid-template-columns:minmax(0,1fr) auto !important;
+      grid-template-areas:
+        "select fav"
+        "strengthLabel strengthInput"
+        "rec rec";
+      column-gap:0.28rem !important;
+      row-gap:0.24rem !important;
+      align-items:center !important;
+    }
+    .lora-slot-select{ grid-area:select; min-width:0; width:100%; }
+    .lora-slot-fav{ grid-area:fav; min-width:2.1rem; padding:0.28rem 0.34rem !important; }
+    .lora-strength-label{ grid-area:strengthLabel; justify-self:start; }
+    .lora-strength-input{
+      grid-area:strengthInput;
+      width:100% !important;
+      max-width:6rem;
+      justify-self:start;
+    }
+    .lora-rec-label{
+      grid-area:rec;
+      font-size:0.6rem !important;
+      line-height:1.25;
     }
 
 
@@ -4112,9 +4136,11 @@ function initLoraSlots(){
 
   for(let i=0; i<LORA_SLOT_COUNT; i++){
     const row = document.createElement('div');
+    row.className = 'lora-slot-row';
     row.style.cssText = 'display:grid;grid-template-columns:1fr auto auto auto auto;gap:0.35rem;align-items:center;margin-bottom:0.3rem;';
     const sel = document.createElement('select');
     sel.id = `lora_name_${i}`;
+    sel.className = 'lora-slot-select';
     sel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.72rem;border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.5rem;outline:none;background:white;color:var(--ink);cursor:pointer;';
     sel.addEventListener('change', ()=>{
       applyRecommendedWeightToSlot(i, sel.value);
@@ -4129,6 +4155,7 @@ function initLoraSlots(){
     const favBtn = document.createElement('button');
     favBtn.type = 'button';
     favBtn.id = `lora_fav_btn_${i}`;
+    favBtn.className = 'lora-slot-fav';
     favBtn.textContent = '☆';
     favBtn.style.cssText = 'display:inline-flex;width:auto;align-items:center;justify-content:center;font-family:DM Mono,monospace;font-size:0.76rem;letter-spacing:0;border:1px solid var(--border);border-radius:5px;background:white;color:#b9770e;padding:0.22rem 0.34rem;cursor:pointer;';
     favBtn.addEventListener('click', ()=>{
@@ -4137,15 +4164,18 @@ function initLoraSlots(){
     });
 
     const strLabel = document.createElement('span');
+    strLabel.className = 'lora-strength-label';
     strLabel.textContent = '強度';
     strLabel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.7rem;color:var(--muted);white-space:nowrap;';
     const strInput = document.createElement('input');
     strInput.type = 'number';
     strInput.id = `lora_strength_${i}`;
+    strInput.className = 'lora-strength-input';
     strInput.value = '1'; strInput.min = '0'; strInput.max = '2'; strInput.step = '0.05';
     strInput.style.cssText = 'font-family:DM Mono,monospace;font-size:0.75rem;border:1px solid var(--border);border-radius:5px;padding:0.3rem 0.4rem;outline:none;width:4.6rem;box-sizing:border-box;';
     const recLabel = document.createElement('span');
     recLabel.id = `lora_rec_${i}`;
+    recLabel.className = 'lora-rec-label';
     recLabel.textContent = '推奨: 1.00';
     recLabel.style.cssText = 'font-family:DM Mono,monospace;font-size:0.64rem;color:var(--muted);white-space:nowrap;';
     row.appendChild(sel);
