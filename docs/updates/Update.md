@@ -770,3 +770,14 @@
   - `docs/specs/features.md`
   - `docs/guides/anima_pipeline_guide.md`
   - `docs/guides/anima_pipeline_guide_en.md`
+
+## 2026-03-28 - v1.5.16
+
+- Release version updated to `v1.5.16`.
+- GEN-9 implemented:
+  - Added "今日の気分" button (`🎲`) to each character preset row.
+  - Randomly applies one saved character preset to the selected character.
+  - Shows a guard alert when no preset exists.
+- Updated docs:
+  - `docs/updates/roadmap.md` (GEN-9 marked as completed)
+  - `docs/specs/features.md`
