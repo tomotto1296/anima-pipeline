@@ -91,6 +91,8 @@ In `SETTINGS`, verify:
 7. `History DB Path` (default: `history/history.db`)
 8. `History Thumb Dir` (default: `history/thumbs`)
 
+Use the header `Theme` selector to switch `Device / Light / Dark` (`Device` follows your OS theme setting).
+
 Click `Save Settings` to write user-specific values into `settings/pipeline_config.local.json`.  
 Shared defaults are loaded from `settings/pipeline_config.default.json`.
 

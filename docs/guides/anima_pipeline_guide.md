@@ -91,6 +91,8 @@ python anima_pipeline.py
 7. `History DB Path`（既定: `history/history.db`）
 8. `History Thumb Dir`（既定: `history/thumbs`）
 
+ヘッダーの `表示テーマ` では `端末連動 / ライト / ダーク` を切り替えできます（`端末連動` はOS設定に追従）。
+
 `Save Settings` を押すと、個人設定は `settings/pipeline_config.local.json` に保存されます。  
 共通既定値は `settings/pipeline_config.default.json` から読み込まれます。
 

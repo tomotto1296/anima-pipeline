@@ -320,6 +320,11 @@
   :root[data-theme="dark"] input[type=number],
   :root[data-theme="dark"] textarea,
   :root[data-theme="dark"] select{background:var(--card);color:var(--ink);}
+  :root[data-theme="dark"] input[type=number]:disabled{
+    background:#2d2840 !important;
+    color:#9a93b2 !important;
+    border-color:#575071 !important;
+  }
   :root[data-theme="dark"] #widthInput,
   :root[data-theme="dark"] #heightInput{
     background:var(--card) !important;
@@ -373,6 +378,20 @@
   :root[data-theme="dark"] .preset-btn,
   :root[data-theme="dark"] .tag-check,
   :root[data-theme="dark"] .safety-btn{background:var(--card);color:var(--ink);border-color:var(--border);}
+  :root[data-theme="dark"] .multi-btn{
+    background:var(--card);
+    color:var(--ink);
+    border-color:var(--border);
+  }
+  :root[data-theme="dark"] .multi-btn:hover:not(.active){
+    background:#2f2942;
+    color:#f0ebff;
+  }
+  :root[data-theme="dark"] .multi-btn.active{
+    background:var(--multi);
+    color:#fff;
+    border-color:var(--multi);
+  }
   :root[data-theme="dark"] .extra-custom button{
     background:var(--card) !important;
     color:var(--ink) !important;
@@ -1947,6 +1966,10 @@ function _resolveTheme(mode){
   return 'light';
 }
 
+function _themeDefaultFieldBg(){
+  return document.documentElement.getAttribute('data-theme') === 'dark' ? '#1d1a2a' : 'white';
+}
+
 function _syncThemeSelector(){
   const sel = document.getElementById('themeModeSelect');
   if(sel) sel.value = currentThemeMode;
@@ -2928,7 +2951,7 @@ function loadCharaPreset(idx){
     if(hairSelEl && ch.haircolor){
       hairSelEl.value = ch.haircolor;
       const hcFound = HAIR_COLORS.find(c=>c.v===ch.haircolor);
-      if(hcFound){ hairSelEl.style.backgroundColor=hcFound.bg||'white'; hairSelEl.style.color=hcFound.fg||'var(--ink)'; }
+      if(hcFound){ hairSelEl.style.backgroundColor=hcFound.bg||_themeDefaultFieldBg(); hairSelEl.style.color=hcFound.fg||'var(--ink)'; }
       document.getElementById(`chara_haircolor_${idx}`).value = ch.haircolor;
     }
     const skinHid = document.getElementById(`chara_skin_${idx}`);
@@ -2952,7 +2975,7 @@ function loadCharaPreset(idx){
       eyeHid2.value=ch.eyes;
       const eyeWrapEl = eyeHid2.parentElement;
       const eyeSelEl2 = eyeWrapEl?.querySelector('select');
-      if(eyeSelEl2){ eyeSelEl2.value=ch.eyes; const f=EYE_COLORS.find(c=>c.v===ch.eyes); if(f){eyeSelEl2.style.backgroundColor=f.bg||'white';eyeSelEl2.style.color=f.fg||'var(--ink)';} }
+      if(eyeSelEl2){ eyeSelEl2.value=ch.eyes; const f=EYE_COLORS.find(c=>c.v===ch.eyes); if(f){eyeSelEl2.style.backgroundColor=f.bg||_themeDefaultFieldBg();eyeSelEl2.style.color=f.fg||'var(--ink)';} }
     }
     const hasDetail = ['outfit','action','hair','eyes','skin','body','misc','bust'].some(f=>ch[f]);
     if(hasDetail){
@@ -4897,14 +4920,14 @@ function applySession(data){
         hcHid.value = ch['haircolor'];
         const hcWrap = hcHid.parentElement;
         const hcSel = hcWrap?.querySelector('select');
-        if(hcSel){ hcSel.value=ch['haircolor']; const f=HAIR_COLORS.find(c=>c.v===ch['haircolor']); if(f){hcSel.style.backgroundColor=f.bg||'white';hcSel.style.color=f.fg||'var(--ink)';} }
+        if(hcSel){ hcSel.value=ch['haircolor']; const f=HAIR_COLORS.find(c=>c.v===ch['haircolor']); if(f){hcSel.style.backgroundColor=f.bg||_themeDefaultFieldBg();hcSel.style.color=f.fg||'var(--ink)';} }
       }
       let eyeHid = document.getElementById(`chara_eyes_${i}`);
       if(eyeHid && ch['eyes']){
         eyeHid.value = ch['eyes'];
         const eyeWrapEl2 = eyeHid.parentElement;
         const eyeSelEl3 = eyeWrapEl2?.querySelector('select');
-        if(eyeSelEl3){ eyeSelEl3.value=ch['eyes']; const f=EYE_COLORS.find(c=>c.v===ch['eyes']); if(f){eyeSelEl3.style.backgroundColor=f.bg||'white';eyeSelEl3.style.color=f.fg||'var(--ink)';} }
+        if(eyeSelEl3){ eyeSelEl3.value=ch['eyes']; const f=EYE_COLORS.find(c=>c.v===ch['eyes']); if(f){eyeSelEl3.style.backgroundColor=f.bg||_themeDefaultFieldBg();eyeSelEl3.style.color=f.fg||'var(--ink)';} }
       }
       let skinHid = document.getElementById(`chara_skin_${i}`);
       if(skinHid){
@@ -5904,7 +5927,7 @@ function makeCharaBlock(idx){
   skinSel.addEventListener('change',function(){
     skinHidden.value = this.value;
     const found = SKIN_OPTIONS.find(c=>c.v===this.value);
-    this.style.backgroundColor = found?.bg||'white';
+    this.style.backgroundColor = found?.bg||_themeDefaultFieldBg();
     this.style.color = found?.fg||'var(--ink)';
     skinOther.value = '';
   });
@@ -5916,7 +5939,7 @@ function makeCharaBlock(idx){
   skinOther.style.cssText = 'width:100%;border-radius:5px;padding:0.35rem 0.6rem;font-family:DM Mono,monospace;font-size:0.75rem;outline:none;box-sizing:border-box;';
   skinOther.addEventListener('input', function(){
     if(this.value.trim()){
-      skinSel.value = ''; skinSel.style.backgroundColor='white'; skinSel.style.color='var(--ink)';
+      skinSel.value = ''; skinSel.style.backgroundColor=_themeDefaultFieldBg(); skinSel.style.color='var(--ink)';
       skinHidden.value = this.value.trim();
     } else {
       skinHidden.value = skinSel.value;
@@ -5954,7 +5977,7 @@ function makeCharaBlock(idx){
   eyeSel.addEventListener('change',function(){
     if(oddBtn.dataset.odd==='0'){
       const sel = EYE_COLORS.find(c=>c.v===this.value);
-      this.style.backgroundColor = sel?.bg||'white';
+      this.style.backgroundColor = sel?.bg||_themeDefaultFieldBg();
       this.style.color = sel?.fg||'var(--ink)';
       updateEyeValue();
     }
@@ -5992,7 +6015,7 @@ function makeCharaBlock(idx){
     });
     sel.addEventListener('change',function(){
       const found = EYE_COLORS.find(c=>c.v===this.value);
-      this.style.backgroundColor = found?.bg||'white';
+      this.style.backgroundColor = found?.bg||_themeDefaultFieldBg();
       this.style.color = found?.fg||'var(--ink)';
       sel.dataset['odd'+oi] = this.value;
       updateEyeValue();
@@ -6032,7 +6055,7 @@ function makeCharaBlock(idx){
     this.classList.toggle('active', isOdd);
     oddWrap.style.display = isOdd?'flex':'none';
     eyeSel.style.display = isOdd?'none':'';
-    if(!isOdd){ eyeSel.value=''; eyeSel.style.backgroundColor='white'; eyeSel.style.color='var(--ink)'; }
+    if(!isOdd){ eyeSel.value=''; eyeSel.style.backgroundColor=_themeDefaultFieldBg(); eyeSel.style.color='var(--ink)'; }
     updateEyeValue();
   });
 
@@ -6127,7 +6150,7 @@ function makeCharaBlock(idx){
     });
     sel.addEventListener('change',function(){
       const found=OUTFIT_COLORS.find(c=>c.v===this.value);
-      this.style.backgroundColor=found?.bg||'white';
+      this.style.backgroundColor=found?.bg||_themeDefaultFieldBg();
       this.style.color=found?.fg||'var(--ink)';
       sel.dataset.ocolor=this.value;
       outfitState[stateKey].color=this.value;
@@ -6327,7 +6350,7 @@ function makeCharaBlock(idx){
   hairSel.addEventListener('change',function(){
     hairHidden.value = this.value;
     const sel = HAIR_COLORS.find(c=>c.v===this.value);
-    this.style.backgroundColor = sel?.bg||'white';
+    this.style.backgroundColor = sel?.bg||_themeDefaultFieldBg();
     this.style.color = sel?.fg||'var(--ink)';
   });
   const hairOther = document.createElement('input');
@@ -6339,7 +6362,7 @@ function makeCharaBlock(idx){
   hairOther.addEventListener('input', function(){
     if(this.value.trim()){
       hairSel.value = '';
-      hairSel.style.backgroundColor='white'; hairSel.style.color='var(--ink)';
+      hairSel.style.backgroundColor=_themeDefaultFieldBg(); hairSel.style.color='var(--ink)';
       hairHidden.value = this.value.trim();
     } else {
       hairHidden.value = hairSel.value;
