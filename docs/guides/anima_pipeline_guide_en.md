@@ -5,6 +5,7 @@
 Anima Pipeline is a browser-based tool that can optionally use an LLM to assist prompt creation, then sends jobs to ComfyUI for image generation.
 
 After refactoring, `anima_pipeline.py` remains the entry point, while most logic is split into `core/` and `frontend/`.
+The current release is `v1.5.14`.
 
 ---
 
@@ -298,6 +299,7 @@ These are currently tracked as non-critical issues.
 
 | Version | Changes |
 |---------|---------|
+| **v1.5.14** | INPUT-6: LoRA management UX updates (search, favorites, recommended weight display, sort-order fix, unified settings API) |
 | **v1.5.0** | Module split (core/ · frontend/), generation history DB, preset hierarchy, positive/negative presets, named session save, character name JA/EN split, setup diagnostics UI |
 | **v1.4.7** | UI language switch (JA/EN), logging, preset thumbnail list, allow 0 characters, BOM read fix |
 | **v1.4.6** | SaveImageExtended support, /no_think added to LLM system prompt |

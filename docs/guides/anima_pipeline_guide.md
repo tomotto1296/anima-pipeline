@@ -5,6 +5,7 @@
 Anima Pipeline はブラウザUIから入力した情報を元に、必要に応じてLLMでプロンプト補助を行い、ComfyUIに送信して画像生成するツールです。
 
 リファクタ後は `anima_pipeline.py` をエントリポイントとして、機能を `core/` と `frontend/` に分割しています。
+現行版は `v1.5.14` です。
 
 ---
 
@@ -301,6 +302,7 @@ python scripts/run_quick_checks.py --include-hooks-guard
 
 | バージョン | 主な変更内容 |
 |-----------|------------|
+| **v1.5.14** | INPUT-6: LoRA管理UI改善（検索、★お気に入り、推奨weight表示、整列順修正、設定保存API統一） |
 | **v1.5.0** | モジュール分割（core/・frontend/）、生成履歴DB、プリセット階層化、ポジティブ/ネガティブプリセット、名前付きセッション保存、キャラ名日英分離、セットアップ診断UI |
 | **v1.4.7** | UI言語切替（JA/EN）、ログ機能、プリセットサムネイル一覧、キャラ数0許可、BOM読み込み改善 |
 | **v1.4.6** | SaveImageExtended対応、LLMシステムプロンプトに/no_think追加 |
