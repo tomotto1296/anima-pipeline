@@ -162,6 +162,18 @@ Behavior notes:
 - Saved state includes quality tags, helper tags, notes, and safety-related selections.
 - Last selected Positive/Negative preset is persisted in settings and restored after restart.
 
+### Preset Sharing ZIP (SHARE-1)
+
+- In the `Settings` panel, use `Export Presets` / `Import Presets` under `Preset Sharing (zip)`.
+- Export downloads a single zip (`anima-presets_YYYY-MM-DD.zip`) containing:
+  - `chara/*.json` / `chara/*.webp`
+  - `presets/{scene,camera,quality,lora,composite}/*.json`
+- Import expands the selected zip in one operation.
+- If same-name files already exist, an overwrite confirmation dialog is shown (`409`-equivalent behavior), and overwrite is applied only after confirmation.
+- Out of SHARE-1 scope:
+  - `negative` / `positive` presets
+  - `sessions/` (named sessions)
+
 ---
 
 ## 6. Output Format and Metadata (OUTPUT-4)

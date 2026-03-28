@@ -162,6 +162,18 @@ The result panel shows `OK / WARN / ERR / SKIP`, and `WARN / ERR` rows include h
 - 保存対象には品質タグ・補助タグ・メモ・セーフティ系の選択状態が含まれます。
 - 最後に選んだ Positive/Negative プリセットは設定に記録され、再起動後に復元されます。
 
+### プリセット共有 zip（SHARE-1）
+
+- `設定` パネルの `プリセット共有（zip）` に `プリセットをエクスポート` / `プリセットをインポート` ボタンがあります。
+- Export では次を1つのzipとしてダウンロードします（`anima-presets_YYYY-MM-DD.zip`）。
+  - `chara/*.json` / `chara/*.webp`
+  - `presets/{scene,camera,quality,lora,composite}/*.json`
+- Import はzipを選択して一括展開します。
+- 同名ファイルが存在する場合は `409` 相当の上書き確認ダイアログを表示し、承認時のみ上書きします。
+- SHARE-1の対象外:
+  - `negative` / `positive` プリセット
+  - `sessions/`（名前付きセッション）
+
 ---
 
 ## 6. 出力形式とメタデータ（OUTPUT-4）
