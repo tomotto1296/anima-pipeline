@@ -5,7 +5,7 @@
 Anima Pipeline is a browser-based tool that can optionally use an LLM to assist prompt creation, then sends jobs to ComfyUI for image generation.
 
 After refactoring, `anima_pipeline.py` remains the entry point, while most logic is split into `core/` and `frontend/`.
-The current release is `v1.5.20`.
+The current release is `v1.5.21`.
 
 ---
 
@@ -329,6 +329,7 @@ These are currently tracked as non-critical issues.
 
 | Version | Changes |
 |---------|---------|
+| **v1.5.21** | Version-sync and spec-update release (added GEN-1 spec and updated current-version labels across major docs). |
 | **v1.5.20** | SHARE-1: Implemented preset bundle Export/Import (zip). Also improved visual distinction between `Generate` and `Today's Mood`, and switched the two-button row to stacked layout on mobile. |
 | **v1.5.19** | INPUT-1: random character preset generation from `ui_options` (random attribute apply + save confirmation + STATUS summary). Dice icon style was unified for random buttons. |
 | **v1.5.18** | INPUT-6 follow-up: Improved mobile LoRA visibility (card columns and slot-row layout optimization). |

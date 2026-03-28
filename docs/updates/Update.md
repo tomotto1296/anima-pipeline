@@ -8,7 +8,7 @@
 - `1.4.699x` 系は `1.4.7` として正式リリース済み
 
 ## 現在バージョン
-- `1.5.20`
+- `1.5.21`
 
 
 ## 直近追記（v1.4.910）
@@ -841,3 +841,15 @@
   - `docs/specs/features.md`
   - `docs/updates/roadmap.md`
   - `docs/updates/Update.md` current version
+
+## 2026-03-29 - v1.5.21
+
+- Release version updated to `v1.5.21`.
+- Documentation/spec updates:
+  - Added GEN-1 spec: `docs/specs/feature_GEN-1_batch_generation.md`.
+  - Updated current version labels in app/docs to `v1.5.21`.
+- Updated docs:
+  - `README.md` / `README_EN.md` current version
+  - `docs/guides/anima_pipeline_guide.md` / `docs/guides/anima_pipeline_guide_en.md`
+  - `docs/specs/features.md`
+  - `docs/updates/roadmap.md`
