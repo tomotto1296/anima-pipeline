@@ -1236,6 +1236,28 @@
   </div>
   <button class="btn-cancel" id="cancelBtn" onclick="cancelGenerate()">■ 生成中止</button>
 
+  <div id="batchPanel" data-no-i18n="1" style="margin-top:0.9rem;border:1px solid var(--border);border-radius:8px;padding:0.7rem;background:rgba(255,255,255,0.92);">
+    <div style="font-family:'DM Mono',monospace;font-size:0.74rem;color:var(--muted);margin-bottom:0.35rem;">GEN-1 Batch Generation (CSV/TXT)</div>
+    <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:0.4rem;">
+      <select id="batchFormat" style="font-family:'DM Mono',monospace;font-size:0.72rem;border:1px solid var(--border);border-radius:6px;padding:0.28rem 0.45rem;background:white;color:var(--ink);">
+        <option value="csv">CSV</option>
+        <option value="txt">TXT</option>
+      </select>
+      <input type="file" id="batchFile" accept=".csv,.txt,text/csv,text/plain" style="font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--ink);">
+    </div>
+    <textarea id="batchContent" rows="5" placeholder="preset_name,scene_world,scene_tod,scene_weather,extra_tags,negative_tags,count,workflow_file"
+      style="width:100%;box-sizing:border-box;font-family:'DM Mono',monospace;font-size:0.72rem;border:1px solid var(--border);border-radius:6px;padding:0.45rem 0.55rem;background:white;color:var(--ink);resize:vertical;"></textarea>
+    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.45rem;">
+      <button id="batchStartBtn" onclick="startBatchGeneration()" style="margin:0;width:auto;padding:0.34rem 0.7rem;border:1px solid var(--border);border-radius:6px;background:white;color:var(--ink);font-family:'DM Mono',monospace;font-size:0.7rem;cursor:pointer;">Start Batch</button>
+      <button id="batchPauseBtn" onclick="pauseBatchGeneration()" style="margin:0;width:auto;padding:0.34rem 0.7rem;border:1px solid var(--border);border-radius:6px;background:white;color:var(--ink);font-family:'DM Mono',monospace;font-size:0.7rem;cursor:pointer;">Pause</button>
+      <button id="batchResumeBtn" onclick="resumeBatchGeneration()" style="margin:0;width:auto;padding:0.34rem 0.7rem;border:1px solid var(--border);border-radius:6px;background:white;color:var(--ink);font-family:'DM Mono',monospace;font-size:0.7rem;cursor:pointer;">Resume</button>
+      <button id="batchClearBtn" onclick="clearBatchGeneration()" style="margin:0;width:auto;padding:0.34rem 0.7rem;border:1px solid var(--border);border-radius:6px;background:white;color:var(--ink);font-family:'DM Mono',monospace;font-size:0.7rem;cursor:pointer;">Clear</button>
+    </div>
+    <div id="batchStatusText" style="margin-top:0.45rem;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);">state: idle</div>
+    <div id="batchCurrentText" style="margin-top:0.2rem;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);"></div>
+    <div id="batchList" style="margin-top:0.35rem;max-height:150px;overflow:auto;border:1px solid var(--border);border-radius:6px;background:#fff;padding:0.35rem 0.45rem;font-family:'DM Mono',monospace;font-size:0.66rem;color:var(--ink);"></div>
+  </div>
+
   <div class="extra-block" id="extraBlock" style="margin-top:0.8rem;border:1px solid var(--border);padding:0.8rem;background:#fafaf8;">
     <div class="scene-toggle" id="navExtra" onclick="toggleExtraContent()" style="cursor:pointer;margin-bottom:0.5rem;">
       <span id="extraContentArrow">▶</span> プロンプト調整・追加（再生成に反映されます）
@@ -7714,6 +7736,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   initSizePresets();
   initGenParams();
   initLoraSlots();
+  initBatchPanel();
   initHierarchicalPresets();
   loadWorkflowList();
   loadLastSession();
@@ -8119,6 +8142,143 @@ async function regenPrompt(){
     document.getElementById('cancelBtn').classList.remove('show');
     document.getElementById('regenBtn').classList.add('show');
   }
+}
+
+let _batchPollTimer = null;
+
+function _renderBatchStatus(data){
+  const st = document.getElementById('batchStatusText');
+  const cur = document.getElementById('batchCurrentText');
+  const list = document.getElementById('batchList');
+  if(!st || !cur || !list) return;
+  const state = String((data && data.state) || 'idle');
+  const total = Number((data && data.total) || 0);
+  const completed = Number((data && data.completed) || 0);
+  const failed = Number((data && data.failed) || 0);
+  const skipped = Number((data && data.skipped) || 0);
+  st.textContent = `state: ${state} | ${completed}/${total} done | failed:${failed} skipped:${skipped}`;
+  const cj = data && data.current_job ? data.current_job : null;
+  cur.textContent = cj ? `current: #${Number(cj.index||0)+1} ${String(cj.preset_name||'')}` : '';
+  const jobs = (data && Array.isArray(data.jobs)) ? data.jobs : [];
+  if(!jobs.length){
+    list.textContent = '(no jobs)';
+    return;
+  }
+  list.textContent = jobs.slice(0, 500).map((j, i)=>{
+    const no = Number(j.index ?? i) + 1;
+    const status = String(j.status || 'queued');
+    const nm = String(j.preset_name || '');
+    const err = String(j.error || '');
+    return `${no}. [${status}] ${nm}${err ? ' | ' + err : ''}`;
+  }).join('\n');
+}
+
+async function pollBatchStatus(){
+  try{
+    const res = await fetch('/batch/status');
+    if(!res.ok) return;
+    const data = await res.json();
+    _renderBatchStatus(data);
+    const state = String((data && data.state) || 'idle');
+    if(state === 'running' || state === 'pausing'){
+      if(!_batchPollTimer){
+        _batchPollTimer = setInterval(pollBatchStatus, 1200);
+      }
+    }else{
+      if(_batchPollTimer){
+        clearInterval(_batchPollTimer);
+        _batchPollTimer = null;
+      }
+    }
+  }catch(_e){}
+}
+
+async function startBatchGeneration(){
+  const fmtEl = document.getElementById('batchFormat');
+  const ta = document.getElementById('batchContent');
+  if(!fmtEl || !ta) return;
+  const format = String(fmtEl.value || 'csv');
+  const content = String(ta.value || '').trim();
+  const useLLM = !!(document.getElementById('useLLM') && document.getElementById('useLLM').checked);
+  if(!content){
+    alert('Batch input is empty');
+    return;
+  }
+  try{
+    const res = await fetch('/batch/start', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({format, content, use_llm: useLLM, client_id: window._comfyClientId || ''})
+    });
+    const data = await res.json();
+    if(!res.ok || data.status !== 'started'){
+      alert(data.error || 'Failed to start batch');
+      return;
+    }
+    await pollBatchStatus();
+    if(!_batchPollTimer) _batchPollTimer = setInterval(pollBatchStatus, 1200);
+  }catch(e){
+    alert('Batch start failed: ' + e.message);
+  }
+}
+
+async function pauseBatchGeneration(){
+  try{
+    await fetch('/batch/pause', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    await pollBatchStatus();
+  }catch(_e){}
+}
+
+async function resumeBatchGeneration(){
+  try{
+    const res = await fetch('/batch/resume', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({client_id: window._comfyClientId || ''})
+    });
+    const data = await res.json();
+    if(!res.ok || data.status !== 'resumed'){
+      alert(data.error || 'Failed to resume batch');
+      return;
+    }
+    await pollBatchStatus();
+    if(!_batchPollTimer) _batchPollTimer = setInterval(pollBatchStatus, 1200);
+  }catch(e){
+    alert('Batch resume failed: ' + e.message);
+  }
+}
+
+async function clearBatchGeneration(){
+  try{
+    const res = await fetch('/batch/clear', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    const data = await res.json();
+    if(!res.ok || data.status !== 'ok'){
+      alert(data.error || 'Failed to clear batch');
+      return;
+    }
+    if(_batchPollTimer){
+      clearInterval(_batchPollTimer);
+      _batchPollTimer = null;
+    }
+    await pollBatchStatus();
+  }catch(e){
+    alert('Batch clear failed: ' + e.message);
+  }
+}
+
+function initBatchPanel(){
+  const fileEl = document.getElementById('batchFile');
+  const ta = document.getElementById('batchContent');
+  if(fileEl && ta){
+    fileEl.addEventListener('change', async (ev)=>{
+      const f = ev && ev.target && ev.target.files ? ev.target.files[0] : null;
+      if(!f) return;
+      try{
+        ta.value = await f.text();
+      }catch(_e){}
+    });
+  }
+  pollBatchStatus();
 }
 
 document.addEventListener('keydown',e=>{

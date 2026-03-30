@@ -12,6 +12,23 @@ def build_handler(context: dict):
         history_pending = {}
         history_saved_paths = set()
         history_lock = threading.Lock()
+        batch_lock = threading.RLock()
+        batch_thread = None
+        batch_pause_requested = False
+        batch_state = {
+            'state': 'idle',
+            'format': '',
+            'use_llm': True,
+            'total': 0,
+            'completed': 0,
+            'failed': 0,
+            'skipped': 0,
+            'next_index': 0,
+            'client_id': '',
+            'current_job': None,
+            'jobs': [],
+        }
+        BATCH_PROGRESS_FILE = _sf('batch_progress.json')
         def log_message(self,fmt,*args):pass
 
         def _send_bytes(self, data: bytes, mime: str, cache_control: str | None = None, extra_headers: dict | None = None):
@@ -33,6 +50,339 @@ def build_handler(context: dict):
             self.send_header('Content-Length', str(len(data)))
             self.end_headers()
             self.wfile.write(data)
+
+        def _snapshot_batch_state(self) -> dict:
+            with Handler.batch_lock:
+                snap = json.loads(json.dumps(Handler.batch_state, ensure_ascii=False))
+            return snap
+
+        def _save_batch_progress(self):
+            snap = self._snapshot_batch_state()
+            payload = {
+                'format': snap.get('format', ''),
+                'use_llm': bool(snap.get('use_llm', True)),
+                'state': snap.get('state', 'idle'),
+                'total': int(snap.get('total', 0) or 0),
+                'completed': int(snap.get('completed', 0) or 0),
+                'failed': int(snap.get('failed', 0) or 0),
+                'skipped': int(snap.get('skipped', 0) or 0),
+                'next_index': int(snap.get('next_index', 0) or 0),
+                'client_id': str(snap.get('client_id', '') or ''),
+                'current_job': snap.get('current_job'),
+                'jobs': snap.get('jobs', []),
+            }
+            try:
+                with open(Handler.BATCH_PROGRESS_FILE, 'w', encoding='utf-8') as f:
+                    json.dump(payload, f, ensure_ascii=False, indent=2)
+            except Exception as e:
+                print(f'[GEN-1] failed to save batch progress: {e}')
+
+        def _load_batch_progress_file(self) -> dict:
+            if not os.path.exists(Handler.BATCH_PROGRESS_FILE):
+                return {}
+            try:
+                with open(Handler.BATCH_PROGRESS_FILE, 'r', encoding='utf-8-sig') as f:
+                    data = json.load(f)
+                return data if isinstance(data, dict) else {}
+            except Exception as e:
+                print(f'[GEN-1] failed to load batch progress: {e}')
+                return {}
+
+        def _resolve_chara_preset_for_batch(self, preset_name: str):
+            name = str(preset_name or '').strip()
+            if not name:
+                return None
+            try:
+                return load_preset('chara', name)
+            except Exception:
+                pass
+            try:
+                lowered = name.lower()
+                for n in list_presets('chara'):
+                    if str(n or '').lower() == lowered:
+                        try:
+                            return load_preset('chara', n)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+            return None
+
+        def _build_batch_input_payload(self, preset_data: dict, scene_world: str, scene_tod: str, scene_weather: str) -> str:
+            d = preset_data if isinstance(preset_data, dict) else {}
+            character = {
+                'name': str(d.get('name', '') or ''),
+                'name_en': str(d.get('name_en', '') or ''),
+                'gender': str(d.get('gender', 'female') or 'female'),
+                'age': str(d.get('age', 'adult') or 'adult'),
+                'series': str(d.get('series', '') or ''),
+                'series_en': str(d.get('series_en', '') or ''),
+            }
+            for key in (
+                'hairstyle', 'haircolor', 'eyes', 'skin', 'bust', 'outfit', 'outfit_free', 'body',
+                'misc', 'action', 'hair', 'face', 'eyestate', 'eye_state', 'mouth', 'effect',
+                'ears', 'tail', 'wings', 'acc', 'item', 'posv', 'posh'
+            ):
+                val = d.get(key, '')
+                if str(val or '').strip():
+                    character[key] = val
+            if bool(d.get('original', False)):
+                character['original'] = True
+            scene_parts = [str(scene_world or '').strip(), str(scene_tod or '').strip(), str(scene_weather or '').strip()]
+            place = ' '.join([x for x in scene_parts if x])
+            payload = {
+                'global_series': str(d.get('series', '') or ''),
+                'characters': [character],
+                'gender_summary': '',
+                'place': place,
+                'mood': '',
+            }
+            return json.dumps(payload, ensure_ascii=False)
+
+        def _build_batch_char_direct_tags(self, preset_data: dict, scene_world: str, scene_tod: str, scene_weather: str) -> list[str]:
+            d = preset_data if isinstance(preset_data, dict) else {}
+            tags = []
+
+            def _add_text(value):
+                s = str(value or '').strip()
+                if not s:
+                    return
+                for part in s.replace('\n', ',').split(','):
+                    t = str(part or '').strip()
+                    if t:
+                        tags.append(t)
+
+            def _norm_tag(value):
+                s = str(value or '').strip().lower().replace(' ', '_')
+                s = ''.join(ch for ch in s if ch.isalnum() or ch in ('_', '(', ')'))
+                return s.strip('_')
+
+            g = str(d.get('gender', '') or '').strip().lower()
+            if g in ('female', 'girl'):
+                tags.append('1girl')
+            elif g in ('male', 'boy'):
+                tags.append('1boy')
+
+            name_en = str(d.get('name_en', '') or '').strip()
+            series_en = str(d.get('series_en', '') or '').strip()
+            if name_en:
+                n = _norm_tag(name_en)
+                s = _norm_tag(series_en)
+                if n:
+                    tags.append(f'{n}_({s})' if s else n)
+
+            for key in (
+                'hairstyle', 'haircolor', 'hair', 'eyes', 'skin', 'bust', 'outfit', 'outfit_free',
+                'body', 'misc', 'action', 'face', 'eyestate', 'eye_state', 'mouth', 'effect',
+                'ears', 'tail', 'wings', 'acc', 'item', 'posv', 'posh'
+            ):
+                _add_text(d.get(key, ''))
+
+            _add_text(scene_world)
+            _add_text(scene_tod)
+            _add_text(scene_weather)
+            return tags
+
+        def _parse_batch_jobs(self, fmt: str, content: str) -> tuple[list[dict], list[str]]:
+            jobs = []
+            warnings = []
+            normalized = str(fmt or '').strip().lower()
+            text = str(content or '')
+            cfg = load_config()
+            try:
+                default_count = max(1, int(cfg.get('batch_default_count', 1) or 1))
+            except Exception:
+                default_count = 1
+
+            if normalized == 'txt':
+                for idx, raw in enumerate(text.splitlines(), start=1):
+                    name = str(raw or '').strip()
+                    if not name:
+                        continue
+                    jobs.append({
+                        'index': len(jobs),
+                        'source_line': idx,
+                        'preset_name': name,
+                        'scene_world': '',
+                        'scene_tod': '',
+                        'scene_weather': '',
+                        'extra_tags': '',
+                        'negative_tags': '',
+                        'count': default_count,
+                        'workflow_file': '',
+                        'status': 'queued',
+                        'error': '',
+                    })
+                return jobs, warnings
+
+            import csv
+            import io
+            reader = csv.DictReader(io.StringIO(text))
+            fieldnames = [str(f or '').strip() for f in (reader.fieldnames or [])]
+            has_preset_header = 'preset_name' in fieldnames
+            # UX fallback: if CSV is selected by mistake for plain line-based input,
+            # treat it as TXT instead of hard-failing.
+            if not has_preset_header:
+                lines = [ln.strip() for ln in text.splitlines() if ln.strip()]
+                looks_like_txt = bool(lines) and all(',' not in ln for ln in lines)
+                if looks_like_txt:
+                    warnings.append('CSV header missing; interpreted as TXT format')
+                    for idx, raw in enumerate(lines, start=1):
+                        jobs.append({
+                            'index': len(jobs),
+                            'source_line': idx,
+                            'preset_name': raw,
+                            'scene_world': '',
+                            'scene_tod': '',
+                            'scene_weather': '',
+                            'extra_tags': '',
+                            'negative_tags': '',
+                            'count': default_count,
+                            'workflow_file': '',
+                            'status': 'queued',
+                            'error': '',
+                        })
+                    return jobs, warnings
+                raise ValueError('CSV header must include preset_name')
+            for row_no, row in enumerate(reader, start=2):
+                row = row if isinstance(row, dict) else {}
+                preset_name = str((row.get('preset_name') or '')).strip()
+                if not preset_name:
+                    warnings.append(f'line {row_no}: preset_name is empty (skipped)')
+                    continue
+                raw_count = str((row.get('count') or '')).strip()
+                try:
+                    count = int(raw_count) if raw_count else default_count
+                except Exception:
+                    count = default_count
+                if count <= 0:
+                    count = default_count
+                jobs.append({
+                    'index': len(jobs),
+                    'source_line': row_no,
+                    'preset_name': preset_name,
+                    'scene_world': str((row.get('scene_world') or '')).strip(),
+                    'scene_tod': str((row.get('scene_tod') or '')).strip(),
+                    'scene_weather': str((row.get('scene_weather') or '')).strip(),
+                    'extra_tags': str((row.get('extra_tags') or '')).strip(),
+                    'negative_tags': str((row.get('negative_tags') or '')).strip(),
+                    'count': count,
+                    'workflow_file': str((row.get('workflow_file') or '')).strip(),
+                    'status': 'queued',
+                    'error': '',
+                })
+            return jobs, warnings
+
+        def _run_batch_worker(self):
+            import urllib.request as _ureq
+
+            while True:
+                with Handler.batch_lock:
+                    state = Handler.batch_state
+                    if state.get('state') != 'running':
+                        break
+                    idx = int(state.get('next_index', 0) or 0)
+                    jobs = state.get('jobs', []) if isinstance(state.get('jobs', []), list) else []
+                    if idx >= len(jobs):
+                        state['state'] = 'done'
+                        state['current_job'] = None
+                        self._save_batch_progress()
+                        break
+                    job = jobs[idx]
+                    state['current_job'] = {
+                        'index': int(job.get('index', idx)),
+                        'preset_name': str(job.get('preset_name', '') or ''),
+                    }
+                    jobs[idx]['status'] = 'running'
+                    jobs[idx]['error'] = ''
+                    state['jobs'] = jobs
+                    self._save_batch_progress()
+
+                try:
+                    preset = self._resolve_chara_preset_for_batch(job.get('preset_name', ''))
+                    if not preset:
+                        with Handler.batch_lock:
+                            jobs = Handler.batch_state.get('jobs', [])
+                            jobs[idx]['status'] = 'skipped'
+                            jobs[idx]['error'] = f'preset not found: {job.get("preset_name","")}'
+                            Handler.batch_state['jobs'] = jobs
+                            Handler.batch_state['skipped'] = int(Handler.batch_state.get('skipped', 0) or 0) + 1
+                            Handler.batch_state['completed'] = int(Handler.batch_state.get('completed', 0) or 0) + 1
+                            Handler.batch_state['next_index'] = idx + 1
+                            Handler.batch_state['current_job'] = None
+                            if Handler.batch_pause_requested:
+                                Handler.batch_pause_requested = False
+                                Handler.batch_state['state'] = 'paused'
+                            self._save_batch_progress()
+                        continue
+
+                    input_payload = self._build_batch_input_payload(
+                        preset.get('data', {}),
+                        job.get('scene_world', ''),
+                        job.get('scene_tod', ''),
+                        job.get('scene_weather', ''),
+                    )
+                    extra_tags = [t for t in str(job.get('extra_tags', '') or '').split() if t]
+                    use_llm = bool(Handler.batch_state.get('use_llm', True))
+                    body = {
+                        'input': input_payload,
+                        'use_llm': use_llm,
+                        'count': max(1, int(job.get('count', 1) or 1)),
+                        'extra_tags': extra_tags,
+                        'negative_prompt': str(job.get('negative_tags', '') or ''),
+                        'workflow_file': str(job.get('workflow_file', '') or ''),
+                        'client_id': str(Handler.batch_state.get('client_id', '') or str(uuid.uuid4())),
+                    }
+                    if not use_llm:
+                        body['char_direct_tags'] = self._build_batch_char_direct_tags(
+                            preset.get('data', {}),
+                            job.get('scene_world', ''),
+                            job.get('scene_tod', ''),
+                            job.get('scene_weather', ''),
+                        )
+                    data = json.dumps(body, ensure_ascii=False).encode('utf-8')
+                    req = _ureq.Request(
+                        f'http://127.0.0.1:{int(UI_PORT)}/generate',
+                        data=data,
+                        headers={'Content-Type': 'application/json'},
+                        method='POST'
+                    )
+                    with _ureq.urlopen(req, timeout=300) as resp:
+                        raw = resp.read()
+                    result = json.loads(raw.decode('utf-8')) if raw else {}
+                    err = str(result.get('error', '') or result.get('comfyui_error', '') or '')
+
+                    with Handler.batch_lock:
+                        jobs = Handler.batch_state.get('jobs', [])
+                        jobs[idx]['status'] = 'failed' if err else 'done'
+                        jobs[idx]['error'] = err
+                        Handler.batch_state['jobs'] = jobs
+                        if err:
+                            Handler.batch_state['failed'] = int(Handler.batch_state.get('failed', 0) or 0) + 1
+                        Handler.batch_state['completed'] = int(Handler.batch_state.get('completed', 0) or 0) + 1
+                        Handler.batch_state['next_index'] = idx + 1
+                        Handler.batch_state['current_job'] = None
+                        if Handler.batch_pause_requested:
+                            Handler.batch_pause_requested = False
+                            Handler.batch_state['state'] = 'paused'
+                        self._save_batch_progress()
+                except Exception as e:
+                    with Handler.batch_lock:
+                        jobs = Handler.batch_state.get('jobs', [])
+                        jobs[idx]['status'] = 'failed'
+                        jobs[idx]['error'] = str(e)
+                        Handler.batch_state['jobs'] = jobs
+                        Handler.batch_state['failed'] = int(Handler.batch_state.get('failed', 0) or 0) + 1
+                        Handler.batch_state['completed'] = int(Handler.batch_state.get('completed', 0) or 0) + 1
+                        Handler.batch_state['next_index'] = idx + 1
+                        Handler.batch_state['current_job'] = None
+                        if Handler.batch_pause_requested:
+                            Handler.batch_pause_requested = False
+                            Handler.batch_state['state'] = 'paused'
+                        self._save_batch_progress()
+
+            with Handler.batch_lock:
+                Handler.batch_thread = None
 
         def _serve_file(self, file_path: str, mime: str | None = None, cache_control: str | None = None) -> bool:
             if not os.path.isfile(file_path):
@@ -1076,6 +1426,24 @@ def build_handler(context: dict):
                 self._send_json({'files': files})
                 return True
 
+            if req_path == '/batch/status':
+                snap = self._snapshot_batch_state()
+                total = int(snap.get('total', 0) or 0)
+                completed = int(snap.get('completed', 0) or 0)
+                failed = int(snap.get('failed', 0) or 0)
+                skipped = int(snap.get('skipped', 0) or 0)
+                payload = {
+                    'state': str(snap.get('state', 'idle') or 'idle'),
+                    'total': total,
+                    'completed': completed,
+                    'failed': failed,
+                    'skipped': skipped,
+                    'current_job': snap.get('current_job'),
+                    'jobs': snap.get('jobs', []),
+                }
+                self._send_json(payload)
+                return True
+
             if req_path == '/version':
                 self._send_json({'version': __version__})
                 return True
@@ -1598,6 +1966,137 @@ def build_handler(context: dict):
                 self._send_json({'error': str(e)}, code=500)
             return
 
+        def _handle_post_batch_start(self, body):
+            fmt = str(body.get('format', '') or '').strip().lower()
+            content = str(body.get('content', '') or '')
+            client_id = str(body.get('client_id', '') or str(uuid.uuid4()))
+            use_llm = bool(body.get('use_llm', True))
+            if fmt not in ('csv', 'txt'):
+                self._send_json({'status': 'error', 'error': 'format must be csv or txt'}, code=400)
+                return
+            try:
+                jobs, warnings = self._parse_batch_jobs(fmt, content)
+            except Exception as e:
+                self._send_json({'status': 'error', 'error': str(e)}, code=400)
+                return
+            if not jobs:
+                self._send_json({'status': 'error', 'error': 'No jobs found in input'}, code=400)
+                return
+            with Handler.batch_lock:
+                if Handler.batch_state.get('state') == 'running':
+                    self._send_json({'status': 'error', 'error': 'batch already running'}, code=409)
+                    return
+                Handler.batch_pause_requested = False
+                Handler.batch_state = {
+                    'state': 'running',
+                    'format': fmt,
+                    'use_llm': use_llm,
+                    'total': len(jobs),
+                    'completed': 0,
+                    'failed': 0,
+                    'skipped': 0,
+                    'next_index': 0,
+                    'client_id': client_id,
+                    'current_job': None,
+                    'jobs': jobs,
+                }
+                self._save_batch_progress()
+                th = threading.Thread(target=self._run_batch_worker, daemon=True, name='gen1-batch-worker')
+                Handler.batch_thread = th
+                th.start()
+            payload = {'status': 'started', 'total': len(jobs)}
+            if warnings:
+                payload['warnings'] = warnings
+            self._send_json(payload)
+
+        def _handle_post_batch_pause(self):
+            with Handler.batch_lock:
+                state = Handler.batch_state.get('state')
+                if state == 'running':
+                    Handler.batch_pause_requested = True
+                    Handler.batch_state['state'] = 'pausing'
+                    self._save_batch_progress()
+                    self._send_json({'status': 'pausing', 'completed': int(Handler.batch_state.get('completed', 0) or 0)})
+                    return
+                if state in ('paused', 'pausing'):
+                    self._send_json({'status': 'pausing', 'completed': int(Handler.batch_state.get('completed', 0) or 0)})
+                    return
+            self._send_json({'status': 'error', 'error': 'batch is not running'}, code=409)
+
+        def _handle_post_batch_resume(self, body):
+            client_id = str(body.get('client_id', '') or str(uuid.uuid4()))
+            with Handler.batch_lock:
+                state = Handler.batch_state.get('state')
+                total = int(Handler.batch_state.get('total', 0) or 0)
+                next_index = int(Handler.batch_state.get('next_index', 0) or 0)
+                jobs = Handler.batch_state.get('jobs', [])
+                can_resume_mem = state in ('paused', 'done') and total > 0 and next_index < total and isinstance(jobs, list) and len(jobs) == total
+            if not can_resume_mem:
+                saved = self._load_batch_progress_file()
+                s_total = int(saved.get('total', 0) or 0)
+                s_next = int(saved.get('next_index', 0) or 0)
+                s_jobs = saved.get('jobs', []) if isinstance(saved.get('jobs', []), list) else []
+                if s_total <= 0 or s_next >= s_total or not s_jobs:
+                    self._send_json({'status': 'error', 'error': 'no paused batch to resume'}, code=404)
+                    return
+                with Handler.batch_lock:
+                    Handler.batch_state = {
+                        'state': 'paused',
+                        'format': str(saved.get('format', '') or ''),
+                        'use_llm': bool(saved.get('use_llm', True)),
+                        'total': s_total,
+                        'completed': int(saved.get('completed', 0) or 0),
+                        'failed': int(saved.get('failed', 0) or 0),
+                        'skipped': int(saved.get('skipped', 0) or 0),
+                        'next_index': s_next,
+                        'client_id': str(saved.get('client_id', '') or client_id),
+                        'current_job': saved.get('current_job'),
+                        'jobs': s_jobs,
+                    }
+            with Handler.batch_lock:
+                if Handler.batch_state.get('state') == 'running':
+                    self._send_json({'status': 'error', 'error': 'batch already running'}, code=409)
+                    return
+                if int(Handler.batch_state.get('next_index', 0) or 0) >= int(Handler.batch_state.get('total', 0) or 0):
+                    self._send_json({'status': 'error', 'error': 'all jobs already completed'}, code=409)
+                    return
+                Handler.batch_state['state'] = 'running'
+                Handler.batch_state['client_id'] = client_id
+                Handler.batch_pause_requested = False
+                self._save_batch_progress()
+                th = threading.Thread(target=self._run_batch_worker, daemon=True, name='gen1-batch-worker')
+                Handler.batch_thread = th
+                th.start()
+                remaining = int(Handler.batch_state.get('total', 0) or 0) - int(Handler.batch_state.get('next_index', 0) or 0)
+            self._send_json({'status': 'resumed', 'remaining': max(0, remaining)})
+
+        def _handle_post_batch_clear(self):
+            with Handler.batch_lock:
+                if Handler.batch_state.get('state') in ('running', 'pausing'):
+                    self._send_json({'status': 'error', 'error': 'batch is running'}, code=409)
+                    return
+                Handler.batch_pause_requested = False
+                Handler.batch_state = {
+                    'state': 'idle',
+                    'format': '',
+                    'use_llm': True,
+                    'total': 0,
+                    'completed': 0,
+                    'failed': 0,
+                    'skipped': 0,
+                    'next_index': 0,
+                    'client_id': '',
+                    'current_job': None,
+                    'jobs': [],
+                }
+                try:
+                    if os.path.exists(Handler.BATCH_PROGRESS_FILE):
+                        os.remove(Handler.BATCH_PROGRESS_FILE)
+                except Exception as e:
+                    self._send_json({'status': 'error', 'error': str(e)}, code=500)
+                    return
+            self._send_json({'status': 'ok'})
+
         def _handle_post_terminal_routes(self, req_path: str, req_qs: dict, body: dict, unquote_fn) -> bool:
             if req_path == '/get_image':
                 self._handle_get_image_route(req_qs)
@@ -1613,6 +2112,22 @@ def build_handler(context: dict):
 
             if req_path == '/generate':
                 self._handle_post_generate(body)
+                return True
+
+            if req_path == '/batch/start':
+                self._handle_post_batch_start(body)
+                return True
+
+            if req_path == '/batch/pause':
+                self._handle_post_batch_pause()
+                return True
+
+            if req_path == '/batch/resume':
+                self._handle_post_batch_resume(body)
+                return True
+
+            if req_path == '/batch/clear':
+                self._handle_post_batch_clear()
                 return True
 
             return False

@@ -307,6 +307,7 @@ DEFAULT_CONFIG = {
     'last_composite_preset': '',
     'last_negative_preset': '',
     'last_positive_preset': '',
+    'batch_default_count': 1,
 }
 
 
@@ -422,4 +423,3 @@ def _console_lang(cfg: dict | None = None) -> str:
 
 def _ct(ja: str, en: str, cfg: dict | None = None) -> str:
     return en if _console_lang(cfg) == 'en' else ja
-

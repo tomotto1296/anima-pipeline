@@ -497,13 +497,23 @@ def send_to_comfyui(
     lora_slots: list = None,
     pipeline_version: str = "",
 ):
-    workflow_path = cfg.get("workflow_json_path", "").strip()
-    if workflow_path and not os.path.isabs(workflow_path):
-        workflow_path = os.path.join(BASE_DIR, workflow_path)
-    if not workflow_path or not os.path.exists(workflow_path):
-        raise FileNotFoundError(f"ワークフローJSONが見つかりません: {workflow_path}")
+    workflow_path = str(cfg.get("workflow_json_path", "") or "").strip()
+    resolved_workflow_path = workflow_path
+    if resolved_workflow_path and not os.path.isabs(resolved_workflow_path):
+        cand_base = os.path.join(BASE_DIR, resolved_workflow_path)
+        if os.path.exists(cand_base):
+            resolved_workflow_path = cand_base
+        else:
+            # Backward-compatible fallback for bare filename settings.
+            cand_workflows = os.path.join(BASE_DIR, "workflows", os.path.basename(resolved_workflow_path))
+            if os.path.exists(cand_workflows):
+                resolved_workflow_path = cand_workflows
+            else:
+                resolved_workflow_path = cand_base
+    if not resolved_workflow_path or not os.path.exists(resolved_workflow_path):
+        raise FileNotFoundError(f"ワークフローJSONが見つかりません: {resolved_workflow_path}")
 
-    workflow_data = json.load(open(workflow_path, "r", encoding="utf-8"))
+    workflow_data = json.load(open(resolved_workflow_path, "r", encoding="utf-8"))
     # API形式（Save (API Format)）か保存形式かを判定
     # API形式: キーが数字文字列でclass_typeを持つ dict
     # 保存形式: "nodes"キーを持つ dict
@@ -611,7 +621,7 @@ def send_to_comfyui(
     if "error" in data:
         raise RuntimeError(f"ComfyUI error: {data['error']}")
     model_name = _extract_checkpoint_name(api_prompt)
-    root_candidates = _infer_comfy_root_candidates(cfg, workflow_path=workflow_path)
+    root_candidates = _infer_comfy_root_candidates(cfg, workflow_path=resolved_workflow_path)
     model_hash = ""
     try:
         model_fp = _resolve_model_file(model_name, root_candidates)
@@ -646,11 +656,10 @@ def send_to_comfyui(
         "model_hash": model_hash,
         "lora": active_lora_pairs,
         "lora_hashes": lora_hashes,
-        "workflow_version": _workflow_version_label(workflow_path),
+        "workflow_version": _workflow_version_label(resolved_workflow_path),
         "prompt_json": json.dumps(api_prompt, ensure_ascii=False),
         "workflow_json": json.dumps(workflow_data, ensure_ascii=False),
     }
     return data.get("prompt_id", "unknown"), meta
-
 
 
