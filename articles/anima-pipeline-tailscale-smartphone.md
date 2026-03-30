@@ -13,6 +13,9 @@ published_at: "2026-03-28 09:00"
 
 ## はじめに
 
+## 解説動画
+https://www.youtube.com/watch?v=MzkqdaPwxJs
+
 布団に寝転がりながら、スマホで「生成」を押す。自宅のPCが唸りながら画像を作り始める——そんな使い方がAnima Pipelineでできます。
 
 Anima Pipelineには、Tailscale経由でスマホからアクセスするための起動スクリプトが同梱されています。Tailscaleのセットアップさえ済ませれば、**あとはbatファイルを叩くだけ**。外出先でも、別の部屋からでも、自宅PCのComfyUIを操作できます。
