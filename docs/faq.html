@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FAQ — Anima Pipeline</title>
+<meta name="description" content="Anima Pipeline のよくある質問。セットアップ・ComfyUI連携・LLM設定・スマホアクセス・プリセット・トラブルシューティングをまとめています。">
+<link rel="canonical" href="https://tomotto1296.github.io/anima-pipeline/faq.html">
+<meta property="og:site_name" content="Anima Pipeline">
+<meta property="og:title" content="FAQ — Anima Pipeline">
+<meta property="og:description" content="Anima Pipeline のよくある質問。セットアップ・ComfyUI連携・LLM設定・スマホアクセス・プリセット・トラブルシューティングをまとめています。">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://tomotto1296.github.io/anima-pipeline/faq.html">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="FAQ — Anima Pipeline">
+<meta name="twitter:description" content="Anima Pipeline のよくある質問まとめ。">
+<meta name="twitter:site" content="@RHU_AIstudio">
+
+<!-- FAQPage 構造化データ（LLMO対策） -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "name": "Anima Pipeline FAQ",
+  "url": "https://tomotto1296.github.io/anima-pipeline/faq.html",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Anima Pipeline の動作に必要な環境・依存関係は？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Python 3.10 以上と requests ライブラリが必要です（pip install -r requirements.txt）。履歴サムネイル表示には Pillow も推奨。ComfyUI が起動済みであることも確認してください。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "起動したがブラウザに何も表示されない・白画面になる",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "http://localhost:7860 を正しく開いているか確認してください（https:// ではなく http://）。起動時の黒窓（コマンドプロンプト）にエラーが出ていないかも確認してください。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "bat ファイルをダブルクリックしても VS Code などで開いてしまう",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "右クリック →「プログラムから開く」→「コマンドプロンプト」を選択してください。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "初回設定で何を入力すればよいですか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "画面上部の「▶ 設定」を開き、ComfyUI URL（通常 http://127.0.0.1:8188）、ワークフロー JSON（workflows/ 内のファイルを選択）、LLM を使う場合はプラットフォーム・APIキー・モデル名を設定して「設定を保存」を押してください。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "ComfyUI に繋がらない",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ComfyUI が起動しているか、URL が正しいかを確認してください。設定パネルの「Run Setup Diagnostics」ボタンで接続状態を一括チェックできます。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "ワークフローの Node ID が合わない",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ComfyUI の「Save (API Format)」で出力した JSON を確認し、Positive / Negative / KSampler の各 Node ID を設定画面で手動指定してください。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "LoRA のサムネイルが表示されない",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ComfyUI 起動時に --listen --enable-cors-header オプションを追加してください。また、設定画面の ComfyUI output フォルダを絶対パスで指定しているか確認してください。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "対応している LLM プラットフォームは？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "LM Studio・Gemini・カスタムエンドポイント（OpenAI 互換）に対応しています。Gemini は Google AI Studio で無料の API キーを取得できます。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "LLM エラーが出る",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "API キーを再確認してください。Gemini 無料枠には 1 日 250 回のレート制限があります。設定パネルの「Run Setup Diagnostics」で LLM 接続状態も確認できます。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "LLM を使わずに生成できますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "できます。英語タグを入力欄に直接記述すれば、LLM なしで最速生成が可能です。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "スマホから使いたい（同一 Wi-Fi）",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "PC の IPv4 アドレスを ipconfig で確認し、スマホで http://192.168.x.x:7860 を開いてください。ComfyUI 起動時に --listen --enable-cors-header オプションが必要です。繋がらない場合は PC ファイアウォールで 7860 番ポートの受信が許可されているか確認してください。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "外出先からスマホで操作したい",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Tailscale を使う方法があります。PC とスマホ両方に Tailscale をインストールしてログインし、start_anima_pipeline - Tailscale.bat で起動してください。コンソールに表示される URL をスマホで開けばアクセスできます。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "キャラプリセットを他の人と共有したい",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "v1.5.20 以降、プリセットを zip 形式で Export / Import できます。設定パネルの「Presets Export」からエクスポートし、相手側は「Presets Import」で取り込んでください。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "セッションを保存しても復元できない",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "「SAVE SESSION」で保存したセッションは sessions/<名前>.json に保存されます。復元するには「Open」→「LOAD」を使ってください。自動保存（last session）とは別管理です。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "生成履歴はどこに保存されますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "history/history.db（SQLite）に保存されます。サムネイルは history/thumbs/ に保存されます。保存先は設定画面の「History DB Path」「History Thumb Dir」で変更できます。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "セッション履歴をクリアしたら全履歴も消えますか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "消えません。「セッション履歴のクリア」は画面表示をリセットするだけです。DB に保存された「全履歴」タブのデータは保持されます。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "起動直後に進捗 % が表示されない",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "初回 WebSocket 接続のタイミングによる既知の動作です。しばらく待つと表示されるようになります。致命的な問題ではありません。"
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "バグ報告・機能リクエストはどこにすればよいですか？",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "GitHub の Issue にお送りください。PR も大歓迎です。X（旧 Twitter）でも進捗をつぶやいています → @RHU_AIstudio"
+      }
+    }
+  ]
+}
+</script>
+
+<!-- Google Analytics (GA4) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-JPMJG9G12Q"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-JPMJG9G12Q');
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/style.css">
+<link rel="icon" type="image/x-icon" href="assets/favicon-light.ico">
+<link rel="icon" type="image/x-icon" href="assets/favicon-dark.ico" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+
+<style>
+/* ── FAQ固有スタイル（style.cssの変数・クラスを流用） ── */
+
+.faq-breadcrumb {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 20px 24px 0;
+  font-size: 12px;
+  color: var(--txt3);
+  font-family: 'JetBrains Mono', monospace;
+}
+.faq-breadcrumb a { color: var(--txt3); text-decoration: none; }
+.faq-breadcrumb a:hover { color: var(--accent); }
+.faq-breadcrumb span { margin: 0 5px; }
+
+.faq-hero {
+  padding: 64px 24px 40px;
+  text-align: center;
+}
+.faq-hero .sec-label { margin-bottom: 10px; }
+.faq-hero .sec-title { margin-bottom: 12px; }
+.faq-hero .sec-sub { max-width: 520px; margin: 0 auto; }
+.faq-hero .sec-sub a { color: var(--accent); text-decoration: none; }
+.faq-hero .sec-sub a:hover { text-decoration: underline; }
+
+.faq-body {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 24px 80px;
+}
+
+/* カテゴリ見出し */
+.faq-cat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 48px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.faq-cat-icon { font-size: 15px; line-height: 1; }
+.faq-cat-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.faq-cat-count {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--txt3);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 1px 8px;
+}
+
+/* details / summary アコーディオン */
+.faq-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: var(--card-bg);
+  overflow: hidden;
+  transition: border-color 0.18s, box-shadow 0.18s;
+}
+.faq-item:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+.faq-item[open] {
+  border-color: var(--accent);
+  box-shadow: 0 4px 18px rgba(0,0,0,0.08);
+}
+
+.faq-item > summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 15px 18px;
+  cursor: pointer;
+  list-style: none;
+  font-weight: 500;
+  font-size: 14.5px;
+  color: var(--txt1);
+  line-height: 1.5;
+  user-select: none;
+  transition: background 0.12s;
+}
+.faq-item > summary::-webkit-details-marker { display: none; }
+.faq-item > summary::marker { display: none; }
+.faq-item[open] > summary { background: var(--bg2); }
+
+.faq-q-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(224,119,154,0.10);
+  border: 1px solid rgba(224,119,154,0.22);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-top: 1px;
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+.faq-q-text { flex: 1; }
+
+.faq-chevron {
+  flex-shrink: 0;
+  margin-top: 3px;
+  width: 17px;
+  height: 17px;
+  color: var(--txt3);
+  transition: transform 0.22s cubic-bezier(0.4,0,0.2,1), color 0.15s;
+}
+.faq-item[open] .faq-chevron {
+  transform: rotate(180deg);
+  color: var(--accent);
+}
+
+.faq-answer {
+  padding: 13px 18px 16px 42px;
+  font-size: 14px;
+  line-height: 1.78;
+  color: var(--txt2);
+  border-top: 1px solid var(--border);
+}
+.faq-answer code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--accent2, #3b82f6);
+  word-break: break-all;
+}
+.faq-answer a { color: var(--accent); text-decoration: none; }
+.faq-answer a:hover { text-decoration: underline; }
+
+@media (max-width: 600px) {
+  .faq-answer { padding-left: 18px; }
+  .faq-hero { padding: 40px 16px 28px; }
+  .faq-body { padding: 0 16px 64px; }
+}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="site-logo">
+      <div class="logo-dot"></div>
+      Anima Pipeline
+    </div>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="index.html#howto">使い方</a></li>
+        <li><a href="index.html#features">特徴</a></li>
+        <li><a href="index.html#setup">セットアップ</a></li>
+        <li><a href="index.html#gallery">生成例</a></li>
+        <li><a href="faq.html" style="color: var(--accent);">FAQ</a></li>
+        <li><a href="faq_en.html" class="nav-lang-btn">English</a></li>
+        <li><a href="https://github.com/tomotto1296/anima-pipeline" target="_blank" class="nav-gh-btn">GitHub</a></li>
+      </ul>
+    </nav>
+  </div>
+</header>
+
+<nav class="faq-breadcrumb" aria-label="パンくずリスト">
+  <a href="index.html">Home</a><span>/</span><span>FAQ</span>
+</nav>
+
+<section class="faq-hero">
+  <div class="sec-label">FAQ</div>
+  <h1 class="sec-title">よくある質問</h1>
+  <p class="sec-sub">セットアップ・ComfyUI連携・LLM設定・スマホアクセスなど、よくある疑問をまとめています。解決しない場合は <a href="https://github.com/tomotto1296/anima-pipeline/issues" target="_blank">GitHub Issue</a> へ。</p>
+</section>
+
+<main class="faq-body">
+
+  <!-- ① セットアップ・起動 -->
+  <div class="faq-cat">
+    <span class="faq-cat-icon">🔧</span>
+    <span class="faq-cat-name">セットアップ・起動</span>
+    <span class="faq-cat-count">4</span>
+  </div>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">必要な環境・依存関係は？</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      Python 3.10 以上と <code>requests</code> ライブラリが必要です（<code>pip install -r requirements.txt</code>）。<br>
+      履歴サムネイル表示には <code>Pillow</code> も推奨。ComfyUI が起動済みであることも確認してください。
+    </div>
+  </details>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">起動したがブラウザに何も表示されない・白画面になる</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      <code>http://localhost:7860</code> を正しく開いているか確認してください（<code>https://</code> ではなく <code>http://</code>）。<br>
+      起動時の黒窓（コマンドプロンプト）にエラーが出ていないかも確認してください。
+    </div>
+  </details>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">bat ファイルをダブルクリックしても VS Code などで開いてしまう</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      右クリック →「プログラムから開く」→「コマンドプロンプト」を選択してください。
+    </div>
+  </details>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">初回設定で何を入力すればよいですか？</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      画面上部の「▶ 設定」を開き、以下を設定して「💾 設定を保存」を押してください。<br><br>
+      ・ComfyUI URL（通常 <code>http://127.0.0.1:8188</code>）<br>
+      ・ワークフロー JSON（<code>workflows/</code> 内のファイルを選択）<br>
+      ・LLM を使う場合はプラットフォーム・API キー・モデル名
+    </div>
+  </details>
+
+  <!-- ② ComfyUI連携 -->
+  <div class="faq-cat">
+    <span class="faq-cat-icon">⚙️</span>
+    <span class="faq-cat-name">ComfyUI 連携</span>
+    <span class="faq-cat-count">3</span>
+  </div>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">ComfyUI に繋がらない</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      ComfyUI が起動しているか、URL が正しいかを確認してください。<br>
+      設定パネルの「Run Setup Diagnostics」ボタンで接続状態を一括チェックできます。
+    </div>
+  </details>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">ワークフローの Node ID が合わない</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      ComfyUI の「Save (API Format)」で出力した JSON を確認し、Positive / Negative / KSampler の各 Node ID を設定画面で手動指定してください。
+    </div>
+  </details>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">LoRA のサムネイルが表示されない</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      ComfyUI 起動時に <code>--listen --enable-cors-header</code> オプションを追加してください。<br>
+      また、設定画面の ComfyUI output フォルダを絶対パスで指定しているか確認してください。
+    </div>
+  </details>
+
+  <!-- ③ LLM連携 -->
+  <div class="faq-cat">
+    <span class="faq-cat-icon">🤖</span>
+    <span class="faq-cat-name">LLM 連携</span>
+    <span class="faq-cat-count">3</span>
+  </div>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">対応している LLM プラットフォームは？</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      LM Studio・Gemini・カスタムエンドポイント（OpenAI 互換）に対応しています。<br>
+      Gemini は Google AI Studio で無料の API キーを取得できます。
+    </div>
+  </details>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">LLM エラーが出る</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      API キーを再確認してください。Gemini 無料枠には 1 日 250 回のレート制限があります。<br>
+      設定パネルの「Run Setup Diagnostics」で LLM 接続状態も確認できます。
+    </div>
+  </details>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">LLM を使わずに生成できますか？</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      できます。英語タグを入力欄に直接記述すれば、LLM なしで最速生成が可能です。
+    </div>
+  </details>
+
+  <!-- ④ スマホ・リモート -->
+  <div class="faq-cat">
+    <span class="faq-cat-icon">📱</span>
+    <span class="faq-cat-name">スマホ・リモートアクセス</span>
+    <span class="faq-cat-count">2</span>
+  </div>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">スマホから使いたい（同一 Wi-Fi）</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      PC の IPv4 アドレスを <code>ipconfig</code> で確認し、スマホで <code>http://192.168.x.x:7860</code> を開いてください。<br>
+      ComfyUI 起動時に <code>--listen --enable-cors-header</code> オプションが必要です。<br>
+      繋がらない場合は PC ファイアウォールで 7860 番ポートの受信が許可されているか確認してください。
+    </div>
+  </details>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">外出先からスマホで操作したい</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      Tailscale を使う方法があります。PC とスマホ両方に Tailscale をインストールしてログインし、<code>start_anima_pipeline - Tailscale.bat</code> で起動してください。<br>
+      コンソールに表示される URL（例: <code>http://100.x.x.x:7860</code>）をスマホで開けばアクセスできます。
+    </div>
+  </details>
+
+  <!-- ⑤ プリセット・セッション -->
+  <div class="faq-cat">
+    <span class="faq-cat-icon">💾</span>
+    <span class="faq-cat-name">プリセット・セッション</span>
+    <span class="faq-cat-count">2</span>
+  </div>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">キャラプリセットを他の人と共有したい</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      v1.5.20 以降、プリセットを zip 形式で Export / Import できます。<br>
+      設定パネルの「Presets Export」からエクスポートし、相手側は「Presets Import」で取り込んでください。
+    </div>
+  </details>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">セッションを保存しても復元できない</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      「SAVE SESSION」で保存したセッションは <code>sessions/&lt;名前&gt;.json</code> に保存されます。<br>
+      復元するには「Open」→「LOAD」を使ってください。自動保存（last session）とは別管理です。
+    </div>
+  </details>
+
+  <!-- ⑥ 履歴・ギャラリー -->
+  <div class="faq-cat">
+    <span class="faq-cat-icon">🕒</span>
+    <span class="faq-cat-name">履歴・ギャラリー</span>
+    <span class="faq-cat-count">2</span>
+  </div>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">生成履歴はどこに保存されますか？</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      <code>history/history.db</code>（SQLite）に保存されます。サムネイルは <code>history/thumbs/</code> に保存されます。<br>
+      保存先は設定画面の「History DB Path」「History Thumb Dir」で変更できます。
+    </div>
+  </details>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">セッション履歴をクリアしたら全履歴も消えますか？</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      消えません。「セッション履歴のクリア」は画面表示をリセットするだけです。<br>
+      DB に保存された「全履歴」タブのデータは保持されます。
+    </div>
+  </details>
+
+  <!-- ⑦ その他 -->
+  <div class="faq-cat">
+    <span class="faq-cat-icon">📌</span>
+    <span class="faq-cat-name">その他</span>
+    <span class="faq-cat-count">2</span>
+  </div>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">起動直後に進捗 % が表示されない</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      初回 WebSocket 接続のタイミングによる既知の動作です。しばらく待つと表示されるようになります。致命的な問題ではありません。
+    </div>
+  </details>
+
+  <details class="faq-item">
+    <summary>
+      <span class="faq-q-badge">Q</span>
+      <span class="faq-q-text">バグ報告・機能リクエストはどこにすればよいですか？</span>
+      <svg class="faq-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </summary>
+    <div class="faq-answer">
+      <a href="https://github.com/tomotto1296/anima-pipeline/issues" target="_blank">GitHub の Issue</a> にお送りください。PR も大歓迎です。<br>
+      X でも進捗をつぶやいています → <a href="https://x.com/RHU_AIstudio" target="_blank">@RHU_AIstudio</a>
+    </div>
+  </details>
+
+</main>
+
+<section class="cta-sec">
+  <div class="inner">
+    <h2 class="cta-title">解決しない場合は</h2>
+    <p class="cta-sub">
+      GitHub Issue でお気軽にご報告ください。<br>
+      使い方ガイドにも詳細な手順を掲載しています。
+    </p>
+    <div class="cta-btns">
+      <a href="https://github.com/tomotto1296/anima-pipeline/issues" target="_blank" class="btn-primary" style="min-width: 220px; text-align: center;">Issue を開く</a>
+      <a href="guides/anima_pipeline_guide.md" class="btn-secondary" style="min-width: 220px; text-align: center;">使い方ガイド</a>
+      <a href="index.html" class="btn-secondary" style="min-width: 220px; text-align: center;">← トップへ戻る</a>
+    </div>
+    <div class="cta-links">
+      <a href="https://note.com/rhustudio/n/nf0dc2414f852" target="_blank" class="cta-link">note 記事</a>
+      <a href="https://qiita.com/RHU/items/18095cb22281cd027bc4" target="_blank" class="cta-link">Qiita</a>
+      <a href="https://zenn.dev/rhu/articles/anima-pipeline-comfyui-llm" target="_blank" class="cta-link">Zenn</a>
+      <a href="https://x.com/RHU_AIstudio" target="_blank" class="cta-link">X @RHU_AIstudio</a>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <p>© 2026 <a href="https://github.com/tomotto1296" target="_blank">tomotto1296</a> - Anima Pipeline is released under the MIT License</p>
+</footer>
+
+</body>
+</html>
