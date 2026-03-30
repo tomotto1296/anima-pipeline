@@ -853,3 +853,33 @@
   - `docs/guides/anima_pipeline_guide.md` / `docs/guides/anima_pipeline_guide_en.md`
   - `docs/specs/features.md`
   - `docs/updates/roadmap.md`
+
+## 2026-03-31 - v1.5.21 (GEN-1 implementation update)
+
+- GEN-1 implemented (batch generation, first runnable version):
+  - Added batch endpoints:
+    - `POST /batch/start`
+    - `POST /batch/pause`
+    - `POST /batch/resume`
+    - `POST /batch/clear`
+    - `GET /batch/status`
+  - Added batch progress persistence:
+    - `settings/batch_progress.json`
+  - Added CSV/TXT input parsing for batch jobs.
+  - Added pause/resume behavior (pause after current running job finishes).
+  - Added CSV-misselect fallback:
+    - When CSV is selected but plain line-based input is provided, interpret as TXT.
+  - Added workflow path fallback in ComfyUI sender:
+    - Resolve bare filename under `workflows/` when needed.
+  - Added non-LLM batch execution support:
+    - Batch now follows UI `use_llm` state and can run without LLM.
+- UI updates:
+  - Added `GEN-1 Batch Generation (CSV/TXT)` panel in `frontend/index.html`.
+  - Added Start/Pause/Resume/Clear controls and batch status/job list rendering.
+- Config update:
+  - Added `batch_default_count` to `core/config.py` `DEFAULT_CONFIG`.
+- Updated files:
+  - `core/handlers.py`
+  - `core/comfyui.py`
+  - `core/config.py`
+  - `frontend/index.html`

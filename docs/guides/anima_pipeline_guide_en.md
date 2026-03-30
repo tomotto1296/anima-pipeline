@@ -174,6 +174,25 @@ Behavior notes:
   - `negative` / `positive` presets
   - `sessions/` (named sessions)
 
+### Batch Generation (GEN-1)
+
+- Use the `GEN-1 Batch Generation (CSV/TXT)` panel below the Generate button.
+- Input formats:
+  - `TXT`: one preset name per line (for example: `000_default`)
+  - `CSV`: must include `preset_name` header
+- Controls:
+  - `Start Batch`: start sequential generation
+  - `Pause`: pause after the currently running job finishes (not immediate interrupt)
+  - `Resume`: continue from the next pending job
+  - `Clear`: clear stopped/completed batch state
+- Status:
+  - `state: running / pausing / paused / done / idle`
+  - Job list shows `queued / running / done / failed / skipped`
+- Notes:
+  - If CSV is selected by mistake but plain line-based input is provided, it is auto-interpreted as TXT.
+  - Batch respects the main `Use LLM` toggle (ON/OFF).
+  - Progress is persisted in `settings/batch_progress.json` and used for resume.
+
 ---
 
 ## 6. Output Format and Metadata (OUTPUT-4)
@@ -329,7 +348,7 @@ These are currently tracked as non-critical issues.
 
 | Version | Changes |
 |---------|---------|
-| **v1.5.21** | Version-sync and spec-update release (added GEN-1 spec and updated current-version labels across major docs). |
+| **v1.5.21** | Implemented GEN-1 batch generation (CSV/TXT input, Start/Pause/Resume/Clear, progress persistence, and Use-LLM toggle support). Also improved workflow-path resolution and CSV input fallback behavior. |
 | **v1.5.20** | SHARE-1: Implemented preset bundle Export/Import (zip). Also improved visual distinction between `Generate` and `Today's Mood`, and switched the two-button row to stacked layout on mobile. |
 | **v1.5.19** | INPUT-1: random character preset generation from `ui_options` (random attribute apply + save confirmation + STATUS summary). Dice icon style was unified for random buttons. |
 | **v1.5.18** | INPUT-6 follow-up: Improved mobile LoRA visibility (card columns and slot-row layout optimization). |

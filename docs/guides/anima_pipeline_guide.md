@@ -174,6 +174,25 @@ The result panel shows `OK / WARN / ERR / SKIP`, and `WARN / ERR` rows include h
   - `negative` / `positive` プリセット
   - `sessions/`（名前付きセッション）
 
+### 一括生成（GEN-1）
+
+- 生成ボタン下の `GEN-1 Batch Generation (CSV/TXT)` パネルから実行します。
+- 入力方式:
+  - `TXT`: 1行1プリセット名（例: `000_default`）
+  - `CSV`: `preset_name` ヘッダを含む形式
+- 操作:
+  - `Start Batch`: 一括生成開始
+  - `Pause`: 現在ジョブ完了後に停止（即時停止ではない）
+  - `Resume`: 停止位置の次ジョブから再開
+  - `Clear`: 停止中/完了後のバッチ状態をクリア
+- 状態確認:
+  - `state: running / pausing / paused / done / idle`
+  - ジョブ一覧に `queued / running / done / failed / skipped` を表示
+- 補足:
+  - CSV選択時でも、入力がプレーンな1行リストならTXTとして自動解釈します。
+  - 「LLMを使用する」のON/OFFはバッチ実行にも反映されます。
+  - 進捗は `settings/batch_progress.json` に保存され、再開に利用されます。
+
 ---
 
 ## 6. 出力形式とメタデータ（OUTPUT-4）
@@ -332,7 +351,7 @@ python scripts/run_quick_checks.py --include-hooks-guard
 
 | バージョン | 主な変更内容 |
 |-----------|------------|
-| **v1.5.21** | バージョン同期・仕様更新リリース（GEN-1 仕様書追加、主要ドキュメントの現在バージョン表記を更新）。 |
+| **v1.5.21** | GEN-1 一括生成を実装（CSV/TXT入力、Start/Pause/Resume/Clear、進捗保存、LLM ON/OFF 反映）。あわせてワークフローパス解決とCSV入力フォールバックを改善。 |
 | **v1.5.20** | SHARE-1: プリセット一括 Export/Import（zip）を実装。あわせて `Generate` と `今日の気分` の視認性差を強化し、モバイルでは2ボタンを縦積みに調整。 |
 | **v1.5.19** | INPUT-1: ランダムキャラプリセット作成（ui_options由来の属性ランダム適用、保存確認、STATUSサマリー表示）。ランダムボタンのサイコロ表示を統一。 |
 | **v1.5.18** | INPUT-6 follow-up: モバイルLoRA UIの視認性を改善（カード列数・スロット行レイアウト最適化）。 |
