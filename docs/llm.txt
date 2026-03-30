@@ -1,0 +1,14 @@
+Project: Anima Pipeline
+Description: Browser UI + LLM automation for the Anima image generation workflow.
+
+Primary docs:
+- README (JP): https://tomotto1296.github.io/anima-pipeline/README.md
+- README (EN): https://tomotto1296.github.io/anima-pipeline/README_EN.md
+- Feature list: https://tomotto1296.github.io/anima-pipeline/docs/specs/features.md
+- Roadmap: https://tomotto1296.github.io/anima-pipeline/docs/updates/roadmap.md
+- Update log: https://tomotto1296.github.io/anima-pipeline/docs/updates/Update.md
+
+Entry points:
+- Japanese landing page: https://tomotto1296.github.io/anima-pipeline/index.html
+- English landing page: https://tomotto1296.github.io/anima-pipeline/index_en.html
+- Demo page: https://tomotto1296.github.io/anima-pipeline/demo_en.html
