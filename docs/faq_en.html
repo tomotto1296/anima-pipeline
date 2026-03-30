@@ -138,6 +138,35 @@
   padding: 0 24px 80px;
 }
 
+.faq-cat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 48px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.faq-cat-icon { font-size: 15px; line-height: 1; }
+.faq-cat-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.faq-cat-count {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--txt3);
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 1px 8px;
+}
+
 .faq-item {
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -263,6 +292,12 @@
 </section>
 
 <main class="faq-body">
+  <div class="faq-cat">
+    <span class="faq-cat-icon">🔧</span>
+    <span class="faq-cat-name">Setup & Launch</span>
+    <span class="faq-cat-count">2</span>
+  </div>
+
   <details class="faq-item" open>
     <summary>
       <span class="faq-q-badge">Q</span>
@@ -286,6 +321,12 @@
     </div>
   </details>
 
+  <div class="faq-cat">
+    <span class="faq-cat-icon">⚙️</span>
+    <span class="faq-cat-name">ComfyUI Integration</span>
+    <span class="faq-cat-count">1</span>
+  </div>
+
   <details class="faq-item">
     <summary>
       <span class="faq-q-badge">Q</span>
@@ -297,6 +338,12 @@
       Then run setup diagnostics from the app settings.
     </div>
   </details>
+
+  <div class="faq-cat">
+    <span class="faq-cat-icon">🤖</span>
+    <span class="faq-cat-name">LLM Integration</span>
+    <span class="faq-cat-count">2</span>
+  </div>
 
   <details class="faq-item">
     <summary>
@@ -320,6 +367,12 @@
     </div>
   </details>
 
+  <div class="faq-cat">
+    <span class="faq-cat-icon">📱</span>
+    <span class="faq-cat-name">Mobile / Remote Access</span>
+    <span class="faq-cat-count">1</span>
+  </div>
+
   <details class="faq-item">
     <summary>
       <span class="faq-q-badge">Q</span>
@@ -333,6 +386,12 @@
     </div>
   </details>
 
+  <div class="faq-cat">
+    <span class="faq-cat-icon">🕒</span>
+    <span class="faq-cat-name">History & Gallery</span>
+    <span class="faq-cat-count">1</span>
+  </div>
+
   <details class="faq-item">
     <summary>
       <span class="faq-q-badge">Q</span>
@@ -344,6 +403,12 @@
       Thumbnails: <code>history/thumbs/</code>
     </div>
   </details>
+
+  <div class="faq-cat">
+    <span class="faq-cat-icon">📌</span>
+    <span class="faq-cat-name">Other</span>
+    <span class="faq-cat-count">1</span>
+  </div>
 
   <details class="faq-item">
     <summary>
