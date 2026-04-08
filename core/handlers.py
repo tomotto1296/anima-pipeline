@@ -29,6 +29,15 @@ def build_handler(context: dict):
             'jobs': [],
         }
         BATCH_PROGRESS_FILE = _sf('batch_progress.json')
+        queue_lock = threading.RLock()
+        queue_thread = None
+        queue_pause_requested = False
+        queue_loaded = False
+        queue_state = {
+            'state': 'idle',  # idle / running / paused
+            'jobs': [],
+        }
+        QUEUE_STATE_FILE = _sf('queue_state.json')
         def log_message(self,fmt,*args):pass
 
         def _send_bytes(self, data: bytes, mime: str, cache_control: str | None = None, extra_headers: dict | None = None):
@@ -87,6 +96,432 @@ def build_handler(context: dict):
             except Exception as e:
                 print(f'[GEN-1] failed to load batch progress: {e}')
                 return {}
+
+        def _now_iso(self) -> str:
+            return datetime.datetime.now().replace(microsecond=0).isoformat()
+
+        def _queue_summary(self, jobs: list) -> dict:
+            summary = {'queued': 0, 'running': 0, 'done': 0, 'failed': 0}
+            for j in (jobs or []):
+                st = str((j or {}).get('status', '') or '')
+                if st in summary:
+                    summary[st] += 1
+            return summary
+
+        def _normalize_queue_job(self, raw: dict) -> dict:
+            item = raw if isinstance(raw, dict) else {}
+            st = str(item.get('status', 'queued') or 'queued')
+            if st not in ('queued', 'running', 'done', 'failed'):
+                st = 'queued'
+            return {
+                'job_id': str(item.get('job_id', '') or ''),
+                'label': str(item.get('label', '') or ''),
+                'status': st,
+                'snapshot': item.get('snapshot', {}) if isinstance(item.get('snapshot', {}), dict) else {},
+                'created_at': str(item.get('created_at', '') or ''),
+                'started_at': item.get('started_at'),
+                'completed_at': item.get('completed_at'),
+                'error': item.get('error'),
+                'progress': int(item.get('progress', 0) or 0),
+            }
+
+        def _save_queue_state(self):
+            with Handler.queue_lock:
+                payload = {
+                    'state': str(Handler.queue_state.get('state', 'idle') or 'idle'),
+                    'jobs': [self._normalize_queue_job(j) for j in Handler.queue_state.get('jobs', []) if isinstance(j, dict)],
+                }
+            try:
+                with open(Handler.QUEUE_STATE_FILE, 'w', encoding='utf-8') as f:
+                    json.dump(payload, f, ensure_ascii=False, indent=2)
+            except Exception as e:
+                print(f'[GEN-2] failed to save queue state: {e}')
+
+        def _load_queue_state_file(self) -> dict:
+            if not os.path.exists(Handler.QUEUE_STATE_FILE):
+                return {'state': 'idle', 'jobs': []}
+            try:
+                with open(Handler.QUEUE_STATE_FILE, 'r', encoding='utf-8-sig') as f:
+                    data = json.load(f)
+                if not isinstance(data, dict):
+                    raise ValueError('queue state is not an object')
+                jobs_raw = data.get('jobs', [])
+                jobs = [self._normalize_queue_job(j) for j in jobs_raw] if isinstance(jobs_raw, list) else []
+                state = str(data.get('state', 'idle') or 'idle')
+                if state not in ('idle', 'running', 'paused'):
+                    state = 'idle'
+                # Never restore running across restart.
+                if state == 'running':
+                    state = 'paused' if any(j.get('status') == 'queued' for j in jobs) else 'idle'
+                for j in jobs:
+                    if j.get('status') == 'running':
+                        j['status'] = 'failed'
+                        j['error'] = str(j.get('error') or 'interrupted by restart')
+                        j['completed_at'] = self._now_iso()
+                        j['progress'] = 0
+                return {'state': state, 'jobs': jobs}
+            except Exception as e:
+                print(f'[GEN-2] failed to restore queue state. Starting with empty queue. {e}')
+                return {'state': 'idle', 'jobs': []}
+
+        def _ensure_queue_loaded(self):
+            with Handler.queue_lock:
+                if Handler.queue_loaded:
+                    return
+                loaded = self._load_queue_state_file()
+                Handler.queue_state = {
+                    'state': str(loaded.get('state', 'idle') or 'idle'),
+                    'jobs': loaded.get('jobs', []) if isinstance(loaded.get('jobs', []), list) else [],
+                }
+                Handler.queue_pause_requested = False
+                Handler.queue_loaded = True
+
+        def _queue_snapshot(self) -> dict:
+            self._ensure_queue_loaded()
+            with Handler.queue_lock:
+                jobs = [self._normalize_queue_job(j) for j in Handler.queue_state.get('jobs', []) if isinstance(j, dict)]
+                state = str(Handler.queue_state.get('state', 'idle') or 'idle')
+                summary = self._queue_summary(jobs)
+                if state == 'running' and summary.get('running', 0) == 0 and summary.get('queued', 0) == 0:
+                    state = 'idle'
+                return {'state': state, 'jobs': jobs, 'summary': summary}
+
+        def _next_queue_job_id(self) -> str:
+            ts = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+            with Handler.queue_lock:
+                used = {str((j or {}).get('job_id', '') or '') for j in Handler.queue_state.get('jobs', []) if isinstance(j, dict)}
+            idx = 1
+            while True:
+                candidate = f'q_{ts}_{idx:03d}'
+                if candidate not in used:
+                    return candidate
+                idx += 1
+
+        def _queue_set_generate_button_disabled(self, disabled: bool):
+            # Frontend handles this, kept for parity in naming and future server-push hooks.
+            return
+
+        def _resolve_output_dir_from_cfg(self, cfg: dict) -> str:
+            output_dir = str(cfg.get("comfyui_output_dir", "") or "").strip()
+            if output_dir:
+                return output_dir
+            wf_path = str(cfg.get("workflow_json_path", "") or "")
+            if wf_path and not os.path.isabs(wf_path):
+                wf_path = os.path.join(_base_dir, wf_path)
+            wf_path = wf_path.replace(os.sep, "/")
+            parts = wf_path.split("/")
+            for i, p in enumerate(parts):
+                if p.lower() == "comfyui":
+                    return os.path.normpath("/".join(parts[:i + 1]) + "/output")
+            return os.path.normpath(os.path.join(os.path.dirname(wf_path), "..", "..", "output"))
+
+        def _extract_prompt_output_paths(self, cfg: dict, prompt_id: str) -> list[str]:
+            import urllib.request as _ureq
+            comfy = str(cfg.get('comfyui_url', 'http://127.0.0.1:8188') or '').rstrip('/')
+            with _ureq.urlopen(comfy + '/history/' + str(prompt_id), timeout=3) as r:
+                hist = json.loads(r.read())
+            item = hist.get(str(prompt_id), {})
+            status = item.get('status', {}) if isinstance(item, dict) else {}
+            if not bool(status.get('completed', False)):
+                return []
+            outputs = item.get('outputs', {}) if isinstance(item, dict) else {}
+            output_dir = self._resolve_output_dir_from_cfg(cfg)
+            paths = []
+            for _nid, out in outputs.items():
+                imgs = out.get('images', []) if isinstance(out, dict) else []
+                for img in imgs:
+                    subfolder = str((img or {}).get('subfolder', '') or '')
+                    fname = str((img or {}).get('filename', '') or '')
+                    if not fname:
+                        continue
+                    full = os.path.normpath(os.path.join(output_dir, subfolder, fname)) if subfolder else os.path.normpath(os.path.join(output_dir, fname))
+                    if (not os.path.exists(full)) and fname.lower().endswith('.png'):
+                        wp = os.path.normpath(os.path.join(output_dir, subfolder, fname[:-4] + '.webp')) if subfolder else os.path.normpath(os.path.join(output_dir, fname[:-4] + '.webp'))
+                        if os.path.exists(wp):
+                            full = wp
+                    paths.append(full.replace('\\', '/'))
+            return paths
+
+        def _query_comfy_progress_percent(self, cfg: dict) -> int | None:
+            try:
+                import urllib.request as _ureq
+                comfy = str(cfg.get('comfyui_url', 'http://127.0.0.1:8188') or '').rstrip('/')
+                with _ureq.urlopen(comfy + '/progress', timeout=2) as r:
+                    data = json.loads(r.read())
+                value = float((data or {}).get('value', 0) or 0)
+                maximum = float((data or {}).get('max', 0) or 0)
+                if maximum <= 0:
+                    return None
+                return int(max(0, min(99, round((value / maximum) * 100))))
+            except Exception:
+                return None
+
+        def _set_queue_job_progress(self, job_id: str, pct: int):
+            jid = str(job_id or '')
+            if not jid:
+                return
+            with Handler.queue_lock:
+                jobs = Handler.queue_state.get('jobs', []) if isinstance(Handler.queue_state.get('jobs', []), list) else []
+                for j in jobs:
+                    if str((j or {}).get('job_id', '') or '') == jid and str((j or {}).get('status', '') or '') == 'running':
+                        j['progress'] = int(max(0, min(99, pct)))
+                        Handler.queue_state['jobs'] = jobs
+                        self._save_queue_state()
+                        break
+
+        def _is_rate_limit_error(self, err: Exception) -> bool:
+            msg = str(err or '')
+            return ('429' in msg) or ('Too Many Requests' in msg)
+
+        def _extract_positive_prompt_safe(self, raw: str) -> str:
+            txt = extract_positive_prompt(str(raw or '')).replace("\\n", " ").replace("\n", " ").strip()
+            # Drop tool-debug style payloads from model responses.
+            if '[TOOL CALL COUNT' in txt or '[INPUT]' in txt:
+                return ''
+            return txt
+
+        def _call_llm_for_generation(self, user_input: str, cfg: dict) -> str:
+            import time
+            raw = None
+            last_err = None
+            for attempt in range(4):
+                try:
+                    raw = call_llm(user_input, cfg)
+                    break
+                except Exception as e:
+                    last_err = e
+                    if not self._is_rate_limit_error(e):
+                        raise
+                    if attempt >= 3:
+                        print('[GEN-2] LLM rate-limited after retries; continuing with direct tags only')
+                        raw = ''
+                        break
+                    wait_sec = 2 * (2 ** attempt)  # 2, 4, 8
+                    print(f'[GEN-2] LLM rate-limited, retrying in {wait_sec}s ({attempt+1}/3)')
+                    time.sleep(wait_sec)
+            if raw is None and last_err is not None:
+                raise last_err
+            return self._extract_positive_prompt_safe(str(raw or ''))
+
+        def _compose_positive_prompt(
+            self,
+            llm_positive: str,
+            prompt_prefix: list,
+            char_direct_tags: list,
+            extra_tags: list,
+            extra_note_en: str,
+        ) -> tuple[str, str]:
+            positive_flat = str(llm_positive or '')
+            if prompt_prefix:
+                if positive_flat:
+                    prefix_set = {t.strip().lower() for t in prompt_prefix if t}
+                    deduped = [t for t in positive_flat.split(',') if t.strip().lower() not in prefix_set]
+                    positive_flat = ', '.join(t.strip() for t in deduped if t.strip())
+                positive_flat = ", ".join(str(t) for t in prompt_prefix) + ("", ", " + positive_flat)[bool(positive_flat)]
+
+            if char_direct_tags:
+                direct_str = ", ".join(str(t) for t in char_direct_tags if t)
+                if positive_flat:
+                    flat_tags = {t.strip().lower() for t in positive_flat.split(',')}
+                    deduped_direct = [t for t in char_direct_tags if t and t.strip().lower() not in flat_tags]
+                    direct_str = ", ".join(str(t) for t in deduped_direct if t)
+                if direct_str:
+                    positive_flat = (positive_flat + ", " + direct_str).strip(", ")
+
+            pre_extra_prompt = positive_flat
+            if extra_tags:
+                extra_str = ", ".join(str(t) for t in extra_tags)
+                positive_flat = (positive_flat + ", " + extra_str).strip(", ") if positive_flat else extra_str
+            if extra_note_en:
+                positive_flat = positive_flat.rstrip(". ").rstrip(",") + ", " + extra_note_en
+            return pre_extra_prompt, positive_flat
+
+        def _wait_and_save_history_for_prompt(
+            self,
+            cfg: dict,
+            prompt_id: str,
+            meta: dict,
+            timeout_sec: int = 900,
+            queue_job_id: str = '',
+        ) -> bool:
+            import time
+            started = time.time()
+            deadline = time.time() + max(5, int(timeout_sec))
+            while time.time() < deadline:
+                pct = self._query_comfy_progress_percent(cfg)
+                if queue_job_id:
+                    if pct is not None:
+                        self._set_queue_job_progress(queue_job_id, pct)
+                    else:
+                        # Fallback ramp for environments where /progress is unavailable
+                        # and WS progress events are delayed (e.g. right after startup).
+                        elapsed = max(0.0, time.time() - started)
+                        pseudo = int(max(1, min(92, 1 + (elapsed / 120.0) * 91)))
+                        self._set_queue_job_progress(queue_job_id, pseudo)
+                try:
+                    paths = self._extract_prompt_output_paths(cfg, prompt_id)
+                    if not paths:
+                        time.sleep(0.8)
+                        continue
+                    for pth in paths:
+                        key = (str(prompt_id), str(pth))
+                        with Handler.history_lock:
+                            if key in Handler.history_saved_paths:
+                                continue
+                        ok = _save_history_record(cfg, str(prompt_id), str(pth), meta or {})
+                        if ok:
+                            with Handler.history_lock:
+                                Handler.history_saved_paths.add(key)
+                    with Handler.history_lock:
+                        Handler.history_pending.pop(str(prompt_id), None)
+                    return True
+                except Exception:
+                    time.sleep(0.8)
+            return False
+
+        def _run_queue_job(self, snapshot: dict) -> tuple[bool, str | None]:
+            cfg = load_config()
+            use_llm = bool(snapshot.get('use_llm', True))
+            user_input = str(snapshot.get('input', '') or '')
+            extra_tags = snapshot.get('extra_tags', []) if isinstance(snapshot.get('extra_tags', []), list) else []
+            char_direct_tags = snapshot.get('char_direct_tags', []) if isinstance(snapshot.get('char_direct_tags', []), list) else []
+            extra_note_en = str(snapshot.get('extra_note_en', '') or '').strip()
+            prompt_prefix = snapshot.get('prompt_prefix', []) if isinstance(snapshot.get('prompt_prefix', []), list) else []
+            negative_prompt = str(snapshot.get('negative_prompt', '') or '').strip()
+            img_width = int(snapshot.get('width', 1024) or 1024)
+            img_height = int(snapshot.get('height', 1024) or 1024)
+            img_fmt = snapshot.get('fmt', cfg.get('output_format', 'png'))
+            img_count = max(1, int(snapshot.get('count', 1) or 1))
+            embed_metadata = bool(snapshot.get('embed_metadata', cfg.get('embed_metadata', True)))
+            gen_params = snapshot.get('gen_params', {}) if isinstance(snapshot.get('gen_params', {}), dict) else {}
+            for k in ('seed_mode', 'seed_value', 'steps', 'cfg', 'sampler_name', 'scheduler'):
+                if k in gen_params:
+                    cfg[k] = gen_params[k]
+            lora_slots = snapshot.get('lora_slots', []) if isinstance(snapshot.get('lora_slots', []), list) else []
+            workflow_file = str(snapshot.get('workflow_file', '') or '').strip()
+            if workflow_file:
+                cfg['workflow_json_path'] = os.path.join(_workflows_dir, workflow_file)
+
+            if use_llm:
+                llm_positive = self._call_llm_for_generation(user_input, cfg)
+            else:
+                llm_positive = ""
+            _pre_extra_prompt, positive_flat = self._compose_positive_prompt(
+                llm_positive=llm_positive,
+                prompt_prefix=prompt_prefix,
+                char_direct_tags=char_direct_tags,
+                extra_tags=extra_tags,
+                extra_note_en=extra_note_en,
+            )
+
+            output_dir = self._resolve_output_dir_from_cfg(cfg)
+
+            comfyui_url = cfg.get('comfyui_url', 'http://127.0.0.1:8188')
+            date_folder = datetime.date.today().strftime("%Y-%m-%d")
+            shared_cid = str(snapshot.get('client_id', '') or str(uuid.uuid4()))
+            for i in range(img_count):
+                if Handler.cancel_event.is_set():
+                    return False, 'cancelled'
+                pid, meta = send_to_comfyui(
+                    positive_flat,
+                    cfg,
+                    img_width,
+                    img_height,
+                    img_fmt,
+                    shared_cid,
+                    negative_prompt=negative_prompt,
+                    lora_slots=lora_slots,
+                    pipeline_version=__version__,
+                )
+                with Handler.history_lock:
+                    Handler.history_pending[pid] = meta
+                watch_and_postprocess(
+                    comfyui_url=comfyui_url,
+                    output_dir=output_dir,
+                    date_folder=date_folder,
+                    prompt_id=pid,
+                    client_id=shared_cid,
+                    output_format=img_fmt,
+                    embed_metadata=embed_metadata,
+                    parameters_text=_build_parameters_text(meta) if embed_metadata else "",
+                    prompt_json=meta.get("prompt_json", "") if embed_metadata else "",
+                    workflow_json=meta.get("workflow_json", "") if embed_metadata else "",
+                    progress_callback=(lambda pct, qid=str(snapshot.get('_queue_job_id', '') or ''): self._set_queue_job_progress(qid, pct)),
+                )
+                # GEN-2 はバックエンド側で履歴保存まで責務を持つ。
+                self._wait_and_save_history_for_prompt(
+                    cfg,
+                    pid,
+                    meta,
+                    timeout_sec=900,
+                    queue_job_id=str(snapshot.get('_queue_job_id', '') or ''),
+                )
+                if cfg.get('seed_mode') == 'increment':
+                    cfg['seed_value'] = int(cfg.get('seed_value', 0)) + 1
+                    save_cfg = load_config()
+                    save_cfg['seed_value'] = cfg['seed_value']
+                    save_config(save_cfg)
+            return True, None
+
+        def _queue_worker(self):
+            while True:
+                self._ensure_queue_loaded()
+                job_id = ''
+                snapshot = {}
+                with Handler.queue_lock:
+                    if str(Handler.queue_state.get('state', 'idle') or 'idle') != 'running':
+                        break
+                    jobs = Handler.queue_state.get('jobs', []) if isinstance(Handler.queue_state.get('jobs', []), list) else []
+                    target = None
+                    for j in jobs:
+                        if str(j.get('status', '') or '') == 'queued':
+                            target = j
+                            break
+                    if target is None:
+                        Handler.queue_state['state'] = 'idle'
+                        self._save_queue_state()
+                        break
+                    target['status'] = 'running'
+                    target['started_at'] = self._now_iso()
+                    target['error'] = None
+                    target['progress'] = 1
+                    job_id = str(target.get('job_id', '') or '')
+                    snapshot = target.get('snapshot', {}) if isinstance(target.get('snapshot', {}), dict) else {}
+                    self._save_queue_state()
+
+                ok = False
+                err = None
+                try:
+                    Handler.cancel_event.clear()
+                    if isinstance(snapshot, dict):
+                        snapshot['_queue_job_id'] = str(job_id or '')
+                    ok, err = self._run_queue_job(snapshot)
+                except Exception as e:
+                    ok = False
+                    err = str(e)
+
+                with Handler.queue_lock:
+                    jobs = Handler.queue_state.get('jobs', []) if isinstance(Handler.queue_state.get('jobs', []), list) else []
+                    cur = None
+                    for j in jobs:
+                        if str(j.get('job_id', '') or '') == job_id:
+                            cur = j
+                            break
+                    if cur is not None:
+                        cur['status'] = 'done' if ok else 'failed'
+                        cur['progress'] = 100 if ok else 0
+                        cur['error'] = None if ok else str(err or 'generation failed')
+                        cur['completed_at'] = self._now_iso()
+                    if Handler.queue_pause_requested:
+                        Handler.queue_pause_requested = False
+                        Handler.queue_state['state'] = 'paused'
+                    else:
+                        summary = self._queue_summary(jobs)
+                        if summary.get('queued', 0) == 0 and summary.get('running', 0) == 0:
+                            Handler.queue_state['state'] = 'idle'
+                        else:
+                            Handler.queue_state['state'] = 'running'
+                    self._save_queue_state()
 
         def _resolve_chara_preset_for_batch(self, preset_name: str):
             name = str(preset_name or '').strip()
@@ -1426,6 +1861,11 @@ def build_handler(context: dict):
                 self._send_json({'files': files})
                 return True
 
+            if req_path == '/queue':
+                snap = self._queue_snapshot()
+                self._send_json(snap)
+                return True
+
             if req_path == '/batch/status':
                 snap = self._snapshot_batch_state()
                 total = int(snap.get('total', 0) or 0)
@@ -2097,6 +2537,204 @@ def build_handler(context: dict):
                     return
             self._send_json({'status': 'ok'})
 
+        def _start_queue_worker_if_needed(self):
+            with Handler.queue_lock:
+                if str(Handler.queue_state.get('state', 'idle') or 'idle') != 'running':
+                    return
+                th = Handler.queue_thread
+                if th is not None and th.is_alive():
+                    return
+                th = threading.Thread(target=self._queue_worker, daemon=True, name='gen2-queue-worker')
+                Handler.queue_thread = th
+                th.start()
+
+        def _handle_post_queue_add(self, body: dict):
+            self._ensure_queue_loaded()
+            snapshot = body.get('snapshot', {})
+            # Backward/compat safety: accept legacy flat payload as snapshot.
+            if not isinstance(snapshot, dict) or not snapshot:
+                fallback_keys = {
+                    'input', 'use_llm', 'width', 'height', 'fmt', 'embed_metadata', 'count',
+                    'extra_tags', 'char_direct_tags', 'prompt_prefix', 'extra_note_en',
+                    'negative_prompt', 'gen_params', 'lora_slots', 'workflow_file', 'client_id'
+                }
+                if isinstance(body, dict):
+                    fb = {k: body.get(k) for k in fallback_keys if k in body}
+                    if fb:
+                        snapshot = fb
+            if not isinstance(snapshot, dict):
+                self._send_json({'status': 'error', 'error': 'snapshot must be object'}, code=400)
+                return
+            label = str(body.get('label', '') or '').strip()
+            if not label:
+                label = str(snapshot.get('input', '') or '').strip()[:40]
+            if not label:
+                label = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            if 'client_id' in body and str(body.get('client_id', '') or '').strip():
+                snapshot['client_id'] = str(body.get('client_id', '') or '').strip()
+            if 'client_id' not in snapshot or not str(snapshot.get('client_id', '') or '').strip():
+                snapshot['client_id'] = str(uuid.uuid4())
+
+            cfg = load_config()
+            try:
+                max_jobs = max(1, int(cfg.get('queue_max_jobs', 50) or 50))
+            except Exception:
+                max_jobs = 50
+
+            with Handler.queue_lock:
+                jobs = Handler.queue_state.get('jobs', []) if isinstance(Handler.queue_state.get('jobs', []), list) else []
+                if len(jobs) >= max_jobs:
+                    self._send_json({'status': 'error', 'error': f'Queue is full ({max_jobs} jobs max)'}, code=409)
+                    return
+                job_id = self._next_queue_job_id()
+                jobs.append({
+                    'job_id': job_id,
+                    'label': label,
+                    'status': 'queued',
+                    'snapshot': snapshot,
+                    'created_at': self._now_iso(),
+                    'started_at': None,
+                    'completed_at': None,
+                    'error': None,
+                    'progress': 0,
+                })
+                Handler.queue_state['jobs'] = jobs
+                if str(Handler.queue_state.get('state', 'idle') or 'idle') != 'paused':
+                    Handler.queue_state['state'] = 'running'
+                self._save_queue_state()
+            self._start_queue_worker_if_needed()
+            self._send_json({'status': 'added', 'job_id': job_id})
+
+        def _handle_post_queue_pause(self):
+            self._ensure_queue_loaded()
+            with Handler.queue_lock:
+                state = str(Handler.queue_state.get('state', 'idle') or 'idle')
+                if state == 'paused':
+                    self._send_json({'status': 'paused'})
+                    return
+                jobs = Handler.queue_state.get('jobs', []) if isinstance(Handler.queue_state.get('jobs', []), list) else []
+                has_running = any(str((j or {}).get('status', '') or '') == 'running' for j in jobs)
+                if has_running:
+                    Handler.queue_pause_requested = True
+                else:
+                    Handler.queue_state['state'] = 'paused'
+                self._save_queue_state()
+            self._send_json({'status': 'paused'})
+
+        def _handle_post_queue_resume(self):
+            self._ensure_queue_loaded()
+            with Handler.queue_lock:
+                jobs = Handler.queue_state.get('jobs', []) if isinstance(Handler.queue_state.get('jobs', []), list) else []
+                has_queued = any(str((j or {}).get('status', '') or '') == 'queued' for j in jobs)
+                if has_queued:
+                    Handler.queue_state['state'] = 'running'
+                else:
+                    Handler.queue_state['state'] = 'idle'
+                Handler.queue_pause_requested = False
+                self._save_queue_state()
+            self._start_queue_worker_if_needed()
+            self._send_json({'status': 'resumed'})
+
+        def _handle_post_queue_reorder(self, body: dict):
+            self._ensure_queue_loaded()
+            order = body.get('order', [])
+            if not isinstance(order, list):
+                self._send_json({'status': 'error', 'error': 'order must be array'}, code=400)
+                return
+            order_ids = [str(x or '').strip() for x in order if str(x or '').strip()]
+            with Handler.queue_lock:
+                jobs = Handler.queue_state.get('jobs', []) if isinstance(Handler.queue_state.get('jobs', []), list) else []
+                queued = [j for j in jobs if str((j or {}).get('status', '') or '') == 'queued']
+                queued_ids = [str((j or {}).get('job_id', '') or '') for j in queued]
+                if set(order_ids) != set(queued_ids):
+                    self._send_json({'status': 'error', 'error': 'Only queued jobs can be reordered'}, code=400)
+                    return
+                by_id = {str((j or {}).get('job_id', '') or ''): j for j in queued}
+                ordered_queued = [by_id[jid] for jid in order_ids]
+                qi = 0
+                new_jobs = []
+                for j in jobs:
+                    if str((j or {}).get('status', '') or '') == 'queued':
+                        new_jobs.append(ordered_queued[qi])
+                        qi += 1
+                    else:
+                        new_jobs.append(j)
+                Handler.queue_state['jobs'] = new_jobs
+                self._save_queue_state()
+            self._send_json({'status': 'ok'})
+
+        def _handle_post_queue_rerun(self, req_path: str):
+            self._ensure_queue_loaded()
+            prefix = '/queue/rerun/'
+            if not req_path.startswith(prefix):
+                self._send_json({'status': 'error', 'error': 'invalid endpoint'}, code=400)
+                return
+            job_id = req_path[len(prefix):].strip()
+            if not job_id:
+                self._send_json({'status': 'error', 'error': 'job_id is required'}, code=400)
+                return
+            with Handler.queue_lock:
+                jobs = Handler.queue_state.get('jobs', []) if isinstance(Handler.queue_state.get('jobs', []), list) else []
+                src = None
+                for j in jobs:
+                    if str((j or {}).get('job_id', '') or '') == job_id:
+                        src = j
+                        break
+                if src is None:
+                    self._send_json({'status': 'error', 'error': 'Job not found'}, code=404)
+                    return
+                src_status = str(src.get('status', '') or '')
+                if src_status not in ('done', 'failed'):
+                    self._send_json({'status': 'error', 'error': 'only done/failed jobs can be rerun'}, code=409)
+                    return
+                new_id = self._next_queue_job_id()
+                jobs.append({
+                    'job_id': new_id,
+                    'label': str(src.get('label', '') or ''),
+                    'status': 'queued',
+                    'snapshot': src.get('snapshot', {}) if isinstance(src.get('snapshot', {}), dict) else {},
+                    'created_at': self._now_iso(),
+                    'started_at': None,
+                    'completed_at': None,
+                    'error': None,
+                    'progress': 0,
+                })
+                Handler.queue_state['jobs'] = jobs
+                if str(Handler.queue_state.get('state', 'idle') or 'idle') != 'paused':
+                    Handler.queue_state['state'] = 'running'
+                self._save_queue_state()
+            self._start_queue_worker_if_needed()
+            self._send_json({'status': 'added', 'job_id': new_id})
+
+        def _handle_post_queue_clear(self, body: dict):
+            self._ensure_queue_loaded()
+            target = str(body.get('target', 'completed') or 'completed').strip().lower()
+            if target not in ('completed', 'failed', 'all'):
+                self._send_json({'status': 'error', 'error': 'invalid target'}, code=400)
+                return
+            with Handler.queue_lock:
+                jobs = Handler.queue_state.get('jobs', []) if isinstance(Handler.queue_state.get('jobs', []), list) else []
+                kept = []
+                removed = 0
+                for j in jobs:
+                    st = str((j or {}).get('status', '') or '')
+                    rm = False
+                    if target == 'completed':
+                        rm = st in ('done', 'failed')
+                    elif target == 'failed':
+                        rm = st == 'failed'
+                    elif target == 'all':
+                        rm = st != 'running'
+                    if rm:
+                        removed += 1
+                    else:
+                        kept.append(j)
+                Handler.queue_state['jobs'] = kept
+                if not kept:
+                    Handler.queue_state['state'] = 'idle'
+                self._save_queue_state()
+            self._send_json({'status': 'ok', 'removed': removed})
+
         def _handle_post_terminal_routes(self, req_path: str, req_qs: dict, body: dict, unquote_fn) -> bool:
             if req_path == '/get_image':
                 self._handle_get_image_route(req_qs)
@@ -2112,6 +2750,30 @@ def build_handler(context: dict):
 
             if req_path == '/generate':
                 self._handle_post_generate(body)
+                return True
+
+            if req_path == '/queue/add':
+                self._handle_post_queue_add(body)
+                return True
+
+            if req_path == '/queue/pause':
+                self._handle_post_queue_pause()
+                return True
+
+            if req_path == '/queue/resume':
+                self._handle_post_queue_resume()
+                return True
+
+            if req_path == '/queue/reorder':
+                self._handle_post_queue_reorder(body)
+                return True
+
+            if req_path.startswith('/queue/rerun/'):
+                self._handle_post_queue_rerun(req_path)
+                return True
+
+            if req_path == '/queue/clear':
+                self._handle_post_queue_clear(body)
                 return True
 
             if req_path == '/batch/start':
@@ -2367,6 +3029,15 @@ def build_handler(context: dict):
             img_width=body.get('width',1024)
             img_height=body.get('height',1024)
             cfg=load_config()
+            self._ensure_queue_loaded()
+            with Handler.queue_lock:
+                qstate = str(Handler.queue_state.get('state', 'idle') or 'idle')
+            if qstate == 'running':
+                self._send_json(
+                    {'error': 'Cannot generate while queue is running. Pause the queue first.'},
+                    code=409
+                )
+                return
             img_fmt=body.get('fmt', cfg.get('output_format', 'png'))
             img_count=max(1,int(body.get('count',1)))
             embed_metadata = bool(body.get('embed_metadata', cfg.get('embed_metadata', True)))
@@ -2386,40 +3057,25 @@ def build_handler(context: dict):
             try:
                 if use_llm:
                     print(f"\n[LLM] 生成開始: {user_input}")
-                    raw=call_llm(user_input,cfg)
-                    positive=extract_positive_prompt(raw)
+                    positive=self._call_llm_for_generation(user_input, cfg)
                     if Handler.cancel_event.is_set():
                         result["error"]="cancelled"
                         self._send_json(result)
                         return
                     print(f"[LLM] 完了: {positive}")
                     result["positive_prompt"]=positive
-                    positive_flat=positive.replace("\\n"," ").replace("\n"," ")
                 else:
                     print("[LLM] スキップ")
                     result["positive_prompt"]=""
-                    positive_flat=""
-                if prompt_prefix:
-                    if positive_flat and prompt_prefix:
-                        prefix_set = {t.strip().lower() for t in prompt_prefix if t}
-                        deduped = [t for t in positive_flat.split(',') if t.strip().lower() not in prefix_set]
-                        positive_flat = ', '.join(t.strip() for t in deduped if t.strip())
-                    positive_flat=", ".join(str(t) for t in prompt_prefix)+("", ", "+positive_flat)[bool(positive_flat)]
-                if char_direct_tags:
-                    direct_str=", ".join(str(t) for t in char_direct_tags if t)
-                    if positive_flat:
-                        direct_set = {t.strip().lower() for t in char_direct_tags if t}
-                        flat_tags = {t.strip().lower() for t in positive_flat.split(',')}
-                        deduped_direct = [t for t in char_direct_tags if t and t.strip().lower() not in flat_tags]
-                        direct_str = ", ".join(str(t) for t in deduped_direct if t)
-                    if direct_str:
-                        positive_flat=(positive_flat+", "+direct_str).strip(", ")
-                result["pre_extra_prompt"] = positive_flat
-                if extra_tags:
-                    extra_str=", ".join(str(t) for t in extra_tags)
-                    positive_flat=(positive_flat+", "+extra_str).strip(", ") if positive_flat else extra_str
-                if extra_note_en:
-                    positive_flat=positive_flat.rstrip(". ").rstrip(",")+", "+extra_note_en
+                    positive=""
+                pre_extra_prompt, positive_flat = self._compose_positive_prompt(
+                    llm_positive=positive,
+                    prompt_prefix=prompt_prefix,
+                    char_direct_tags=char_direct_tags,
+                    extra_tags=extra_tags,
+                    extra_note_en=extra_note_en,
+                )
+                result["pre_extra_prompt"] = pre_extra_prompt
                 result["final_prompt"]=positive_flat
                 result["negative_prompt"]=negative_prompt
 
@@ -2489,7 +3145,7 @@ def build_handler(context: dict):
                 print(f"[エラー] {e}")
             self._send_json(result)
 
-        def _handle_post_cancel(self):
+        def _interrupt_generation_internal(self) -> str:
             cfg = load_config()
             comfyui_url = cfg.get('comfyui_url', 'http://127.0.0.1:8188')
             cancel_warn = ''
@@ -2514,7 +3170,11 @@ def build_handler(context: dict):
                 except Exception:
                     pass
 
-            print('[ComfyUI] 生成中止')
+            print('[ComfyUI] generation cancelled')
+            return cancel_warn
+
+        def _handle_post_cancel(self):
+            cancel_warn = self._interrupt_generation_internal()
             payload = {'ok': True}
             if cancel_warn:
                 payload['warn'] = cancel_warn
@@ -2533,6 +3193,9 @@ def build_handler(context: dict):
         def do_DELETE(self):
             from urllib.parse import unquote
             req_path, _ = self._parse_request_path_qs()
+
+            if self._handle_delete_queue_routes(req_path):
+                return
 
             if self._handle_delete_named_session_routes(req_path):
                 return
@@ -2556,6 +3219,42 @@ def build_handler(context: dict):
                 self._send_json({'status': 'error', 'error': str(e)}, code=400)
             except Exception as e:
                 self._send_json({'status': 'error', 'error': str(e)}, code=500)
+            return True
+        def _handle_delete_queue_routes(self, req_path: str) -> bool:
+            prefix = '/queue/'
+            if not req_path.startswith(prefix):
+                return False
+            self._ensure_queue_loaded()
+            job_id = str(req_path[len(prefix):] or '').strip()
+            if not job_id:
+                self._send_json({'status': 'error', 'error': 'job_id is required'}, code=400)
+                return True
+            cancel_warn = ''
+            need_cancel = False
+            with Handler.queue_lock:
+                jobs = Handler.queue_state.get('jobs', []) if isinstance(Handler.queue_state.get('jobs', []), list) else []
+                target = None
+                for j in jobs:
+                    if str((j or {}).get('job_id', '') or '') == job_id:
+                        target = j
+                        break
+                if target is None:
+                    self._send_json({'status': 'error', 'error': 'Job not found'}, code=404)
+                    return True
+                need_cancel = str(target.get('status', '') or '') == 'running'
+            if need_cancel:
+                cancel_warn = self._interrupt_generation_internal()
+            with Handler.queue_lock:
+                jobs = Handler.queue_state.get('jobs', []) if isinstance(Handler.queue_state.get('jobs', []), list) else []
+                Handler.queue_state['jobs'] = [j for j in jobs if str((j or {}).get('job_id', '') or '') != job_id]
+                summary = self._queue_summary(Handler.queue_state.get('jobs', []))
+                if summary.get('queued', 0) == 0 and summary.get('running', 0) == 0:
+                    Handler.queue_state['state'] = 'idle'
+                self._save_queue_state()
+            payload = {'status': 'ok'}
+            if cancel_warn:
+                payload['warn'] = cancel_warn
+            self._send_json(payload)
             return True
         def _handle_delete_preset_routes(self, req_path: str, unquote_fn) -> bool:
             if req_path.startswith('/presets/'):
@@ -2581,3 +3280,4 @@ def build_handler(context: dict):
             return False
 
     return Handler
+

@@ -139,15 +139,28 @@
   button:disabled{background:linear-gradient(135deg,#bbb,#ccc);box-shadow:none;cursor:not-allowed;transform:none;}
   .gen-actions{display:flex;gap:0.5rem;align-items:stretch;margin-top:1.2rem;}
   .gen-actions button{margin-top:0;}
-  #btn{flex:1.18;}
+  #btn{
+    flex:1.55;
+    font-size:1.02rem;
+    font-weight:700;
+    letter-spacing:0.12em;
+    padding:1.05rem 1rem;
+    box-shadow:0 6px 18px rgba(124,77,191,0.35);
+  }
+  #btnQueue{
+    flex:0.95;
+    background:linear-gradient(135deg,#6e48bf 0%,#9a69cd 100%);
+    font-size:0.9rem;
+    letter-spacing:0.08em;
+  }
   #btnMood{
-    flex:0.82;
-    min-width:178px;
+    flex:0.78;
+    min-width:170px;
     background:white;
     color:#4f3f74;
     border:1.5px solid #8f7ad2;
     box-shadow:0 2px 10px rgba(98,78,154,0.18);
-    letter-spacing:0.14em;
+    letter-spacing:0.09em;
   }
   #btnMood:hover{
     background:#f5f1ff;
@@ -470,6 +483,10 @@
     background:rgba(188,168,239,0.24) !important;
     border-color:#d2c2ff !important;
   }
+  :root[data-theme="dark"] #btnQueue{
+    background:linear-gradient(135deg,#6a48ac 0%,#8558ba 100%) !important;
+    color:#f8f4ff !important;
+  }
   :root[data-theme="dark"] #loraCardGrid{
     background:#231f33 !important;
     border-color:var(--border) !important;
@@ -591,11 +608,14 @@
       gap:0.45rem;
     }
     .gen-actions #btn,
+    .gen-actions #btnQueue,
     .gen-actions #btnMood{
       width:100%;
       min-width:0;
       flex:1 1 auto;
     }
+    .gen-actions #btn,
+    .gen-actions #btnQueue,
     .gen-actions #btnMood{
       letter-spacing:0.1em;
     }
@@ -1231,10 +1251,25 @@
     <label for="useLLM" style="font-family:'DM Mono',monospace;font-size:0.78rem;color:var(--muted);cursor:pointer;user-select:none;">LLMを使用する</label>
   </div>
   <div class="gen-actions">
-    <button id="btn" onclick="generate()">▶ 生成開始　(Ctrl+Enter)</button>
+    <button id="btn" onclick="generate()">▶ 生成開始 ※キュー実行中はdisabled<br>(CTRL+ENTER)</button>
+    <button id="btnQueue" onclick="addCurrentToQueue()">＋ キューに追加</button>
     <button id="btnMood" onclick="applyTodaysMood()">🎲 今日の気分</button>
   </div>
   <button class="btn-cancel" id="cancelBtn" onclick="cancelGenerate()">■ 生成中止</button>
+
+  <div id="queuePanel" data-no-i18n="1" style="margin-top:0.9rem;border:1px solid var(--border);border-radius:8px;padding:0.7rem;background:rgba(255,255,255,0.92);">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;flex-wrap:wrap;">
+      <div style="font-family:'DM Mono',monospace;font-size:0.74rem;color:var(--muted);">生成キュー</div>
+      <div style="display:flex;gap:0.35rem;flex-wrap:wrap;">
+        <button id="queuePauseBtn" onclick="pauseQueueGeneration()" style="margin:0;width:auto;padding:0.34rem 0.7rem;border:1px solid var(--border);border-radius:6px;background:white;color:var(--ink);font-family:'DM Mono',monospace;font-size:0.7rem;cursor:pointer;">Ⅱ 一時停止</button>
+        <button id="queueResumeBtn" onclick="resumeQueueGeneration()" style="margin:0;width:auto;padding:0.34rem 0.7rem;border:1px solid var(--border);border-radius:6px;background:white;color:var(--ink);font-family:'DM Mono',monospace;font-size:0.7rem;cursor:pointer;">▶ 再開</button>
+        <button id="queueClearBtn" onclick="clearQueueGeneration()" style="margin:0;width:auto;padding:0.34rem 0.7rem;border:1px solid var(--border);border-radius:6px;background:white;color:var(--ink);font-family:'DM Mono',monospace;font-size:0.7rem;cursor:pointer;">🗑 完了をクリア</button>
+      </div>
+    </div>
+    <div id="queueStatusText" style="margin-top:0.45rem;font-family:'DM Mono',monospace;font-size:0.68rem;color:var(--muted);">状態: idle</div>
+    <div id="queueList" style="margin-top:0.35rem;max-height:180px;overflow:auto;border:1px solid var(--border);border-radius:6px;background:#fff;padding:0.35rem 0.45rem;font-family:'DM Mono',monospace;font-size:0.67rem;color:var(--ink);"></div>
+    <div id="queueSummaryText" style="margin-top:0.35rem;font-family:'DM Mono',monospace;font-size:0.66rem;color:var(--muted);"></div>
+  </div>
 
   <div id="batchPanel" data-no-i18n="1" style="margin-top:0.9rem;border:1px solid var(--border);border-radius:8px;padding:0.7rem;background:rgba(255,255,255,0.92);">
     <div style="font-family:'DM Mono',monospace;font-size:0.74rem;color:var(--muted);margin-bottom:0.35rem;">GEN-1 Batch Generation (CSV/TXT)</div>
@@ -2187,6 +2222,12 @@ function applyLanguageUiFixups(){
   const title = document.querySelector('#gallerySection > div:first-child > div:first-child');
   const clearBtn = document.querySelector('#gallerySection > div:first-child > button');
   const moodBtn = document.getElementById('btnMood');
+  const genBtn = document.getElementById('btn');
+  const queueBtn = document.getElementById('btnQueue');
+  const queueTitle = document.querySelector('#queuePanel > div:first-child > div:first-child');
+  const queuePauseBtn = document.getElementById('queuePauseBtn');
+  const queueResumeBtn = document.getElementById('queueResumeBtn');
+  const queueClearBtn = document.getElementById('queueClearBtn');
   if(currentLang === 'en'){
     if(tabSession) tabSession.textContent = 'Session History';
     if(tabAll) tabAll.textContent = 'All History';
@@ -2196,6 +2237,12 @@ function applyLanguageUiFixups(){
       moodBtn.textContent = "🎲 Today's Mood";
       moodBtn.title = "Today's Mood";
     }
+    if(genBtn) genBtn.innerHTML = '▶ Generate <span style="font-size:0.8em;">(disabled while queue running)</span><br>(CTRL+ENTER)';
+    if(queueBtn) queueBtn.textContent = '+ Add to Queue';
+    if(queueTitle) queueTitle.textContent = 'Generation Queue';
+    if(queuePauseBtn) queuePauseBtn.textContent = 'Ⅱ Pause';
+    if(queueResumeBtn) queueResumeBtn.textContent = '▶ Resume';
+    if(queueClearBtn) queueClearBtn.textContent = '🗑 Clear done';
   }else{
     if(tabSession) tabSession.textContent = 'セッション履歴';
     if(tabAll) tabAll.textContent = '全履歴';
@@ -2205,6 +2252,12 @@ function applyLanguageUiFixups(){
       moodBtn.textContent = '🎲 今日の気分';
       moodBtn.title = '今日の気分';
     }
+    if(genBtn) genBtn.innerHTML = '▶ 生成開始 ※キュー実行中はdisabled<br>(CTRL+ENTER)';
+    if(queueBtn) queueBtn.textContent = '＋ キューに追加';
+    if(queueTitle) queueTitle.textContent = '生成キュー';
+    if(queuePauseBtn) queuePauseBtn.textContent = 'Ⅱ 一時停止';
+    if(queueResumeBtn) queueResumeBtn.textContent = '▶ 再開';
+    if(queueClearBtn) queueClearBtn.textContent = '🗑 完了をクリア';
   }
 }
 
@@ -2389,14 +2442,23 @@ let currentGalleryTab = 'session';
 let historyPage = 1;
 let historyTotalPages = 1;
 const historyPerPage = 20;
+let gallerySeenPaths = new Set();
 let selectedPresetFilename = '';
 let presetThumbOpen = false;
 let _updatingPresetThumbTargetSel = false;
 
 function addGalleryItems(imagePaths, positivePrompt, negativePrompt){
   if(!imagePaths || imagePaths.length===0) return;
+  const uniquePaths = imagePaths.filter(p=>{
+    const key = String(p || '').trim();
+    if(!key) return false;
+    if(gallerySeenPaths.has(key)) return false;
+    gallerySeenPaths.add(key);
+    return true;
+  });
+  if(uniquePaths.length === 0) return;
   const item = {
-    imagePaths,
+    imagePaths: uniquePaths,
     positivePrompt: positivePrompt||'',
     negativePrompt: negativePrompt||'',
     timestamp: new Date().toLocaleTimeString(currentLang==='ja'?'ja-JP':'en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'})
@@ -2947,6 +3009,7 @@ function navScrollTo(id){
 
 function clearGallery(){
   galleryItems = [];
+  gallerySeenPaths = new Set();
   document.getElementById('galleryGrid').innerHTML='';
   const allGrid = document.getElementById('galleryGridAll');
   const hasAll = !!(allGrid && allGrid.children && allGrid.children.length);
@@ -5635,7 +5698,7 @@ function applySession(data){
       nf.textContent = data.negFinalPrompt;
       nf.style.display='block';
     }
-    if(lastPositivePrompt){ document.getElementById('regenBtn').classList.add('show'); running=false; document.getElementById('btn').disabled=false; }
+      if(lastPositivePrompt){ document.getElementById('regenBtn').classList.add('show'); running=false; _applyGenerateButtonState(); }
     if(data.imgW){ selectedW=data.imgW; document.getElementById('widthInput').value=data.imgW; }
     if(data.imgH){ selectedH=data.imgH; document.getElementById('heightInput').value=data.imgH; }
     if(data.imgFmt){ selectedFmt=data.imgFmt; document.querySelectorAll('.fmt-btn').forEach(b=>b.classList.toggle('active',b.dataset.fmt===data.imgFmt)); }
@@ -7736,6 +7799,7 @@ document.addEventListener('DOMContentLoaded', ()=>{
   initSizePresets();
   initGenParams();
   initLoraSlots();
+  initQueuePanel();
   initBatchPanel();
   initHierarchicalPresets();
   loadWorkflowList();
@@ -7760,8 +7824,79 @@ document.addEventListener('DOMContentLoaded', ()=>{
   }, 200);
 });
 
+function buildGenerateRequestBody(){
+  const useLLM = !!(document.getElementById('useLLM') && document.getElementById('useLLM').checked);
+  const {valid, payload, charDirectTags} = collectInput(useLLM);
+  if(!valid){
+    return {ok:false, error:'シリーズまたはいずれかのキャラ名を入力してください'};
+  }
+  payload.extra_tags = Array.from(extraTags);
+  payload.prompt_prefix = collectPromptPrefix();
+  payload.negative_prompt = collectNegativePrompt();
+  const extraNoteJa = (document.getElementById('extraNoteJa')||{value:''}).value.trim();
+  const extraNoteEn = (document.getElementById('extraNoteEn')||{value:''}).value.trim();
+  if(extraNoteJa) payload.extra_note_ja = extraNoteJa;
+  if(extraNoteEn) payload.extra_note_en = extraNoteEn;
+
+  // LLM未使用時は通常生成と同じタグ構成を明示的に再構築
+  if(!useLLM){
+    charDirectTags.length = 0;
+    payload.characters.forEach(ch=>{
+      const directTags = ch._directTagsBlock || [];
+      const gender = ch.gender || '';
+      const genderTag = gender==='female'||gender==='girl' ? '1girl'
+                      : gender==='male'||gender==='boy'   ? '1boy' : '';
+      const nameSource = (ch.name_en || ch.name || '').trim();
+      const seriesSource = (ch.series_en || ch.series || '').trim();
+      if(!ch.original && nameSource){
+        const namePart = nameSource.toLowerCase().replace(/\s+/g,'_').replace(/[^\w]/g,'_');
+        const seriesPart = seriesSource.toLowerCase().replace(/\s+/g,'_').replace(/[^\w]/g,'_');
+        const charTag = seriesPart ? `${namePart}_(${seriesPart})` : namePart;
+        if(genderTag) charDirectTags.push(genderTag);
+        charDirectTags.push(charTag);
+      }else if(genderTag){
+        charDirectTags.push(genderTag);
+      }
+      directTags.forEach(t=>charDirectTags.push(t));
+    });
+    const sceneVals = [
+      document.getElementById('f_world')?.value,
+      document.getElementById('f_outdoor')?.value,
+      document.getElementById('f_tod')?.value,
+      document.getElementById('f_weather')?.value,
+      document.getElementById('f_misc')?.value,
+    ].filter(v=>v && /^[a-zA-Z0-9_\-,\s()]+$/.test(v));
+    sceneVals.forEach(v=>{ if(v) charDirectTags.push(v); });
+  }
+
+  const input = JSON.stringify(payload);
+  const requestBody = {
+    input,
+    use_llm: useLLM,
+    width: selectedW,
+    height: selectedH,
+    fmt: selectedFmt,
+    embed_metadata: embedMetadata,
+    count: selectedCount,
+    extra_tags: Array.from(extraTags),
+    char_direct_tags: charDirectTags,
+    prompt_prefix: collectPromptPrefix(),
+    extra_note_en: (document.getElementById('extraNoteEn')||{value:''}).value.trim(),
+    negative_prompt: collectNegativePrompt(),
+    gen_params: collectGenParams(),
+    lora_slots: collectLoraSlots(),
+    workflow_file: getSelectedWorkflow(),
+    client_id: window._comfyClientId,
+  };
+  return {ok:true, useLLM, requestBody};
+}
+
 async function generate(){
   if(running)return;
+  if(window._queueCurrentState === 'running'){
+    alert('キュー実行中は単発生成できません。先に一時停止してください。');
+    return;
+  }
   // WebSocket接続を生成開始時に確立（未接続または切断済みの場合）
   if(!window._comfyWsReady){
     initComfyWs();
@@ -7771,20 +7906,11 @@ async function generate(){
       if(window._comfyWsReady) break;
     }
   }
-  const useLLMflag = document.getElementById('useLLM').checked;
-  const {valid, payload, charDirectTags} = collectInput(useLLMflag);
-  if(!valid){alert('シリーズまたはいずれかのキャラ名を入力してください');return;}
   await saveSettings();
-  payload.extra_tags = Array.from(extraTags);
-  payload.prompt_prefix = collectPromptPrefix();
-  payload.negative_prompt = collectNegativePrompt();
-  const extraNoteJa = document.getElementById('extraNoteJa').value.trim();
-  const extraNoteEn = document.getElementById('extraNoteEn').value.trim();
-  if(extraNoteJa) payload.extra_note_ja = extraNoteJa;
-  if(extraNoteEn) payload.extra_note_en = extraNoteEn;
-  const input = JSON.stringify(payload);
+  const req = buildGenerateRequestBody();
+  if(!req.ok){ alert(req.error || '入力が不正です'); return; }
   running=true;
-  document.getElementById('btn').disabled=true;
+  _applyGenerateButtonState();
   document.getElementById('cancelBtn').classList.add('show');
   document.getElementById('statusBox').classList.add('show');
   const steps=document.getElementById('steps');
@@ -7798,46 +7924,15 @@ async function generate(){
   document.getElementById('promptNegFinal').style.display='none';
 
   try{
-    const useLLM = useLLMflag;
-    // LLM未使用時: キャラブロック化（1girl/1boy, キャラ名, 属性タグの順）
-    if(!useLLM){
-      // charDirectTagsを一旦クリアしてブロック順で再構築
-      charDirectTags.length = 0;
-      payload.characters.forEach(ch=>{
-        const directTags = ch._directTagsBlock || [];
-        // 性別タグ
-        const gender = ch.gender||'';
-        const genderTag = gender==='female'||gender==='girl' ? '1girl'
-                        : gender==='male'||gender==='boy'   ? '1boy' : '';
-        // キャラ名タグ
-        const nameSource = (ch.name_en || ch.name || '').trim();
-        const seriesSource = (ch.series_en || ch.series || '').trim();
-        if(!ch.original && nameSource){
-          const namePart = nameSource.toLowerCase().replace(/\s+/g,'_').replace(/[^\w]/g,'_');
-          const seriesPart = seriesSource.toLowerCase().replace(/\s+/g,'_').replace(/[^\w]/g,'_');
-          const charTag = seriesPart ? `${namePart}_(${seriesPart})` : namePart;
-          if(genderTag) charDirectTags.push(genderTag);
-          charDirectTags.push(charTag);
-        } else {
-          if(genderTag) charDirectTags.push(genderTag);
-        }
-        directTags.forEach(t=>charDirectTags.push(t));
-      });
-      const sceneVals = [
-        document.getElementById('f_world')?.value,
-        document.getElementById('f_outdoor')?.value,
-        document.getElementById('f_tod')?.value,
-        document.getElementById('f_weather')?.value,
-        document.getElementById('f_misc')?.value,
-      ].filter(v=>v && /^[a-zA-Z0-9_\-,\s()]+$/.test(v));
-      sceneVals.forEach(v=>{ if(v) charDirectTags.push(v); });
+    if(!req.useLLM){
       setStep(steps,'s1','done','LLM: Skipped');
+    } else {
+      setStep(steps,'s1','active','LLM: Generating prompt...');
     }
-    else { setStep(steps,'s1','active','LLM: Generating prompt...'); }
-    if(!useLLM){
+    if(!req.useLLM){
       setStep(steps,'s2','active','ComfyUI: Queueing...');
     }
-    const res=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({input,use_llm:document.getElementById('useLLM').checked,width:selectedW,height:selectedH,fmt:selectedFmt,embed_metadata:embedMetadata,count:selectedCount,extra_tags:Array.from(extraTags),char_direct_tags:charDirectTags,prompt_prefix:collectPromptPrefix(),extra_note_en:document.getElementById('extraNoteEn').value.trim(),negative_prompt:collectNegativePrompt(),gen_params:collectGenParams(),lora_slots:collectLoraSlots(),workflow_file:getSelectedWorkflow(),client_id:window._comfyClientId})});
+    const res=await fetch('/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(req.requestBody)});
     const data=await res.json();
     if(data.error){
       setStep(steps,'s1','error','Error: '+data.error);
@@ -7880,7 +7975,7 @@ async function generate(){
     if(progressWrap) progressWrap.style.display = 'none';
     if(progressBar) progressBar.style.width = '0%';
     running=false;
-    document.getElementById('btn').disabled=false;
+    _applyGenerateButtonState();
     document.getElementById('cancelBtn').classList.remove('show');
     if(lastPositivePrompt){ document.getElementById('regenBtn').classList.add('show'); }
   }
@@ -7899,7 +7994,7 @@ async function cancelGenerate(){
   const wsNotice = document.getElementById('wsNotice');
   if(wsNotice) wsNotice.style.display='none';
   running = false;
-  document.getElementById('btn').disabled = false;
+  _applyGenerateButtonState();
   document.getElementById('cancelBtn').classList.remove('show');
   const steps = document.getElementById('steps');
   if(document.getElementById('s3')) setStep(steps,'s3','error','ComfyUI: Cancelled');
@@ -8064,7 +8159,7 @@ async function pollComfyUIComplete(promptIds, steps, stepId='s3'){
   progressWrap.style.display = 'none';
   progressBar.style.width = '0%';
   running=false;
-  document.getElementById('btn').disabled=false;
+  _applyGenerateButtonState();
   document.getElementById('cancelBtn').classList.remove('show');
   if(lastPositivePrompt){ document.getElementById('regenBtn').classList.add('show'); }
   autoSaveSession();
@@ -8081,7 +8176,7 @@ async function regenPrompt(){
     }
   }
   running=true;
-  document.getElementById('btn').disabled=true;
+  _applyGenerateButtonState();
   document.getElementById('regenBtn').classList.remove('show');
   document.getElementById('cancelBtn').classList.add('show');
   document.getElementById('statusBox').classList.add('show');
@@ -8109,7 +8204,7 @@ async function regenPrompt(){
       if(progressWrap) progressWrap.style.display = 'none';
       if(progressBar) progressBar.style.width = '0%';
       running=false;
-      document.getElementById('btn').disabled=false;
+      _applyGenerateButtonState();
       document.getElementById('cancelBtn').classList.remove('show');
       document.getElementById('regenBtn').classList.add('show');
     }else{
@@ -8138,10 +8233,251 @@ async function regenPrompt(){
     if(progressWrap) progressWrap.style.display = 'none';
     if(progressBar) progressBar.style.width = '0%';
     running=false;
-    document.getElementById('btn').disabled=false;
+    _applyGenerateButtonState();
     document.getElementById('cancelBtn').classList.remove('show');
     document.getElementById('regenBtn').classList.add('show');
   }
+}
+
+let _queuePollTimer = null;
+let _queueLastDoneCount = 0;
+let _queueLastSyncAt = 0;
+window._queueCurrentState = 'idle';
+
+function _applyGenerateButtonState(){
+  const genBtn = document.getElementById('btn');
+  if(!genBtn) return;
+  genBtn.disabled = !!running || window._queueCurrentState === 'running';
+}
+
+function _queueStateJa(state){
+  if(state === 'running') return '実行中';
+  if(state === 'paused') return '一時停止';
+  return '待機';
+}
+
+function _queueJobLabel(job, idx){
+  const no = idx + 1;
+  let label = String((job && job.job_id) || '').trim();
+  const snap = (job && typeof job.snapshot === 'object' && job.snapshot) ? job.snapshot : {};
+  const rawInput = String(snap.input || '').trim();
+  if(rawInput){
+    try{
+      const parsed = JSON.parse(rawInput);
+      const chars = Array.isArray(parsed.characters) ? parsed.characters : [];
+      const names = chars.map(c=>String((c && (c.name || c.name_en)) || '').trim()).filter(Boolean);
+      if(names.length) label = names.join(' / ');
+      else if(parsed.global_series) label = String(parsed.global_series);
+    }catch(_e){}
+  }
+  if(!label) label = `job-${no}`;
+  return `#${no} ${label}`;
+}
+
+async function _syncRecentHistoryToSession(limit = 20){
+  try{
+    const res = await fetch('/history_list?page=1&per_page=' + Math.max(1, limit), {cache:'no-store'});
+    if(!res.ok) return;
+    const data = await res.json();
+    const items = Array.isArray(data.items) ? data.items.slice().reverse() : [];
+    items.forEach(it=>{
+      const p = String((it && it.image_path) || '').trim();
+      if(!p || gallerySeenPaths.has(p)) return;
+      addGalleryItems([p], String(it.prompt || ''), String(it.negative_prompt || ''));
+    });
+  }catch(_e){}
+}
+
+function _renderQueueStatus(data){
+  const st = document.getElementById('queueStatusText');
+  const list = document.getElementById('queueList');
+  const sum = document.getElementById('queueSummaryText');
+  const btnPause = document.getElementById('queuePauseBtn');
+  const btnResume = document.getElementById('queueResumeBtn');
+  if(!st || !list || !sum) return;
+
+  const state = String((data && data.state) || 'idle');
+  window._queueCurrentState = state;
+  const jobs = (data && Array.isArray(data.jobs)) ? data.jobs : [];
+  const summary = (data && typeof data.summary === 'object' && data.summary) ? data.summary : {};
+  const queued = Number(summary.queued || 0);
+  const runningCnt = Number(summary.running || 0);
+  const done = Number(summary.done || 0);
+  const failed = Number(summary.failed || 0);
+
+  st.textContent = `状態: ${_queueStateJa(state)}`;
+  sum.textContent = `件（待機: ${queued} / 実行中: ${runningCnt} / 完了: ${done} / 失敗: ${failed}）`;
+
+  if(btnPause) btnPause.disabled = (state !== 'running');
+  if(btnResume) btnResume.disabled = !(state === 'paused' || queued > 0);
+  _applyGenerateButtonState();
+
+  list.innerHTML = '';
+  if(!jobs.length){
+    list.textContent = '(キュージョブなし)';
+    return;
+  }
+  jobs.slice(0, 500).forEach((job, i)=>{
+    const row = document.createElement('div');
+    row.style.cssText = 'display:grid;grid-template-columns:1fr auto auto;gap:0.42rem;align-items:center;padding:0.28rem 0.18rem;min-height:34px;border-bottom:1px dashed var(--border);';
+    const status = String((job && job.status) || 'queued');
+    const pct = Math.max(0, Math.min(100, Number((job && job.progress) || 0)));
+    if(status === 'done'){
+      row.style.opacity = '0.56';
+    }
+
+    const left = document.createElement('div');
+    left.style.cssText = 'display:flex;flex-direction:column;gap:0.08rem;line-height:1.35;';
+    const top = document.createElement('div');
+    top.style.cssText = 'font-size:0.72rem;color:var(--ink);';
+    top.textContent = _queueJobLabel(job, i);
+    const sub = document.createElement('div');
+    sub.style.cssText = 'font-size:0.62rem;color:var(--muted);';
+    const statusJa = status === 'queued' ? '待機' : (status === 'running' ? '実行中' : (status === 'done' ? '完了' : '失敗'));
+    const err = String((job && job.error) || '').trim();
+    sub.textContent = `状態: ${statusJa}${status === 'running' ? ` (${pct}%)` : ''}${err ? ` / ${err}` : ''}`;
+    left.appendChild(top);
+    left.appendChild(sub);
+
+    const rerunBtn = document.createElement('button');
+    rerunBtn.textContent = '↺';
+    rerunBtn.title = '再実行';
+    rerunBtn.style.cssText = 'margin:0;width:28px;min-height:24px;padding:0;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--muted);font-family:DM Mono,monospace;font-size:0.68rem;cursor:pointer;box-shadow:none;';
+    rerunBtn.disabled = !(status === 'done' || status === 'failed');
+    rerunBtn.onclick = ()=>rerunQueueJob(String((job && job.job_id) || ''));
+
+    const delBtn = document.createElement('button');
+    delBtn.textContent = '✕';
+    delBtn.title = '削除';
+    delBtn.style.cssText = 'margin:0;width:28px;min-height:24px;padding:0;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--muted);font-family:DM Mono,monospace;font-size:0.68rem;cursor:pointer;box-shadow:none;';
+    delBtn.onclick = ()=>removeQueueJob(String((job && job.job_id) || ''));
+
+    row.appendChild(left);
+    row.appendChild(rerunBtn);
+    row.appendChild(delBtn);
+    list.appendChild(row);
+  });
+}
+
+async function pollQueueStatus(){
+  try{
+    const res = await fetch('/queue', {cache:'no-store'});
+    if(!res.ok) return;
+    const data = await res.json();
+    _renderQueueStatus(data);
+    const state = String((data && data.state) || 'idle');
+    const summary = (data && typeof data.summary === 'object' && data.summary) ? data.summary : {};
+    const done = Number(summary.done || 0);
+    if(done > _queueLastDoneCount || (Date.now() - _queueLastSyncAt > 7000)){
+      _queueLastDoneCount = done;
+      _queueLastSyncAt = Date.now();
+      _syncRecentHistoryToSession(25);
+    }
+    if(state === 'running' || state === 'paused' || Number(summary.queued || 0) > 0){
+      if(!_queuePollTimer) _queuePollTimer = setInterval(pollQueueStatus, 1200);
+    }else if(_queuePollTimer){
+      clearInterval(_queuePollTimer);
+      _queuePollTimer = null;
+    }
+  }catch(_e){}
+}
+
+async function addCurrentToQueue(){
+  if(running) return;
+  await saveSettings();
+  const req = buildGenerateRequestBody();
+  if(!req.ok){ alert(req.error || '入力が不正です'); return; }
+  try{
+    const res = await fetch('/queue/add', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        snapshot: req.requestBody,
+        client_id: window._comfyClientId || '',
+      })
+    });
+    const data = await res.json();
+    if(!res.ok || data.status !== 'added'){
+      alert(data.error || 'キューへの追加に失敗しました');
+      return;
+    }
+    await pollQueueStatus();
+    if(!_queuePollTimer) _queuePollTimer = setInterval(pollQueueStatus, 1200);
+  }catch(e){
+    alert('キューへの追加に失敗しました: ' + e.message);
+  }
+}
+
+async function pauseQueueGeneration(){
+  try{
+    await fetch('/queue/pause', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    await pollQueueStatus();
+  }catch(_e){}
+}
+
+async function resumeQueueGeneration(){
+  try{
+    await fetch('/queue/resume', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    await pollQueueStatus();
+    if(!_queuePollTimer) _queuePollTimer = setInterval(pollQueueStatus, 1200);
+  }catch(_e){}
+}
+
+async function clearQueueGeneration(){
+  try{
+    const res = await fetch('/queue/clear', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({target:'completed'})
+    });
+    const data = await res.json();
+    if(!res.ok || data.status !== 'ok'){
+      alert(data.error || 'キューのクリアに失敗しました');
+      return;
+    }
+    await pollQueueStatus();
+  }catch(e){
+    alert('キューのクリアに失敗しました: ' + e.message);
+  }
+}
+
+async function rerunQueueJob(jobId){
+  if(!jobId) return;
+  try{
+    const res = await fetch('/queue/rerun/' + encodeURIComponent(jobId), {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:'{}'
+    });
+    const data = await res.json();
+    if(!res.ok || data.status !== 'added'){
+      alert(data.error || '再実行に失敗しました');
+      return;
+    }
+    await pollQueueStatus();
+    if(!_queuePollTimer) _queuePollTimer = setInterval(pollQueueStatus, 1200);
+  }catch(e){
+    alert('再実行に失敗しました: ' + e.message);
+  }
+}
+
+async function removeQueueJob(jobId){
+  if(!jobId) return;
+  try{
+    const res = await fetch('/queue/' + encodeURIComponent(jobId), {method:'DELETE'});
+    const data = await res.json().catch(()=>({}));
+    if(!res.ok || data.status !== 'ok'){
+      alert(data.error || '削除に失敗しました');
+      return;
+    }
+    await pollQueueStatus();
+  }catch(e){
+    alert('削除に失敗しました: ' + e.message);
+  }
+}
+
+function initQueuePanel(){
+  pollQueueStatus();
 }
 
 let _batchPollTimer = null;
