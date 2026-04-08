@@ -176,7 +176,7 @@ The result panel shows `OK / WARN / ERR / SKIP`, and `WARN / ERR` rows include h
 
 ### 一括生成（GEN-1）
 
-- 生成ボタン下の `GEN-1 Batch Generation (CSV/TXT)` パネルから実行します。
+- 生成ボタン下の `一括生成（CSV/TXT）` ラベルを開くと、バッチパネルを表示できます（デフォルトは非表示）。
 - 入力方式:
   - `TXT`: 1行1プリセット名（例: `000_default`）
   - `CSV`: `preset_name` ヘッダを含む形式
@@ -192,6 +192,7 @@ The result panel shows `OK / WARN / ERR / SKIP`, and `WARN / ERR` rows include h
   - CSV選択時でも、入力がプレーンな1行リストならTXTとして自動解釈します。
   - 「LLMを使用する」のON/OFFはバッチ実行にも反映されます。
   - 進捗は `settings/batch_progress.json` に保存され、再開に利用されます。
+  - ダークテーマ時は、キュー/バッチパネルの背景・入力欄・ステータス文字色がテーマ配色に合わせて表示されます。
 
 ### 生成キュー（GEN-2）
 

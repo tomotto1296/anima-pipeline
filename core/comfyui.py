@@ -333,6 +333,7 @@ def watch_and_postprocess(
     prompt_json: str = "",
     workflow_json: str = "",
     quality: int = 90,
+    progress_callback=None,
 ):
     """ComfyUI WebSocketで完了検知し、履歴API経由で保存画像を後処理する。"""
     import threading, json as _json, urllib.parse
@@ -398,6 +399,16 @@ def watch_and_postprocess(
                             continue
                         try:
                             data = _json.loads(payload.decode("utf-8"))
+                            if data.get("type") == "progress":
+                                try:
+                                    d = data.get("data", {}) or {}
+                                    v = float(d.get("value", 0) or 0)
+                                    m = float(d.get("max", 0) or 0)
+                                    if m > 0 and callable(progress_callback):
+                                        pct = int(max(0, min(99, round((v / m) * 100))))
+                                        progress_callback(pct)
+                                except Exception:
+                                    pass
                             if (
                                 data.get("type") == "executing"
                                 and data.get("data", {}).get("prompt_id") == prompt_id
@@ -661,5 +672,4 @@ def send_to_comfyui(
         "workflow_json": json.dumps(workflow_data, ensure_ascii=False),
     }
     return data.get("prompt_id", "unknown"), meta
-
 

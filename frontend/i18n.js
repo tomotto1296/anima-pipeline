@@ -663,10 +663,28 @@ function scheduleI18nIfNeeded(){
   }
 }
 
+Object.assign(BASE_I18N_MAP_EN, {
+  'キューに追加': 'Add to Queue',
+  '一時停止': 'Pause Queue',
+  '再開': 'Resume Queue',
+  '完了をクリア': 'Clear Completed',
+  '待機中': 'Queued',
+  '実行中': 'Generating',
+  '完了': 'Done',
+  '失敗': 'Failed',
+  '再実行': 'Re-run',
+  'キューが空です': 'Queue is empty',
+  'キュー実行中は単発生成できません。先に一時停止してください。': 'Cannot generate while queue is running. Pause the queue first.',
+  'キューへの追加に失敗しました': 'Failed to add job to queue',
+  'キューのクリアに失敗しました': 'Failed to clear queue',
+  'ジョブ削除に失敗しました': 'Failed to delete job',
+  '再実行の追加に失敗しました': 'Failed to add rerun job',
+  '並び替えに失敗しました': 'Failed to reorder queue',
+});
+
 document.addEventListener('DOMContentLoaded', ()=>{
   document.documentElement.lang = currentLang === 'ja' ? 'ja' : 'en';
   refreshLangButtons();
   // Startup fast-path: Japanese mode skips full-DOM i18n walk.
   scheduleI18nIfNeeded();
 });
-

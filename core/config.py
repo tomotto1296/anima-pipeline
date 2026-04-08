@@ -1,4 +1,4 @@
-﻿import builtins
+import builtins
 import datetime
 import json
 import locale
@@ -308,6 +308,7 @@ DEFAULT_CONFIG = {
     'last_negative_preset': '',
     'last_positive_preset': '',
     'batch_default_count': 1,
+    'queue_max_jobs': 50,
 }
 
 

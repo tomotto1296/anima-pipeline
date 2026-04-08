@@ -893,3 +893,21 @@
   - `core/comfyui.py`
   - `core/config.py`
   - `frontend/index.html`
+
+## 2026-04-08 - v1.5.21 (GEN-1/GEN-2 UI follow-up)
+
+- UI/UX follow-up:
+  - Set GEN-1 batch panel to default hidden and added a label toggle (`一括生成（CSV/TXT）`) to open/close it.
+  - Improved dark-theme contrast for queue/batch panels (`#queuePanel`, `#batchPanel`) including form controls and status/list text.
+- i18n follow-up:
+  - Added/aligned EN labels for queue controls and queue status terms.
+- Runtime follow-up:
+  - Added progress callback hook in ComfyUI watcher for queue progress handling.
+  - Added workflow-path fallback handling for bare workflow filenames.
+- Config follow-up:
+  - Added `queue_max_jobs` default key.
+- Updated files:
+  - `frontend/index.html`
+  - `frontend/i18n.js`
+  - `core/comfyui.py`
+  - `core/config.py`

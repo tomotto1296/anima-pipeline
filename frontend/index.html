@@ -413,6 +413,31 @@
     color:var(--ink) !important;
     border-color:var(--border) !important;
   }
+  :root[data-theme="dark"] #queuePanel,
+  :root[data-theme="dark"] #batchPanel{
+    background:rgba(30,26,43,0.92) !important;
+    border-color:var(--border) !important;
+  }
+  :root[data-theme="dark"] #queuePanel select,
+  :root[data-theme="dark"] #batchPanel select,
+  :root[data-theme="dark"] #queuePanel textarea,
+  :root[data-theme="dark"] #batchPanel textarea{
+    background:var(--card) !important;
+    color:var(--ink) !important;
+    border-color:var(--border) !important;
+  }
+  :root[data-theme="dark"] #queueList,
+  :root[data-theme="dark"] #batchList{
+    background:var(--card) !important;
+    color:var(--ink) !important;
+    border-color:var(--border) !important;
+  }
+  :root[data-theme="dark"] #queueStatusText,
+  :root[data-theme="dark"] #batchStatusText,
+  :root[data-theme="dark"] #queueSummaryText,
+  :root[data-theme="dark"] #batchCurrentText{
+    color:#bfb8d8 !important;
+  }
   :root[data-theme="dark"] .prompt-output{background:#252039;color:var(--ink);}
   :root[data-theme="dark"] .prompt-final{background:#30233a;color:#f2dfeb;}
   :root[data-theme="dark"] .progress-bar-wrap{background:#2c2640;}
@@ -1271,7 +1296,10 @@
     <div id="queueSummaryText" style="margin-top:0.35rem;font-family:'DM Mono',monospace;font-size:0.66rem;color:var(--muted);"></div>
   </div>
 
-  <div id="batchPanel" data-no-i18n="1" style="margin-top:0.9rem;border:1px solid var(--border);border-radius:8px;padding:0.7rem;background:rgba(255,255,255,0.92);">
+  <div id="navBatch" class="scene-toggle" onclick="toggleBlock('batchPanel','arrowBatch')" style="margin-top:0.85rem;margin-bottom:0.45rem;">
+    <span id="arrowBatch">▶</span> 一括生成（CSV/TXT）
+  </div>
+  <div id="batchPanel" data-no-i18n="1" style="display:none;margin-top:0.15rem;border:1px solid var(--border);border-radius:8px;padding:0.7rem;background:rgba(255,255,255,0.92);">
     <div style="font-family:'DM Mono',monospace;font-size:0.74rem;color:var(--muted);margin-bottom:0.35rem;">GEN-1 Batch Generation (CSV/TXT)</div>
     <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:0.4rem;">
       <select id="batchFormat" style="font-family:'DM Mono',monospace;font-size:0.72rem;border:1px solid var(--border);border-radius:6px;padding:0.28rem 0.45rem;background:white;color:var(--ink);">

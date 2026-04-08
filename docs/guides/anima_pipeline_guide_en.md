@@ -176,7 +176,7 @@ Behavior notes:
 
 ### Batch Generation (GEN-1)
 
-- Use the `GEN-1 Batch Generation (CSV/TXT)` panel below the Generate button.
+- Open the `Batch Generation (CSV/TXT)` label below the Generate area to show the batch panel (hidden by default).
 - Input formats:
   - `TXT`: one preset name per line (for example: `000_default`)
   - `CSV`: must include `preset_name` header
@@ -192,6 +192,7 @@ Behavior notes:
   - If CSV is selected by mistake but plain line-based input is provided, it is auto-interpreted as TXT.
   - Batch respects the main `Use LLM` toggle (ON/OFF).
   - Progress is persisted in `settings/batch_progress.json` and used for resume.
+  - In dark theme, queue/batch panel backgrounds, controls, and status/list text are theme-aligned for readability.
 
 ---
 
